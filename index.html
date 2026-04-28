@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>Requisições — Grupo Carlos Vaz</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230a1628'/%3E%3Crect x='2' y='2' width='96' height='96' rx='16' fill='none' stroke='url(%23g)' stroke-width='2'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%232563eb'/%3E%3Cstop offset='100%25' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ctext x='50' y='32' text-anchor='middle' fill='%232563eb' font-family='Arial' font-weight='900' font-size='11'%3EGRUPO%3C/text%3E%3Ctext x='50' y='50' text-anchor='middle' fill='white' font-family='Arial' font-weight='900' font-size='13'%3ECARLOS VAZ%3C/text%3E%3Cline x1='20' y1='58' x2='80' y2='58' stroke='%2306b6d4' stroke-width='1'/%3E%3Ctext x='50' y='75' text-anchor='middle' fill='%2306b6d4' font-family='Arial' font-weight='700' font-size='11'%3EREQUISIÇÕES%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -211,13 +210,18 @@ tbody tr:hover{background:rgba(37,99,235,.05)}
 
   <!-- TOP -->
   <div class="top">
-   <div class="brand">
-  <div>
-    <div class="brand-nm">Requisições <em>Grupo Carlos Vaz</em></div>
-    <div class="brand-sb">Controle por Cidade</div>
+    <div class="brand">
+      <div class="brand-ic">GCV</div>
+      <div>
+        <div class="brand-nm">Requisições <em>GCV</em></div>
+        <div class="brand-sb">Controle por Cidade</div>
+      </div>
+    </div>
+    <div class="top-right">
+      <button class="btn-back" id="btnBack" onclick="voltarPainel()">← Voltar</button>
+      <div class="badge-on"><div class="dot-on"></div>Online</div>
+    </div>
   </div>
-</div>
-
 
   <!-- ========== PAINEL PRINCIPAL ========== -->
   <div class="painel-view" id="painelView">
