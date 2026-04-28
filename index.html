@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Requisições — Grupo Carlos Vaz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg1:#040a14;--bg2:#0a1628;--bg3:#0f1d35;
+  --card:rgba(15,29,53,.65);--card-hover:rgba(20,38,70,.8);
+  --border:rgba(37,99,235,.12);--border2:rgba(37,99,235,.25);
+  --text:#e8edf5;--text2:#8899b8;--text3:#556b8e;
+  --blue:#2563eb;--cyan:#06b6d4;--green:#10b981;
+  --amber:#f59e0b;--red:#ef4444;--purple:#8b5cf6;
+  --orange:#f97316;
+  --glass:rgba(15,29,53,.55);--glass-border:rgba(255,255,255,.08);
+  --shadow:0 8px 32px rgba(0,0,0,.4);
+  --r-lg:20px;--r-md:14px;--r-sm:10px;
+}
+html{height:100%}
+body{font-family:'Inter',sans-serif;background:var(--bg1);color:var(--text);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+
+/* BG */
+.bg-fx{position:fixed;inset:0;z-index:0;pointer-events:none}
+.bg-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(37,99,235,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.03) 1px,transparent 1px);background-size:60px 60px}
+.orb{position:absolute;border-radius:50%;filter:blur(100px);animation:orbF 25s ease-in-out infinite}
+.o1{width:500px;height:500px;background:radial-gradient(circle,rgba(37,99,235,.18),transparent 70%);top:-10%;right:-8%;animation-delay:0s}
+.o2{width:400px;height:400px;background:radial-gradient(circle,rgba(6,182,212,.13),transparent 70%);bottom:5%;left:-6%;animation-delay:-8s}
+.o3{width:350px;height:350px;background:radial-gradient(circle,rgba(139,92,246,.1),transparent 70%);top:40%;right:20%;animation-delay:-16s}
+@keyframes orbF{0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(30px,-40px) scale(1.05)}50%{transform:translate(-20px,-60px) scale(.95)}75%{transform:translate(-40px,20px) scale(1.08)}}
+
+/* LOADING */
+.ld-screen{position:fixed;inset:0;background:var(--bg1);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10000;transition:opacity .6s,visibility .6s}
+.ld-screen.hide{opacity:0;visibility:hidden}
+.ld-icon{width:80px;height:80px;background:linear-gradient(135deg,var(--blue),var(--cyan));border-radius:22px;display:flex;align-items:center;justify-content:center;margin-bottom:24px;animation:ldP 2s ease-in-out infinite;box-shadow:0 0 60px rgba(37,99,235,.3)}
+.ld-icon span{font-size:1.6rem;font-weight:900;color:#fff}
+@keyframes ldP{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.ld-text{font-size:1.1rem;font-weight:600;margin-bottom:6px}
+.ld-sub{font-size:.8rem;color:var(--text3);margin-bottom:24px}
+.ld-bar{width:220px;height:3px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.ld-fill{height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:3px;animation:ldB 2s ease forwards}
+@keyframes ldB{to{width:100%}}
+
+/* APP */
+.app{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+
+/* TOP BAR */
+.top{display:flex;align-items:center;justify-content:space-between;padding:8px 0 24px;flex-wrap:wrap;gap:12px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-ic{width:46px;height:46px;background:linear-gradient(135deg,var(--blue),var(--cyan));border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.9rem;color:#fff;box-shadow:0 4px 20px rgba(37,99,235,.25);position:relative;overflow:hidden}
+.brand-ic::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.15))}
+.brand-nm{font-size:1.15rem;font-weight:800;letter-spacing:-.3px}
+.brand-nm em{font-style:normal;background:linear-gradient(135deg,var(--blue),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.brand-sb{font-size:.72rem;color:var(--text3);font-weight:500}
+.top-right{display:flex;align-items:center;gap:10px}
+.badge-on{display:flex;align-items:center;gap:6px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);padding:6px 14px;border-radius:30px;font-size:.72rem;font-weight:600;color:var(--green)}
+.dot-on{width:7px;height:7px;background:var(--green);border-radius:50%;animation:bk 2s infinite;box-shadow:0 0 8px rgba(16,185,129,.5)}
+@keyframes bk{0%,100%{opacity:1}50%{opacity:.3}}
+.btn-back{display:none;padding:8px 16px;background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--r-sm);color:var(--text2);font-size:.8rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;backdrop-filter:blur(10px)}
+.btn-back:hover{border-color:var(--border2);color:var(--text)}
+
+/* GLASS CARD */
+.gc{background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:var(--r-lg);padding:22px;margin-bottom:16px;box-shadow:var(--shadow);transition:border-color .3s}
+
+/* RESUMO GERAL */
+.resumo-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.resumo-card{background:var(--glass);backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:var(--r-md);padding:18px 16px;text-align:center;transition:border-color .3s}
+.resumo-card:hover{border-color:var(--border2)}
+.rc-value{font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:800;margin-bottom:4px}
+.rc-value.money{background:linear-gradient(135deg,var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.rc-value.blue{background:linear-gradient(135deg,var(--blue),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.rc-label{font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+
+/* SEARCH */
+.search-box{margin-bottom:20px}
+.search-input{width:100%;padding:14px 18px 14px 44px;background:var(--glass);backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:var(--r-md);color:var(--text);font-size:.9rem;font-family:'Inter',sans-serif;outline:none;transition:border-color .3s;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23556b8e' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:14px center}
+.search-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.search-input::placeholder{color:var(--text3)}
+
+/* CIDADE CARDS */
+.cidades-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:24px}
+.cidade-card{background:var(--glass);backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:var(--r-lg);padding:24px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
+.cidade-card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.cidade-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--blue),var(--cyan));opacity:0;transition:opacity .3s}
+.cidade-card:hover::before{opacity:1}
+.cc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.cc-name{font-size:1.15rem;font-weight:800}
+.cc-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+.cc-total{font-family:'JetBrains Mono',monospace;font-size:1.6rem;font-weight:800;margin-bottom:4px;background:linear-gradient(135deg,var(--blue),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.cc-itens{font-size:.78rem;color:var(--text3);margin-bottom:16px}
+.cc-setores{display:flex;flex-wrap:wrap;gap:6px}
+.cc-setor-tag{padding:4px 10px;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.15);border-radius:20px;font-size:.68rem;color:var(--text2);font-weight:500}
+.cc-setor-tag.has-items{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.2);color:var(--green)}
+
+/* RANKING */
+.ranking-title{font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.rank-item{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.rank-pos{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;color:#fff;flex-shrink:0}
+.rank-pos.p1{background:linear-gradient(135deg,#f59e0b,#f97316)}
+.rank-pos.p2{background:linear-gradient(135deg,#94a3b8,#64748b)}
+.rank-pos.p3{background:linear-gradient(135deg,#b45309,#92400e)}
+.rank-pos.p4,.rank-pos.p5{background:var(--bg3);color:var(--text3)}
+.rank-name{flex:1;font-size:.85rem;font-weight:600}
+.rank-bar-bg{flex:2;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.rank-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--blue),var(--cyan));transition:width 1s ease}
+.rank-val{font-family:'JetBrains Mono',monospace;font-size:.8rem;font-weight:700;color:var(--cyan);min-width:90px;text-align:right}
+
+/* DETALHE CIDADE */
+.detalhe-view{display:none}
+.detalhe-view.show{display:block}
+.painel-view.hide{display:none}
+.det-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.det-city-name{font-size:1.8rem;font-weight:900;background:linear-gradient(135deg,var(--blue),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.det-total{font-family:'JetBrains Mono',monospace;font-size:1.3rem;font-weight:800;color:var(--green)}
+.btn-print{padding:10px 20px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;border-radius:var(--r-sm);color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;box-shadow:0 4px 15px rgba(37,99,235,.25);transition:all .2s}
+.btn-print:active{transform:scale(.95)}
+
+/* SETOR SECTION */
+.setor-section{margin-bottom:20px}
+.setor-header{display:flex;align-items:center;gap:10px;padding:12px 18px;background:linear-gradient(135deg,rgba(37,99,235,.15),rgba(6,182,212,.08));border:1px solid rgba(37,99,235,.2);border-radius:var(--r-md) var(--r-md) 0 0;font-weight:700;font-size:.88rem}
+.setor-emoji{font-size:1.1rem}
+.setor-total{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--cyan);font-weight:700}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--glass-border);border-top:none;border-radius:0 0 var(--r-md) var(--r-md)}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+thead th{background:var(--bg2);padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text);vertical-align:middle}
+tbody tr:hover{background:rgba(37,99,235,.05)}
+.td-money{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--cyan);white-space:nowrap}
+.setor-footer{display:flex;justify-content:flex-end;padding:10px 18px;background:rgba(37,99,235,.06);border:1px solid var(--glass-border);border-top:none;border-radius:0 0 var(--r-md) var(--r-md);font-family:'JetBrains Mono',monospace;font-weight:800;font-size:.9rem;color:var(--green)}
+
+/* SETORES CHART */
+.chart-bar{margin-bottom:8px}
+.chart-label{display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:4px}
+.chart-label span:first-child{font-weight:600;color:var(--text2)}
+.chart-label span:last-child{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--cyan)}
+.chart-track{height:10px;background:var(--bg3);border-radius:5px;overflow:hidden}
+.chart-fill{height:100%;border-radius:5px;transition:width 1.2s ease}
+.cf-edu{background:linear-gradient(90deg,#3b82f6,#60a5fa)}
+.cf-sau{background:linear-gradient(90deg,#10b981,#34d399)}
+.cf-inf{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.cf-ass{background:linear-gradient(90deg,#8b5cf6,#a78bfa)}
+.cf-adm{background:linear-gradient(90deg,#ef4444,#f87171)}
+
+/* NO DATA */
+.no-data{text-align:center;padding:40px;color:var(--text3);font-size:.9rem}
+
+/* FOOTER */
+.footer{text-align:center;padding:24px;font-size:.68rem;color:var(--text3);letter-spacing:.3px}
+
+/* PRINT */
+@media print{
+  body{background:#fff!important;color:#000!important}
+  .bg-fx,.ld-screen,.search-box,.btn-back,.btn-print,.badge-on,.top,.footer,.painel-view{display:none!important}
+  .detalhe-view{display:block!important}
+  .app{max-width:100%;padding:0}
+  .gc,.cidade-card,.resumo-card,.setor-section{background:#fff!important;backdrop-filter:none!important;border:1px solid #ddd!important;box-shadow:none!important;color:#000!important}
+  .det-city-name{-webkit-text-fill-color:#1a365d!important;font-size:1.5rem}
+  .det-total{color:#047857!important}
+  .setor-header{background:#f0f4ff!important;border-color:#ccc!important;color:#1a365d!important;-webkit-text-fill-color:#1a365d!important}
+  .setor-total{color:#047857!important;-webkit-text-fill-color:#047857!important}
+  thead th{background:#f0f4ff!important;color:#1a365d!important}
+  tbody td{color:#000!important;border-color:#eee!important}
+  .td-money{color:#047857!important;-webkit-text-fill-color:#047857!important}
+  .setor-footer{background:#f0fdf4!important;color:#047857!important;-webkit-text-fill-color:#047857!important}
+  .rank-val{color:#047857!important;-webkit-text-fill-color:#047857!important}
+  .cc-total{-webkit-text-fill-color:#1a365d!important}
+  .print-header{display:block!important;text-align:center;padding:20px 0;border-bottom:3px solid #1a365d;margin-bottom:20px}
+  .print-header h1{color:#1a365d;font-size:1.3rem;margin-bottom:4px}
+  .print-header p{color:#666;font-size:.85rem}
+  .print-footer{display:block!important;margin-top:40px;padding-top:20px;border-top:1px solid #ccc}
+  .print-sign{display:flex;justify-content:space-between;margin-top:50px}
+  .print-sign div{text-align:center;width:40%;border-top:1px solid #333;padding-top:8px;font-size:.8rem}
+  table{page-break-inside:auto}
+  tr{page-break-inside:avoid}
+}
+.print-header,.print-footer{display:none}
+
+@media(max-width:600px){
+  .cidades-grid{grid-template-columns:1fr}
+  .resumo-row{grid-template-columns:1fr 1fr}
+  .det-header{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="ld-screen" id="ldScreen">
+  <div class="ld-icon"><span>GCV</span></div>
+  <div class="ld-text">Painel de Requisições</div>
+  <div class="ld-sub">Carregando dados das cidades...</div>
+  <div class="ld-bar"><div class="ld-fill"></div></div>
+</div>
+
+<!-- BG -->
+<div class="bg-fx">
+  <div class="bg-grid"></div>
+  <div class="orb o1"></div>
+  <div class="orb o2"></div>
+  <div class="orb o3"></div>
+</div>
+
+<!-- APP -->
+<div class="app">
+
+  <!-- TOP -->
+  <div class="top">
+    <div class="brand">
+      <div class="brand-ic">GCV</div>
+      <div>
+        <div class="brand-nm">Requisições <em>GCV</em></div>
+        <div class="brand-sb">Controle por Cidade</div>
+      </div>
+    </div>
+    <div class="top-right">
+      <button class="btn-back" id="btnBack" onclick="voltarPainel()">← Voltar</button>
+      <div class="badge-on"><div class="dot-on"></div>Online</div>
+    </div>
+  </div>
+
+  <!-- ========== PAINEL PRINCIPAL ========== -->
+  <div class="painel-view" id="painelView">
+
+    <!-- RESUMO -->
+    <div class="resumo-row" id="resumoRow"></div>
+
+    <!-- BUSCA -->
+    <div class="search-box">
+      <input class="search-input" id="searchInput" placeholder="Buscar item, cidade ou setor..." oninput="filtrarBusca()">
+    </div>
+
+    <!-- CIDADES -->
+    <div class="cidades-grid" id="cidadesGrid"></div>
+
+    <!-- RANKING + SETORES -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="gc" id="rankingBox"></div>
+      <div class="gc" id="setoresChart"></div>
+    </div>
+
+  </div>
+
+  <!-- ========== DETALHE CIDADE ========== -->
+  <div class="detalhe-view" id="detalheView">
+    <div class="print-header">
+      <h1>GRUPO CARLOS VAZ — CONTROLE DE REQUISIÇÕES</h1>
+      <p id="printSubtitle"></p>
+    </div>
+    <div class="det-header">
+      <div>
+        <div class="det-city-name" id="detCityName"></div>
+        <div style="color:var(--text3);font-size:.8rem;margin-top:4px" id="detCityInfo"></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div class="det-total" id="detCityTotal"></div>
+        <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
+      </div>
+    </div>
+    <div id="detSetores"></div>
+    <div class="print-footer">
+      <div class="print-sign">
+        <div>Responsável</div>
+        <div>Recebido por</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Grupo Carlos Vaz © 2026 — Painel de Requisições v1.0</div>
+</div>
+
+<script>
+var API_URL='https://script.google.com/macros/s/AKfycbzXuhmVkTDsMGotRuG3-i-YYnx0_nLFWDWjb7hNsTZ2HUg5SzWKDK6jbad_HqOEsnxt/exec';
+var DADOS=null;
+var cidadeIcons={'Ibicuí':'🏙️','Nova Canaã':'🌄','Boa Nova':'🌿','Dário Meira':'🏘️','Floresta Azul':'🌳'};
+var cidadeCores={'Ibicuí':'37,99,235','Nova Canaã':'16,185,129','Boa Nova':'245,158,11','Dário Meira':'139,92,246','Floresta Azul':'6,182,212'};
+var setorEmojis={'EDUCAÇÃO':'📚','SAÚDE':'🏥','INFRAESTRUTURA':'🏗️','ASSISTÊNCIA SOCIAL':'🤝','ADMINISTRAÇÃO':'🏛️'};
+var setorClasses={'EDUCAÇÃO':'cf-edu','SAÚDE':'cf-sau','INFRAESTRUTURA':'cf-inf','ASSISTÊNCIA SOCIAL':'cf-ass','ADMINISTRAÇÃO':'cf-adm'};
+
+window.addEventListener('load',function(){carregarDados()});
+
+function carregarDados(){
+  fetch(API_URL+'?acao=tudo')
+    .then(function(r){return r.json()})
+    .then(function(d){
+      DADOS=d;
+      renderPainel();
+      setTimeout(function(){document.getElementById('ldScreen').classList.add('hide')},800);
+    })
+    .catch(function(err){
+      document.querySelector('.ld-sub').textContent='Erro ao carregar: '+err.message;
+      // Tentar no-cors fallback
+      setTimeout(function(){document.getElementById('ldScreen').classList.add('hide')},3000);
+    });
+}
+
+function fmt(v){return'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+
+function renderPainel(){
+  if(!DADOS||!DADOS.cidades)return;
+
+  // Resumo
+  var totalGeral=DADOS.resumo.totalGeral||0;
+  var totalCidades=DADOS.cidades.length;
+  var totalItens=0;
+  var totalSetores=0;
+  DADOS.cidades.forEach(function(c){totalItens+=c.totalItens;totalSetores+=c.setores.length});
+
+  document.getElementById('resumoRow').innerHTML=
+    '<div class="resumo-card"><div class="rc-value money">'+fmt(totalGeral)+'</div><div class="rc-label">Total Geral</div></div>'+
+    '<div class="resumo-card"><div class="rc-value blue">'+totalCidades+'</div><div class="rc-label">Cidades</div></div>'+
+    '<div class="resumo-card"><div class="rc-value blue">'+totalItens+'</div><div class="rc-label">Itens</div></div>'+
+    '<div class="resumo-card"><div class="rc-value blue">'+DADOS.resumo.mesReferencia+'</div><div class="rc-label">Referência</div></div>';
+
+  // Cidades
+  var html='';
+  DADOS.cidades.forEach(function(c){
+    var cor=cidadeCores[c.nome]||'37,99,235';
+    var tags='';
+    c.setores.forEach(function(s){
+      var cls=s.itens.length>0?'cc-setor-tag has-items':'cc-setor-tag';
+      tags+='<div class="'+cls+'">'+(setorEmojis[s.nome]||'📁')+' '+s.nome+' ('+s.itens.length+')</div>';
+    });
+    html+='<div class="cidade-card" onclick="abrirCidade(\''+c.nome+'\')" style="border-color:rgba('+cor+',.15)">'+
+      '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,rgba('+cor+',1),rgba('+cor+',.3))"></div>'+
+      '<div class="cc-top"><div class="cc-name">'+(cidadeIcons[c.nome]||'🏙️')+' '+c.nome+'</div>'+
+      '<div class="cc-icon" style="background:rgba('+cor+',.12);border:1px solid rgba('+cor+',.2)">📋</div></div>'+
+      '<div class="cc-total">'+fmt(c.totalCidade)+'</div>'+
+      '<div class="cc-itens">'+c.totalItens+' itens em '+c.setores.length+' setores</div>'+
+      '<div class="cc-setores">'+tags+'</div></div>';
+  });
+  document.getElementById('cidadesGrid').innerHTML=html;
+
+  // Ranking
+  var sorted=DADOS.cidades.slice().sort(function(a,b){return b.totalCidade-a.totalCidade});
+  var maxVal=sorted[0]?sorted[0].totalCidade:1;
+  var rHtml='<div class="ranking-title">🏆 Ranking do Mês</div>';
+  sorted.forEach(function(c,i){
+    var pClass=i<3?'rank-pos p'+(i+1):'rank-pos p4';
+    var pct=maxVal>0?Math.round(c.totalCidade/maxVal*100):0;
+    rHtml+='<div class="rank-item"><div class="'+pClass+'">'+(i+1)+'º</div>'+
+      '<div class="rank-name">'+(cidadeIcons[c.nome]||'')+' '+c.nome+'</div>'+
+      '<div class="rank-bar-bg"><div class="rank-bar-fill" style="width:'+pct+'%"></div></div>'+
+      '<div class="rank-val">'+fmt(c.totalCidade)+'</div></div>';
+  });
+  document.getElementById('rankingBox').innerHTML=rHtml;
+
+  // Setores chart
+  var setorTotais={};
+  DADOS.cidades.forEach(function(c){
+    c.setores.forEach(function(s){
+      if(!setorTotais[s.nome])setorTotais[s.nome]=0;
+      setorTotais[s.nome]+=s.total;
+    });
+  });
+  var setorArr=Object.keys(setorTotais).map(function(k){return{nome:k,total:setorTotais[k]}}).sort(function(a,b){return b.total-a.total});
+  var maxS=setorArr[0]?setorArr[0].total:1;
+  var sHtml='<div class="ranking-title">📊 Total por Setor</div>';
+  setorArr.forEach(function(s){
+    var pct=maxS>0?Math.round(s.total/maxS*100):0;
+    var cls=setorClasses[s.nome]||'cf-edu';
+    sHtml+='<div class="chart-bar"><div class="chart-label"><span>'+(setorEmojis[s.nome]||'')+' '+s.nome+'</span><span>'+fmt(s.total)+'</span></div>'+
+      '<div class="chart-track"><div class="chart-fill '+cls+'" style="width:'+pct+'%"></div></div></div>';
+  });
+  document.getElementById('setoresChart').innerHTML=sHtml;
+}
+
+function abrirCidade(nome){
+  if(!DADOS)return;
+  var cidade=null;
+  DADOS.cidades.forEach(function(c){if(c.nome===nome)cidade=c});
+  if(!cidade)return;
+
+  document.getElementById('painelView').classList.add('hide');
+  document.getElementById('detalheView').classList.add('show');
+  document.getElementById('btnBack').style.display='inline-block';
+
+  document.getElementById('detCityName')
+    .textContent=(cidadeIcons[nome]||'')+' '+nome+' — Controle de Requisições';
+  document.getElementById('detCityInfo').textContent=
+    cidade.setores.length+' setores · '+cidade.totalItens+' itens · Atualizado: '+(DADOS.geradoEm||'');
+  document.getElementById('detCityTotal').textContent=fmt(cidade.totalCidade);
+  document.getElementById('printSubtitle').textContent=
+    nome+' — Gerado em '+(DADOS.geradoEm||'')+' · Total: '+fmt(cidade.totalCidade);
+
+  var html='';
+  cidade.setores.forEach(function(s){
+    var emoji=setorEmojis[s.nome]||'📁';
+    html+='<div class="setor-section">'+
+      '<div class="setor-header"><span class="setor-emoji">'+emoji+'</span> SETOR: '+s.nome+
+      '<span class="setor-total">'+fmt(s.total)+'</span></div>';
+
+    if(s.itens.length===0){
+      html+='<div class="no-data">Nenhum item registrado neste setor</div>';
+    }else{
+      html+='<div class="tbl-wrap"><table><thead><tr>'+
+        '<th>Nº</th><th>ID</th><th>Data</th><th>Descrição</th>'+
+        '<th>Vl. Unit.</th><th>Qtd</th><th>Total</th></tr></thead><tbody>';
+      s.itens.forEach(function(it){
+        html+='<tr><td>'+it.num+'</td><td>'+it.idRequisicao+'</td><td>'+it.data+'</td>'+
+          '<td>'+it.descricao+'</td>'+
+          '<td class="td-money">'+fmt(it.valorUnitario)+'</td>'+
+          '<td>'+it.quantidade+'</td>'+
+          '<td class="td-money">'+fmt(it.totalItem)+'</td></tr>';
+      });
+      html+='</tbody></table></div>';
+      html+='<div class="setor-footer">Total '+s.nome+': '+fmt(s.total)+'</div>';
+    }
+    html+='</div>';
+  });
+
+  document.getElementById('detSetores').innerHTML=html;
+  window.scrollTo(0,0);
+}
+
+function voltarPainel(){
+  document.getElementById('painelView').classList.remove('hide');
+  document.getElementById('detalheView').classList.remove('show');
+  document.getElementById('btnBack').style.display='none';
+  window.scrollTo(0,0);
+}
+
+function filtrarBusca(){
+  var q=document.getElementById('searchInput').value.toLowerCase().trim();
+  var cards=document.querySelectorAll('.cidade-card');
+  if(!q){cards.forEach(function(c){c.style.display=''});return;}
+  cards.forEach(function(card){
+    var txt=card.textContent.toLowerCase();
+    card.style.display=txt.indexOf(q)!==-1?'':'none';
+  });
+}
+</script>
+</body>
+</html>
