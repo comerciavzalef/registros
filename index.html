@@ -3,15 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#050d18">
+<link rel="manifest" href="manifest.json">
 <title>Grupo Carlos Vaz — Painel de Requisições</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230a1628'/%3E%3Crect x='2' y='2' width='96' height='96' rx='16' fill='none' stroke='url(%23g)' stroke-width='2'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%232563eb'/%3E%3Cstop offset='100%25' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ctext x='50' y='32' text-anchor='middle' fill='%232563eb' font-family='Arial' font-weight='900' font-size='11'%3EGRUPO%3C/text%3E%3Ctext x='50' y='50' text-anchor='middle' fill='white' font-family='Arial' font-weight='900' font-size='13'%3ECARLOS VAZ%3C/text%3E%3Cline x1='20' y1='58' x2='80' y2='58' stroke='%2306b6d4' stroke-width='1'/%3E%3Ctext x='50' y='75' text-anchor='middle' fill='%2306b6d4' font-family='Arial' font-weight='700' font-size='11'%3EREQUISIÇÕES%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230a1628'/%3E%3Ctext x='50' y='50' text-anchor='middle' fill='%2306b6d4' font-family='Arial' font-weight='900' font-size='28' dy='.35em'%3ECV%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 /* ═══════════════════════════════════════════
    DESIGN SYSTEM — GRUPO CARLOS VAZ
-   Premium Dark Glass-Morphism v4.0
+   Premium Dark Glass-Morphism v4.1
    Módulo: PAINEL DE REQUISIÇÕES
    ═══════════════════════════════════════════ */
 :root{
@@ -179,30 +185,56 @@ body{font-family:var(--font);background:var(--navy-deep);color:var(--text-primar
 .btn-print .shimmer{position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);animation:shimmer 3s ease-in-out infinite}
 @keyframes shimmer{0%{left:-100%}50%,100%{left:100%}}
 
-/* ═══ PRINT STYLES ═══ */
+/* ═══ PRINT HEADER (app-style) ═══ */
+.print-banner{display:none;padding:20px 24px;border-radius:var(--radius-lg);background:var(--glass);border:1px solid var(--glass-border);margin-bottom:20px;text-align:center}
+.print-banner h1{font-size:1.1rem;font-weight:800;margin-bottom:4px;letter-spacing:-.01em}
+.print-banner p{font-size:.72rem;color:var(--text-muted);letter-spacing:.3px}
+.print-sigs-app{display:none;gap:40px;justify-content:center;margin-top:40px;padding:20px;border-radius:var(--radius-lg);background:var(--glass);border:1px solid var(--glass-border)}
+.print-sigs-app .sig-col{text-align:center;min-width:160px}
+.print-sigs-app .sig-line{border-top:1px solid var(--text-dim);padding-top:8px;font-size:.7rem;color:var(--text-secondary);font-weight:600}
+.print-footer-app{display:none;text-align:center;font-size:.58rem;color:var(--text-dim);margin-top:20px;letter-spacing:.3px}
+
+/* ═══ PRINT — APP-STYLE OUTPUT ═══ */
 @media print{
-  body{background:#fff!important;color:#000!important}
-  .bg-scene,.ld-bar-top,.top-bar,.search-wrap,.panel-view,.btn-back,.btn-print,.badge,.btn-icon{display:none!important}
-  .app{max-width:100%;padding:0;opacity:1!important;transform:none!important}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
+
+  /* Keep the dark background and all colors */
+  html,body{background:var(--navy-deep)!important;color:var(--text-primary)!important;-webkit-font-smoothing:auto}
+  .bg-scene{display:none!important}
+
+  /* Hide interactive-only elements */
+  .ld-screen,.ld-bar-top,.top-bar,.search-wrap,.panel-view,.btn-back,.btn-print,.badge,.btn-icon{display:none!important}
+
+  /* App container */
+  .app{max-width:100%;padding:0 20px;opacity:1!important;transform:none!important}
   .detail-view{display:block!important}
-  .sector-block{background:#fff!important;border:1px solid #ddd!important;break-inside:avoid;page-break-inside:avoid;backdrop-filter:none!important}
+
+  /* Show print banner, sigs and footer */
+  .print-banner{display:block!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:rgba(12,26,48,.8)!important;border:1px solid rgba(37,99,235,.2)!important}
+  .print-banner h1{color:var(--text-primary)!important;-webkit-text-fill-color:var(--text-primary)!important;background:none!important}
+  .print-banner p{color:var(--text-muted)!important}
+
+  .print-sigs-app{display:flex!important;background:rgba(12,26,48,.6)!important;border:1px solid rgba(37,99,235,.12)!important}
+  .print-footer-app{display:block!important}
+
+  /* Detail header */
+  .detail-header{margin:16px 0!important}
+  .detail-city-name{color:var(--text-primary)!important;-webkit-text-fill-color:var(--text-primary)!important}
+
+  /* Sector blocks — keep glass style */
+  .sector-block{background:rgba(12,26,48,.6)!important;border:1px solid rgba(37,99,235,.15)!important;break-inside:avoid;page-break-inside:avoid;backdrop-filter:none!important}
   .sector-block::before{display:none}
-  .sector-head{background:#f5f5f5!important;border-bottom:1px solid #ddd!important}
-  .sector-head .sn{color:#000!important}
-  .sector-head .st{color:#333!important;-webkit-text-fill-color:#333!important}
-  .sector-table th{color:#666!important;background:#fafafa!important;border-bottom:1px solid #ddd!important}
-  .sector-table td{color:#333!important;border-bottom:1px solid #eee!important}
-  .detail-header{margin:0 0 10px!important}
-  .detail-city-name{color:#000!important;font-size:1.4rem!important;-webkit-text-fill-color:#000!important}
-  .print-header{display:block!important;text-align:center;padding:20px 0 16px;border-bottom:2px solid #222;margin-bottom:20px}
-  .print-header h1{font-size:1.15rem;margin:0;color:#000}
-  .print-header p{font-size:.78rem;color:#555;margin:4px 0 0}
-  .print-footer{display:block!important;margin-top:40px;padding-top:16px;border-top:1px solid #ccc;text-align:center;font-size:.65rem;color:#999}
-  .print-sigs{display:flex!important;justify-content:space-around;margin-top:60px;padding-top:10px}
-  .print-sigs div{text-align:center;min-width:180px}
-  .print-sigs div span{display:block;border-top:1px solid #333;padding-top:8px;font-size:.72rem;color:#333}
+  .sector-head{background:rgba(37,99,235,.08)!important;border-bottom:1px solid rgba(255,255,255,.06)!important}
+  .sector-head .sn{color:var(--text-primary)!important}
+  .sector-head .st{color:var(--accent-cyan)!important;-webkit-text-fill-color:var(--accent-cyan)!important}
+  .sector-table th{color:var(--text-muted)!important;background:rgba(255,255,255,.03)!important;border-bottom:1px solid rgba(255,255,255,.06)!important}
+  .sector-table td{color:var(--text-secondary)!important;border-bottom:1px solid rgba(255,255,255,.04)!important}
+
+  @page{margin:12mm 10mm;size:A4}
 }
-.print-header,.print-footer,.print-sigs{display:none}
+
+/* ═══ LIGHT PRINT (optional toggle) ═══ */
+body.print-light{} /* reserved for future light print toggle */
 
 /* ═══ RESPONSIVE ═══ */
 @media(max-width:600px){
@@ -315,22 +347,38 @@ body{font-family:var(--font);background:var(--navy-deep);color:var(--text-primar
 
   <!-- ═══ DETAIL VIEW ═══ -->
   <div class="detail-view" id="detailView">
-    <div class="print-header"><h1>GRUPO CARLOS VAZ — Relatório de Requisições</h1><p id="printSub"></p></div>
+
+    <!-- Print banner (visible only when printing) -->
+    <div class="print-banner">
+      <h1>GRUPO CARLOS VAZ — Relatório de Requisições</h1>
+      <p id="printSub"></p>
+    </div>
+
     <div class="detail-header">
       <button class="btn-back" onclick="voltarPainel()">← Voltar</button>
       <span class="detail-city-name" id="detailCityName"></span>
     </div>
+
     <div id="detailContent"></div>
+
     <button class="btn-print" onclick="window.print()"><span class="shimmer"></span>🖨 Imprimir Relatório</button>
-    <div class="print-sigs"><div><span>Responsável</span></div><div><span>Conferência</span></div></div>
-    <div class="print-footer">Documento gerado pelo sistema Grupo Carlos Vaz — Painel de Requisições</div>
+
+    <!-- Signatures (visible only when printing) -->
+    <div class="print-sigs-app">
+      <div class="sig-col"><div class="sig-line">Responsável</div></div>
+      <div class="sig-col"><div class="sig-line">Conferência</div></div>
+    </div>
+
+    <!-- Footer (visible only when printing) -->
+    <div class="print-footer-app">Documento gerado pelo sistema Grupo Carlos Vaz — Painel de Requisições</div>
+
   </div>
 
 </div>
 
 <script>
 /* ═══════════════════════════════════════════
-   PAINEL DE REQUISIÇÕES — LÓGICA v4.0
+   PAINEL DE REQUISIÇÕES — LÓGICA v4.1
    ═══════════════════════════════════════════ */
 var API_URL='https://script.google.com/macros/s/AKfycbzXuhmVkTDsMGotRuG3-i-YYnx0_nLFWDWjb7hNsTZ2HUg5SzWKDK6jbad_HqOEsnxt/exec';
 var CACHE_KEY='cv_req_cache';
