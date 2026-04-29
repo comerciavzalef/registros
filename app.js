@@ -1,5 +1,5 @@
 /* ============================================================
-   REQUISIÇÕES DIGITAL — APP.JS v2.1
+   REQUISIÇÕES DIGITAL — APP.JS v2.2
    Apple-Inspired Design · Grupo Carlos Vaz
    ============================================================ */
 
@@ -15,11 +15,13 @@ var setorSelecionado = null;
 var autoRefreshTimer = null;
 var lastSync = null;
 
-// ── CIDADES & SETORES (mirror Código.gs) ─────────────────────
+// ── CIDADES & SETORES ────────────────────────────────────────
 var CIDADES = ['Ibicuí', 'Nova Canaã', 'Boa Nova', 'Dário Meira', 'Floresta Azul'];
 var SETORES = ['EDUCAÇÃO', 'SAÚDE', 'ASSISTÊNCIA SOCIAL', 'ADMINISTRAÇÃO', 'INFRAESTRUTURA'];
 
-// ── INIT ─────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function () {
     initApp();
 });
@@ -45,11 +47,14 @@ function initApp() {
     showLogin();
 }
 
-// ── LOGIN ────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  LOGIN / LOGOUT
+// ══════════════════════════════════════════════════════════════
 function showLogin() {
     document.getElementById('loginScreen').classList.add('active');
     document.getElementById('appScreen').classList.remove('active');
-    document.getElementById('loadingOverlay').classList.remove('active');
+    var lo = document.getElementById('loadingOverlay');
+    if (lo) lo.classList.remove('active');
 }
 
 function showApp() {
@@ -104,8 +109,9 @@ function fazerLogin() {
 
     fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'acao=login&usuario=' + encodeURIComponent(usuario) + '&senha=' + encodeURIComponent(senha)
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ acao: 'login', usuario: usuario, senha: senha }),
+        redirect: 'follow'
     })
         .then(function (r) { return r.json(); })
         .then(function (d) {
@@ -154,7 +160,9 @@ function logout() {
     showLogin();
 }
 
-// ── CARREGAR DADOS ───────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  CARREGAR DADOS
+// ══════════════════════════════════════════════════════════════
 function carregarDados() {
     var loading = document.getElementById('loadingOverlay');
     if (loading) loading.classList.add('active');
@@ -190,7 +198,25 @@ function updateSyncTime() {
     el.textContent = 'Atualizado às ' + h + ':' + m;
 }
 
-// ── RENDER DASHBOARD ─────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  HELPER: pega array de cidades do JSON (compatível com ambos)
+// ══════════════════════════════════════════════════════════════
+function getCidadesArray() {
+    if (!dadosCompletos) return [];
+    return dadosCompletos.cidades || dadosCompletos.dados || [];
+}
+
+function getCidadeNome(cidade) {
+    return cidade.nome || cidade.cidade || '';
+}
+
+function getCidadeTotal(cidade) {
+    return cidade.totalCidade || cidade.total || 0;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  RENDER DASHBOARD
+// ══════════════════════════════════════════════════════════════
 function renderDashboard() {
     if (!dadosCompletos) return;
 
@@ -207,29 +233,28 @@ function renderDashboard() {
 }
 
 function renderStats() {
-    if (!dadosCompletos || !dadosCompletos.dados) return;
+    var dados = getCidadesArray();
+    if (!dados.length) return;
 
-    var totalGeral = 0;
+    var totalGeral = dadosCompletos.totalGeral || 0;
     var totalItens = 0;
-    var totalSetores = 0;
     var cidadesComDados = 0;
     var setoresUnicos = {};
 
-    dadosCompletos.dados.forEach(function (cidade) {
-        if (cidade.total > 0) cidadesComDados++;
-        totalGeral += cidade.total || 0;
+    dados.forEach(function (cidade) {
+        var cidadeTotal = getCidadeTotal(cidade);
+        if (cidadeTotal > 0) cidadesComDados++;
 
-        if (cidade.setores) {
-            cidade.setores.forEach(function (setor) {
-                setoresUnicos[setor.nome] = true;
-                if (setor.itens) {
-                    totalItens += setor.itens.length;
-                }
-            });
-        }
+        var setores = cidade.setores || [];
+        setores.forEach(function (setor) {
+            setoresUnicos[setor.nome] = true;
+            if (setor.itens) {
+                totalItens += setor.itens.length;
+            }
+        });
     });
 
-    totalSetores = Object.keys(setoresUnicos).length;
+    var totalSetores = Object.keys(setoresUnicos).length;
 
     var elTotal = document.getElementById('statTotal');
     var elCidades = document.getElementById('statCidades');
@@ -244,14 +269,16 @@ function renderStats() {
 
 function renderCidadeCards() {
     var container = document.getElementById('cidadeCards');
-    if (!container || !dadosCompletos || !dadosCompletos.dados) return;
+    if (!container) return;
 
+    var dados = getCidadesArray();
     container.innerHTML = '';
 
-    dadosCompletos.dados.forEach(function (cidade) {
+    dados.forEach(function (cidade) {
         var card = document.createElement('div');
         card.className = 'cidade-card';
-        card.onclick = function () { abrirCidade(cidade.cidade); };
+        var cidadeNome = getCidadeNome(cidade);
+        card.onclick = function () { abrirCidade(cidadeNome); };
 
         var numSetores = cidade.setores ? cidade.setores.length : 0;
         var numItens = 0;
@@ -261,30 +288,37 @@ function renderCidadeCards() {
             });
         }
 
+        var cidadeTotal = getCidadeTotal(cidade);
+
         card.innerHTML =
             '<div class="cidade-card-header">' +
             '<div class="cidade-card-icon"><i class="fas fa-city"></i></div>' +
             '<div class="cidade-card-info">' +
-            '<h3 class="cidade-card-name">' + escapeHtml(cidade.cidade) + '</h3>' +
+            '<h3 class="cidade-card-name">' + escapeHtml(cidadeNome) + '</h3>' +
             '<span class="cidade-card-meta">' + numSetores + ' setores · ' + numItens + ' itens</span>' +
             '</div>' +
             '<div class="cidade-card-arrow"><i class="fas fa-chevron-right"></i></div>' +
             '</div>' +
             '<div class="cidade-card-footer">' +
-            '<span class="cidade-card-total">' + formatCurrency(cidade.total || 0) + '</span>' +
+            '<span class="cidade-card-total">' + formatCurrency(cidadeTotal) + '</span>' +
             '</div>';
 
         container.appendChild(card);
     });
 }
 
-// ── DETALHE CIDADE ───────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  DETALHE CIDADE
+// ══════════════════════════════════════════════════════════════
 function abrirCidade(nomeCidade) {
-    if (!dadosCompletos || !dadosCompletos.dados) return;
+    if (!dadosCompletos) return;
 
+    var dados = getCidadesArray();
     cidadeSelecionada = null;
-    dadosCompletos.dados.forEach(function (c) {
-        if (c.cidade === nomeCidade) cidadeSelecionada = c;
+
+    dados.forEach(function (c) {
+        var nome = getCidadeNome(c);
+        if (nome === nomeCidade) cidadeSelecionada = c;
     });
 
     if (!cidadeSelecionada) {
@@ -301,8 +335,8 @@ function abrirCidade(nomeCidade) {
 
     var titleEl = document.getElementById('detalheCidadeNome');
     var totalEl = document.getElementById('detalheCidadeTotal');
-    if (titleEl) titleEl.textContent = cidadeSelecionada.cidade;
-    if (totalEl) totalEl.textContent = formatCurrency(cidadeSelecionada.total || 0);
+    if (titleEl) titleEl.textContent = getCidadeNome(cidadeSelecionada);
+    if (totalEl) totalEl.textContent = formatCurrency(getCidadeTotal(cidadeSelecionada));
 
     renderSetorFilter();
     renderSetores();
@@ -318,7 +352,9 @@ function voltarCidades() {
     if (detalheView) detalheView.style.display = 'none';
 }
 
-// ── SETOR FILTER ─────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  SETOR FILTER
+// ══════════════════════════════════════════════════════════════
 function renderSetorFilter() {
     var container = document.getElementById('setorFilter');
     if (!container || !cidadeSelecionada) return;
@@ -350,7 +386,9 @@ function renderSetorFilter() {
     }
 }
 
-// ── RENDER SETORES ───────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  RENDER SETORES
+// ══════════════════════════════════════════════════════════════
 function renderSetores() {
     var container = document.getElementById('setoresContainer');
     if (!container || !cidadeSelecionada) return;
@@ -385,10 +423,12 @@ function renderSetores() {
         var block = document.createElement('div');
         block.className = 'setor-block';
 
-        var subtotal = 0;
-        itens.forEach(function (item) {
-            subtotal += (item.totalItem || item.total || 0);
-        });
+        var subtotal = setor.totalSetor || 0;
+        if (!subtotal) {
+            itens.forEach(function (item) {
+                subtotal += (item.total || item.totalItem || 0);
+            });
+        }
 
         var header = document.createElement('div');
         header.className = 'setor-header';
@@ -418,11 +458,11 @@ function renderSetores() {
             var row = document.createElement('div');
             row.className = 'items-table-row';
 
-            var id = item.id || item.numero || '-';
+            var id = item.id || item.num || item.numero || '-';
             var desc = item.descricao || item.item || '-';
             var qtd = item.quantidade || item.qtd || 0;
-            var unitario = item.valorUnitario || item.unitario || 0;
-            var total = item.totalItem || item.total || 0;
+            var unitario = item.valorUnit || item.valorUnitario || item.unitario || 0;
+            var total = item.total || item.totalItem || 0;
 
             row.innerHTML =
                 '<span class="col-id">' + escapeHtml(String(id)) + '</span>' +
@@ -443,21 +483,28 @@ function renderSetores() {
     }
 }
 
-// ── SEARCH ───────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  SEARCH
+// ══════════════════════════════════════════════════════════════
 function filtrarItens() {
     if (cidadeSelecionada) {
         renderSetores();
     }
 }
 
-// ── REFRESH ──────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  REFRESH
+// ══════════════════════════════════════════════════════════════
 function refreshDados() {
     carregarDados();
 }
 
-// ── RESUMO WHATSAPP ──────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  RESUMO WHATSAPP
+// ══════════════════════════════════════════════════════════════
 function gerarResumoWhatsApp() {
-    if (!dadosCompletos || !dadosCompletos.dados) {
+    var dados = getCidadesArray();
+    if (!dados.length) {
         mostrarToast('Carregue os dados primeiro', 'error');
         return;
     }
@@ -465,17 +512,19 @@ function gerarResumoWhatsApp() {
     var texto = '📋 *REQUISIÇÕES — GRUPO CARLOS VAZ*\n';
     texto += '📅 ' + formatDate(new Date()) + '\n\n';
 
-    dadosCompletos.dados.forEach(function (cidade) {
-        if (!cidade.total || cidade.total === 0) return;
+    dados.forEach(function (cidade) {
+        var cidadeNome = getCidadeNome(cidade);
+        var cidadeTotal = getCidadeTotal(cidade);
+        if (!cidadeTotal || cidadeTotal === 0) return;
 
-        texto += '🏙️ *' + cidade.cidade.toUpperCase() + '* — ' + formatCurrency(cidade.total) + '\n';
+        texto += '🏙️ *' + cidadeNome.toUpperCase() + '* — ' + formatCurrency(cidadeTotal) + '\n';
 
         if (cidade.setores) {
             cidade.setores.forEach(function (setor) {
-                var subtotal = 0;
+                var subtotal = setor.totalSetor || 0;
                 var numItens = setor.itens ? setor.itens.length : 0;
-                if (setor.itens) {
-                    setor.itens.forEach(function (i) { subtotal += (i.totalItem || i.total || 0); });
+                if (!subtotal && setor.itens) {
+                    setor.itens.forEach(function (i) { subtotal += (i.total || i.totalItem || 0); });
                 }
                 texto += '  └ ' + setor.nome + ': ' + numItens + ' itens · ' + formatCurrency(subtotal) + '\n';
             });
@@ -513,7 +562,9 @@ function fallbackCopy(text) {
     document.body.removeChild(ta);
 }
 
-// ── TOAST ────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════════════════
 function mostrarToast(msg, tipo) {
     var t = document.getElementById('toast');
     if (!t) return;
@@ -526,7 +577,9 @@ function mostrarToast(msg, tipo) {
     }, 3000);
 }
 
-// ── HELPERS ──────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════════════
 function formatCurrency(val) {
     if (typeof val !== 'number' || isNaN(val)) val = 0;
     return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -558,7 +611,9 @@ function getSetorIcon(nome) {
     return icons[nome] || 'fa-folder';
 }
 
-// ── KEYBOARD SHORTCUT ────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  KEYBOARD SHORTCUT
+// ══════════════════════════════════════════════════════════════
 document.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') {
         var loginScreen = document.getElementById('loginScreen');
