@@ -6,423 +6,43 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#050d18">
+<meta name="theme-color" content="#000000">
 <link rel="manifest" href="manifest.json">
-<title>Requisições — Grupo Carlos Vaz</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230a1628'/%3E%3Ctext x='50' y='50' text-anchor='middle' fill='%2306b6d4' font-family='Arial' font-weight='900' font-size='28' dy='.35em'%3ECV%3C/text%3E%3C/svg%3E">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-<style>
-/* ══════════════════════════════════════════════════════
-   DESIGN SYSTEM — DARK GLASS-MORPHISM  v5.0
-   ══════════════════════════════════════════════════════ */
-:root{
-  --navy-deep:#050d18;--navy:#0a1628;--navy-light:#0f2035;
-  --panel:rgba(15,32,53,.55);--panel-solid:rgba(15,32,53,.85);
-  --glass:rgba(6,182,212,.06);--glass-border:rgba(6,182,212,.12);
-  --cyan:#06b6d4;--cyan-bright:#22d3ee;--cyan-dim:rgba(6,182,212,.25);
-  --green:#10b981;--green-dim:rgba(16,185,129,.18);
-  --red:#ef4444;--red-dim:rgba(239,68,68,.18);
-  --amber:#f59e0b;--amber-dim:rgba(245,158,11,.18);
-  --purple:#a855f7;--purple-dim:rgba(168,85,247,.18);
-  --blue:#3b82f6;--blue-dim:rgba(59,130,246,.18);
-  --text:#e2e8f0;--text-dim:#64748b;--text-bright:#f8fafc;
-  --font:'Inter',system-ui,-apple-system,sans-serif;
-  --mono:'JetBrains Mono',monospace;
-  --radius:16px;--radius-sm:10px;--radius-xs:6px;
-  --transition:all .3s cubic-bezier(.4,0,.2,1);
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html{font-size:16px;-webkit-text-size-adjust:100%;}
-body{
-  font-family:var(--font);color:var(--text);
-  background:var(--navy-deep);
-  min-height:100vh;min-height:100dvh;
-  overflow-x:hidden;
-  -webkit-font-smoothing:antialiased;
-}
-
-/* ── BG Scene ─────────────────────────────────────── */
-.bg-scene{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
-.bg-scene .orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.18;animation:orbFloat 20s ease-in-out infinite;}
-.bg-scene .orb:nth-child(1){width:500px;height:500px;background:var(--cyan);top:-15%;left:-10%;animation-delay:0s;}
-.bg-scene .orb:nth-child(2){width:400px;height:400px;background:var(--purple);bottom:-10%;right:-8%;animation-delay:-7s;}
-.bg-scene .orb:nth-child(3){width:300px;height:300px;background:var(--green);top:50%;left:60%;animation-delay:-14s;}
-@keyframes orbFloat{0%,100%{transform:translateY(0) scale(1);}50%{transform:translateY(-40px) scale(1.08);}}
-
-/* ── Login Screen ─────────────────────────────────── */
-#loginScreen{
-  position:fixed;inset:0;z-index:10000;
-  display:flex;align-items:center;justify-content:center;
-  background:var(--navy-deep);
-}
-#loginScreen.hidden{display:none;}
-.login-card{
-  background:var(--panel-solid);
-  border:1px solid var(--glass-border);
-  border-radius:var(--radius);
-  padding:40px 32px;
-  width:min(400px,90vw);
-  text-align:center;
-  backdrop-filter:blur(20px);
-  animation:fadeUp .6s ease;
-}
-@keyframes fadeUp{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
-.login-card .brand-icon{
-  width:70px;height:70px;border-radius:18px;
-  background:linear-gradient(135deg,var(--cyan),var(--purple));
-  display:flex;align-items:center;justify-content:center;
-  margin:0 auto 18px;font-size:28px;font-weight:900;color:#fff;
-  box-shadow:0 8px 32px rgba(6,182,212,.3);
-}
-.login-card h2{font-size:1.3rem;font-weight:700;color:var(--text-bright);margin-bottom:4px;}
-.login-card .sub{font-size:.82rem;color:var(--text-dim);margin-bottom:28px;}
-.login-field{
-  width:100%;padding:14px 16px;margin-bottom:14px;
-  background:var(--navy-light);border:1px solid var(--glass-border);
-  border-radius:var(--radius-sm);color:var(--text-bright);
-  font-family:var(--font);font-size:.95rem;
-  outline:none;transition:var(--transition);
-}
-.login-field:focus{border-color:var(--cyan);box-shadow:0 0 0 3px var(--cyan-dim);}
-.login-field::placeholder{color:var(--text-dim);}
-select.login-field{appearance:none;cursor:pointer;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='2' fill='none'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 14px center;
-}
-.login-btn{
-  width:100%;padding:14px;margin-top:6px;
-  background:linear-gradient(135deg,var(--cyan),#0891b2);
-  border:none;border-radius:var(--radius-sm);
-  color:#fff;font-weight:700;font-size:1rem;
-  cursor:pointer;transition:var(--transition);
-}
-.login-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(6,182,212,.35);}
-.login-btn:active{transform:scale(.98);}
-.login-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
-.login-error{
-  color:var(--red);font-size:.82rem;min-height:20px;
-  margin-top:10px;transition:var(--transition);
-}
-@keyframes loginShake{0%,100%{transform:translateX(0);}20%,60%{transform:translateX(-8px);}40%,80%{transform:translateX(8px);}}
-.shake{animation:loginShake .4s ease;}
-
-/* ── Loading Screen ───────────────────────────────── */
-#ldScreen{
-  position:fixed;inset:0;z-index:9999;
-  display:flex;align-items:center;justify-content:center;
-  flex-direction:column;gap:24px;
-  background:var(--navy-deep);
-  transition:opacity .5s ease;
-}
-#ldScreen.hidden{opacity:0;pointer-events:none;}
-.ld-spinner{
-  width:48px;height:48px;border-radius:50%;
-  border:3px solid var(--glass-border);
-  border-top-color:var(--cyan);
-  animation:spin .8s linear infinite;
-}
-@keyframes spin{to{transform:rotate(360deg);}}
-.ld-text{color:var(--text-dim);font-size:.85rem;transition:var(--transition);}
-#ldBarTop{
-  position:fixed;top:0;left:0;height:3px;z-index:9998;
-  background:linear-gradient(90deg,var(--cyan),var(--purple));
-  width:0;transition:width .4s ease;
-}
-
-/* ── Top Bar ──────────────────────────────────────── */
-.top-bar{
-  position:sticky;top:0;z-index:100;
-  background:var(--panel-solid);
-  backdrop-filter:blur(20px);
-  border-bottom:1px solid var(--glass-border);
-  padding:14px 20px;
-  display:flex;align-items:center;justify-content:space-between;
-}
-.top-bar .brand{display:flex;align-items:center;gap:12px;}
-.top-bar .brand-dot{
-  width:36px;height:36px;border-radius:10px;
-  background:linear-gradient(135deg,var(--cyan),var(--purple));
-  display:flex;align-items:center;justify-content:center;
-  font-weight:900;font-size:.8rem;color:#fff;
-}
-.top-bar .brand-text h1{font-size:.95rem;font-weight:700;color:var(--text-bright);line-height:1.2;}
-.top-bar .brand-text span{font-size:.7rem;color:var(--text-dim);font-weight:400;}
-.top-bar-actions{display:flex;align-items:center;gap:10px;}
-.badge{
-  padding:4px 10px;border-radius:20px;font-size:.65rem;
-  font-weight:700;text-transform:uppercase;letter-spacing:.5px;
-}
-.badge-online{background:var(--green-dim);color:var(--green);}
-.badge-offline{background:var(--red-dim);color:var(--red);}
-.badge-gestor{background:var(--purple-dim);color:var(--purple);}
-.user-badge{
-  padding:4px 10px;border-radius:20px;font-size:.68rem;
-  font-weight:600;background:var(--cyan-dim);color:var(--cyan);
-}
-.btn-logout{
-  background:var(--red-dim);color:var(--red);
-  border:1px solid rgba(239,68,68,.2);
-  border-radius:var(--radius-sm);padding:6px 12px;
-  font-size:.72rem;font-weight:600;cursor:pointer;
-  transition:var(--transition);font-family:var(--font);
-}
-.btn-logout:hover{background:var(--red);color:#fff;}
-
-/* ── Container ────────────────────────────────────── */
-.container{max-width:1200px;margin:0 auto;padding:20px 16px 40px;position:relative;z-index:1;}
-
-/* ── Summary Cards ────────────────────────────────── */
-.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px;}
-.s-card{
-  background:var(--panel);border:1px solid var(--glass-border);
-  border-radius:var(--radius);padding:18px;
-  backdrop-filter:blur(12px);transition:var(--transition);
-}
-.s-card:hover{border-color:var(--cyan-dim);transform:translateY(-2px);}
-.s-card .label{font-size:.7rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:6px;}
-.s-card .value{font-size:1.5rem;font-weight:800;font-family:var(--mono);color:var(--cyan-bright);}
-.s-card .value.green{color:var(--green);}
-.s-card .value.amber{color:var(--amber);}
-.s-card .value.purple{color:var(--purple);}
-
-/* ── Search ───────────────────────────────────────── */
-.search-wrap{margin-bottom:20px;}
-.search-input{
-  width:100%;padding:14px 18px 14px 44px;
-  background:var(--panel);border:1px solid var(--glass-border);
-  border-radius:var(--radius);color:var(--text-bright);
-  font-family:var(--font);font-size:.92rem;
-  outline:none;transition:var(--transition);
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Ccircle cx='8' cy='8' r='6'/%3E%3Cline x1='13' y1='13' x2='17' y2='17'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:14px center;
-}
-.search-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px var(--cyan-dim);}
-.search-input::placeholder{color:var(--text-dim);}
-
-/* ── Section Titles ───────────────────────────────── */
-.section-title{
-  font-size:.78rem;font-weight:700;color:var(--text-dim);
-  text-transform:uppercase;letter-spacing:1.2px;
-  margin:28px 0 14px;padding-left:2px;
-}
-
-/* ── City Grid ────────────────────────────────────── */
-.city-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;}
-.city-card{
-  background:var(--panel);border:1px solid var(--glass-border);
-  border-radius:var(--radius);padding:20px;cursor:pointer;
-  backdrop-filter:blur(12px);transition:var(--transition);position:relative;overflow:hidden;
-}
-.city-card::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:3px;
-  background:linear-gradient(90deg,var(--cyan),var(--purple));
-  opacity:0;transition:var(--transition);
-}
-.city-card:hover{border-color:var(--cyan-dim);transform:translateY(-3px);box-shadow:0 12px 40px rgba(6,182,212,.1);}
-.city-card:hover::before{opacity:1;}
-.city-card .city-name{font-size:.92rem;font-weight:700;color:var(--text-bright);margin-bottom:4px;}
-.city-card .city-setores{font-size:.72rem;color:var(--text-dim);margin-bottom:12px;}
-.city-card .city-total{font-size:1.35rem;font-weight:800;font-family:var(--mono);color:var(--cyan-bright);}
-.city-card .city-itens{font-size:.7rem;color:var(--text-dim);margin-top:4px;}
-
-/* ── Ranking ──────────────────────────────────────── */
-.ranking-list{display:flex;flex-direction:column;gap:8px;}
-.rank-item{
-  display:flex;align-items:center;gap:12px;
-  background:var(--panel);border:1px solid var(--glass-border);
-  border-radius:var(--radius-sm);padding:12px 16px;
-  transition:var(--transition);
-}
-.rank-item:hover{border-color:var(--cyan-dim);}
-.rank-pos{
-  width:28px;height:28px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:.75rem;font-weight:800;
-  background:var(--cyan-dim);color:var(--cyan);flex-shrink:0;
-}
-.rank-pos.gold{background:rgba(250,204,21,.18);color:#facc15;}
-.rank-pos.silver{background:rgba(148,163,184,.18);color:#94a3b8;}
-.rank-pos.bronze{background:rgba(251,146,60,.18);color:#fb923c;}
-.rank-name{flex:1;font-size:.88rem;font-weight:600;color:var(--text-bright);}
-.rank-value{font-family:var(--mono);font-weight:700;font-size:.92rem;color:var(--cyan);}
-
-/* ── Sector Chart ─────────────────────────────────── */
-.sector-chart{display:flex;flex-direction:column;gap:10px;}
-.sector-bar-wrap{display:flex;align-items:center;gap:12px;}
-.sector-label{width:140px;font-size:.78rem;font-weight:600;color:var(--text);text-align:right;flex-shrink:0;}
-.sector-bar-bg{flex:1;height:28px;background:var(--navy-light);border-radius:14px;overflow:hidden;position:relative;}
-.sector-bar-fill{height:100%;border-radius:14px;transition:width .8s ease;display:flex;align-items:center;padding:0 10px;justify-content:flex-end;}
-.sector-bar-fill span{font-size:.68rem;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.4);}
-.sector-colors-0{background:linear-gradient(90deg,#06b6d4,#22d3ee);}
-.sector-colors-1{background:linear-gradient(90deg,#10b981,#34d399);}
-.sector-colors-2{background:linear-gradient(90deg,#f59e0b,#fbbf24);}
-.sector-colors-3{background:linear-gradient(90deg,#a855f7,#c084fc);}
-.sector-colors-4{background:linear-gradient(90deg,#3b82f6,#60a5fa);}
-
-/* ── Detail View ──────────────────────────────────── */
-#detailView{display:none;}
-#detailView.active{display:block;}
-#panelView.hidden{display:none;}
-.back-btn{
-  display:inline-flex;align-items:center;gap:6px;
-  background:var(--panel);border:1px solid var(--glass-border);
-  border-radius:var(--radius-sm);padding:10px 18px;
-  color:var(--cyan);font-weight:600;font-size:.85rem;
-  cursor:pointer;transition:var(--transition);margin-bottom:18px;
-  font-family:var(--font);
-}
-.back-btn:hover{background:var(--cyan-dim);border-color:var(--cyan);}
-.detail-header{
-  background:var(--panel);border:1px solid var(--glass-border);
-  border-radius:var(--radius);padding:24px;margin-bottom:20px;
-  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
-}
-.detail-header h2{font-size:1.3rem;font-weight:800;color:var(--text-bright);}
-.detail-header .total-big{font-size:1.6rem;font-weight:900;font-family:var(--mono);color:var(--cyan-bright);}
-
-.setor-block{
-  background:var(--panel);border:1px solid var(--glass-border);
-  border-radius:var(--radius);margin-bottom:16px;overflow:hidden;
-}
-.setor-block-head{
-  padding:14px 18px;font-weight:700;font-size:.88rem;
-  display:flex;align-items:center;justify-content:space-between;
-}
-.setor-block-head .st-name{color:var(--text-bright);}
-.setor-block-head .st-total{font-family:var(--mono);font-weight:700;}
-.setor-block-head.edu{background:rgba(6,182,212,.1);}.setor-block-head.edu .st-total{color:var(--cyan);}
-.setor-block-head.sau{background:rgba(16,185,129,.1);}.setor-block-head.sau .st-total{color:var(--green);}
-.setor-block-head.ass{background:rgba(245,158,11,.1);}.setor-block-head.ass .st-total{color:var(--amber);}
-.setor-block-head.adm{background:rgba(168,85,247,.1);}.setor-block-head.adm .st-total{color:var(--purple);}
-.setor-block-head.inf{background:rgba(59,130,246,.1);}.setor-block-head.inf .st-total{color:var(--blue);}
-
-.item-table{width:100%;border-collapse:collapse;font-size:.78rem;}
-.item-table th{
-  background:var(--navy-light);color:var(--text-dim);
-  padding:8px 12px;text-align:left;font-weight:600;
-  text-transform:uppercase;letter-spacing:.5px;font-size:.68rem;
-}
-.item-table td{padding:8px 12px;border-top:1px solid var(--glass-border);color:var(--text);}
-.item-table tr:hover td{background:var(--glass);}
-.status-badge{
-  padding:2px 8px;border-radius:10px;font-size:.65rem;font-weight:700;
-  text-transform:uppercase;letter-spacing:.3px;
-}
-.status-PENDENTE{background:var(--amber-dim);color:var(--amber);}
-.status-APROVADO{background:var(--green-dim);color:var(--green);}
-.status-NEGADO{background:var(--red-dim);color:var(--red);}
-.status-ENTREGUE{background:var(--cyan-dim);color:var(--cyan);}
-
-/* ── Print Button ─────────────────────────────────── */
-.print-btn{
-  display:inline-flex;align-items:center;gap:6px;
-  background:var(--panel);border:1px solid var(--glass-border);
-  border-radius:var(--radius-sm);padding:10px 18px;
-  color:var(--green);font-weight:600;font-size:.85rem;
-  cursor:pointer;transition:var(--transition);margin-top:10px;
-  font-family:var(--font);
-}
-.print-btn:hover{background:var(--green-dim);border-color:var(--green);}
-
-/* ── Print Banner & Sigs (app-style) ─────────────── */
-.print-banner{
-  display:none;text-align:center;padding:20px;
-  background:var(--panel);border:1px solid var(--glass-border);
-  border-radius:var(--radius);margin-bottom:20px;
-}
-.print-banner h2{font-size:1.1rem;font-weight:800;color:var(--cyan-bright);margin-bottom:4px;}
-.print-banner p{font-size:.78rem;color:var(--text-dim);}
-.print-sigs-app{
-  display:none;margin-top:40px;padding:30px 20px;
-  background:var(--panel);border:1px solid var(--glass-border);
-  border-radius:var(--radius);
-}
-.print-sigs-app .sig-row{display:flex;justify-content:space-around;gap:20px;flex-wrap:wrap;}
-.print-sigs-app .sig-box{text-align:center;min-width:180px;}
-.print-sigs-app .sig-line{border-top:1px solid var(--text-dim);margin-top:50px;padding-top:6px;font-size:.78rem;color:var(--text-dim);}
-.print-footer-app{
-  display:none;text-align:center;margin-top:20px;
-  font-size:.7rem;color:var(--text-dim);padding:10px;
-}
-
-/* ── No Data ──────────────────────────────────────── */
-.no-data{
-  text-align:center;padding:60px 20px;
-  color:var(--text-dim);font-size:.9rem;
-}
-.no-data .icon{font-size:3rem;margin-bottom:12px;opacity:.4;}
-
-/* ── Toast ────────────────────────────────────────── */
-.toast{
-  position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(80px);
-  background:var(--panel-solid);border:1px solid var(--glass-border);
-  border-radius:var(--radius-sm);padding:12px 24px;
-  color:var(--text-bright);font-size:.85rem;font-weight:600;
-  z-index:11000;opacity:0;transition:all .4s ease;
-  backdrop-filter:blur(20px);pointer-events:none;
-}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-
-/* ── Responsive ───────────────────────────────────── */
-@media(max-width:600px){
-  .summary{grid-template-columns:repeat(2,1fr);}
-  .city-grid{grid-template-columns:1fr;}
-  .detail-header{flex-direction:column;align-items:flex-start;}
-  .item-table{font-size:.7rem;}
-  .item-table th,.item-table td{padding:6px 8px;}
-  .sector-label{width:90px;font-size:.7rem;}
-  .print-sigs-app .sig-row{flex-direction:column;align-items:center;}
-  .top-bar{padding:12px 14px;}
-}
-
-/* ── Print ────────────────────────────────────────── */
-@media print{
-  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}
-  body{background:var(--navy-deep)!important;}
-  .bg-scene,.top-bar,.search-wrap,.back-btn,.print-btn,#panelView,.btn-logout,.badge{display:none!important;}
-  .print-banner,.print-sigs-app,.print-footer-app{display:block!important;}
-  #detailView{display:block!important;}
-  .container{padding:10px!important;max-width:100%!important;}
-  .setor-block{break-inside:avoid;page-break-inside:avoid;}
-  .setor-block-head.edu{background:rgba(6,182,212,.15)!important;}
-  .setor-block-head.sau{background:rgba(16,185,129,.15)!important;}
-  .setor-block-head.ass{background:rgba(245,158,11,.15)!important;}
-  .setor-block-head.adm{background:rgba(168,85,247,.15)!important;}
-  .setor-block-head.inf{background:rgba(59,130,246,.15)!important;}
-  .item-table th{background:var(--navy-light)!important;}
-  .print-sigs-app{break-inside:avoid;page-break-inside:avoid;}
-}
-</style>
+<title>Requisições — CRV/LAS</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23000'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='%230a84ff' font-family='Arial' font-weight='900' font-size='40'%3E📋%3C/text%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- BG Scene -->
-<div class="bg-scene"><div class="orb"></div><div class="orb"></div><div class="orb"></div></div>
+<div class="bg-scene">
+  <div class="orb"></div><div class="orb"></div><div class="orb"></div>
+</div>
 
-<!-- ══════════════ LOGIN SCREEN ══════════════ -->
+<!-- ══════════════ LOGIN ══════════════ -->
 <div id="loginScreen">
   <div class="login-card">
-    <div class="brand-icon">CV</div>
-    <h2>Painel de Requisições</h2>
-    <p class="sub">Acesso restrito — apenas gestores autorizados</p>
-
+    <div class="brand-icon">📋</div>
+    <h2>Requisições</h2>
+    <p class="sub">CRV/LAS — Controle de Requisições</p>
     <select id="loginUser" class="login-field">
-      <option value="">Selecione o usuário</option>
+      <option value="">Selecione seu nome</option>
       <option value="ALEF">Alef</option>
       <option value="CARLOS VAZ">Carlos Vaz</option>
     </select>
-
-    <input type="password" id="loginPass" class="login-field" placeholder="Senha de gestor" autocomplete="off">
-
+    <div style="position:relative; margin-bottom:14px;">
+      <input type="password" id="loginPass" class="login-field" placeholder="Sua senha" autocomplete="off" style="padding-right:48px; margin-bottom:0;">
+      <button type="button" onclick="toggleSenha()" id="eyeBtn" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1.1rem; color:rgba(235,235,245,.3);"><span id="eyeIcon">👁️</span></button>
+    </div>
     <button class="login-btn" id="loginBtn" onclick="fazerLogin()">Entrar</button>
     <div class="login-error" id="loginError"></div>
   </div>
 </div>
 
-<!-- ══════════════ LOADING SCREEN ══════════════ -->
+<!-- ══════════════ LOADING ══════════════ -->
 <div id="ldScreen" class="hidden">
   <div class="ld-spinner"></div>
-  <div class="ld-text" id="ldText">Conectando...</div>
+  <div class="ld-text" id="ldText">Sincronizando...</div>
 </div>
 <div id="ldBarTop"></div>
 
@@ -431,415 +51,82 @@ select.login-field{appearance:none;cursor:pointer;
 
   <!-- Top Bar -->
   <div class="top-bar">
-    <div class="brand">
-      <div class="brand-dot">CV</div>
-      <div class="brand-text">
-        <h1>Requisições</h1>
-        <span>Grupo Carlos Vaz</span>
+    <div class="top-bar-row1">
+      <div class="brand">
+        <div class="brand-dot">📋</div>
+        <div class="brand-text"><h1>Requisições</h1><span>CRV/LAS</span></div>
       </div>
-    </div>
-    <div class="top-bar-actions">
-      <span class="badge badge-online" id="badgeStatus">Online</span>
-      <span class="user-badge" id="userBadge"></span>
       <button class="btn-logout" onclick="logout()">Sair</button>
+    </div>
+    <div class="top-bar-row2">
+      <span class="badge badge-online" id="badgeStatus">Online</span>
+      <span class="badge badge-gestor">Gestor</span>
+      <span class="user-badge" id="userBadge"></span>
     </div>
   </div>
 
   <div class="container">
 
-    <!-- ═══════ PANEL VIEW ═══════ -->
-    <div id="panelView">
-
-      <!-- Summary -->
-      <div class="summary">
-        <div class="s-card"><div class="label">Total Geral</div><div class="value" id="sTotalGeral">—</div></div>
-        <div class="s-card"><div class="label">Cidades</div><div class="value purple" id="sCidades">—</div></div>
-        <div class="s-card"><div class="label">Total Itens</div><div class="value amber" id="sTotalItens">—</div></div>
-        <div class="s-card"><div class="label">Atualizado</div><div class="value green" id="sAtualizado" style="font-size:.85rem;">—</div></div>
+    <!-- Stats -->
+    <div class="section-label">Resumo Geral</div>
+    <div class="stats-grid">
+      <div class="stat-card blue" style="grid-column:1/-1;">
+        <span class="s-icon">💰</span>
+        <div class="s-label">Total Geral</div>
+        <div class="s-value blue" id="statTotal">R$ 0,00</div>
       </div>
+    </div>
 
-      <!-- Search -->
-      <div class="search-wrap">
-        <input type="text" class="search-input" id="searchInput" placeholder="Buscar cidade..." oninput="filtrarCidades()">
-      </div>
+    <!-- Cidades Grid -->
+    <div class="section-label">Por Cidade</div>
+    <div class="stats-grid" id="cidadesGrid"></div>
 
-      <!-- City Grid -->
-      <div class="section-title">Cidades</div>
-      <div class="city-grid" id="cityGrid"></div>
+    <!-- Filtros -->
+    <div class="section-label">Explorar Requisições</div>
+    <div class="search-wrap">
+      <input type="text" id="searchInput" class="search-field" placeholder="Buscar cidade, produto ou ID..." oninput="filtrarGeral()">
+    </div>
+    <div class="filter-row" id="filterRow">
+      <button class="filter-btn active" onclick="filtrarStatus(this,'TODOS')">Todos</button>
+      <button class="filter-btn" onclick="filtrarStatus(this,'PENDENTE')">Pendente</button>
+      <button class="filter-btn" onclick="filtrarStatus(this,'APROVADO')">Aprovado</button>
+      <button class="filter-btn" onclick="filtrarStatus(this,'NEGADO')">Negado</button>
+      <button class="filter-btn" onclick="filtrarStatus(this,'ENTREGUE')">Entregue</button>
+    </div>
 
-      <!-- Ranking -->
-      <div class="section-title">Ranking por Valor</div>
-      <div class="ranking-list" id="rankingList"></div>
+    <!-- Lista de Cidades -->
+    <div id="cidadesList"></div>
 
-      <!-- Sector Chart -->
-      <div class="section-title">Distribuição por Setor</div>
-      <div class="sector-chart" id="sectorChart"></div>
+    <!-- Timestamp -->
+    <p class="sync-time" id="syncTime"></p>
+  </div>
+</div>
 
-    </div><!-- /panelView -->
+<!-- ══════════════ MODAL: DETALHE CIDADE ══════════════ -->
+<div class="modal-full" id="cidadeModal">
+  <div class="modal-bar">
+    <h2 id="cidadeModalTitle">🏙️ Cidade</h2>
+    <button class="modal-close" onclick="fecharCidade()">✕</button>
+  </div>
+  <div class="modal-body" id="cidadeBody"></div>
+</div>
 
-    <!-- ═══════ DETAIL VIEW ═══════ -->
-    <div id="detailView">
-
-      <!-- Print Banner -->
-      <div class="print-banner" id="printBanner">
-        <h2>GRUPO CARLOS VAZ — Relatório de Requisições</h2>
-        <p id="printBannerSub"></p>
-      </div>
-
-      <button class="back-btn" onclick="voltarPainel()">← Voltar</button>
-
-      <div id="detailContent"></div>
-
-      <button class="print-btn" onclick="window.print()">🖨️ Imprimir Relatório</button>
-
-      <!-- Print Signatures -->
-      <div class="print-sigs-app">
-        <div class="sig-row">
-          <div class="sig-box"><div class="sig-line">Gestor Responsável</div></div>
-          <div class="sig-box"><div class="sig-line">Diretor</div></div>
-          <div class="sig-box"><div class="sig-line">Financeiro</div></div>
-        </div>
-      </div>
-
-      <!-- Print Footer -->
-      <div class="print-footer-app">Grupo Carlos Vaz — Documento gerado pelo sistema de requisições</div>
-
-    </div><!-- /detailView -->
-
-  </div><!-- /container -->
-</div><!-- /mainApp -->
+<!-- Success Overlay -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-icon" id="successIcon">✅</div>
+  <div class="success-msg" id="successMsg">Dados carregados!</div>
+  <div class="success-detail" id="successDetail"></div>
+</div>
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
-<!-- ══════════════ JAVASCRIPT ══════════════ -->
+<!-- Service Worker -->
 <script>
-// ── Config ───────────────────────────────────────────
-var API_URL = 'https://script.google.com/macros/s/AKfycbzXuhmVkTDsMGotRuG3-i-YYnx0_nLFWDWjb7hNsTZ2HUg5SzWKDK6jbad_HqOEsnxt/exec';
-var CACHE_KEY = 'cv_req_cache';
-var SESSION_KEY = 'cv_req_sessao';
-
-// Credenciais offline (fallback)
-var CREDS_OFFLINE = {
-  'ALEF':       'GP.Carlos2026',
-  'CARLOS VAZ': 'GP.Carlos2026'
-};
-
-var sessao = null;
-var dadosAtuais = null;
-
-// ── Init ─────────────────────────────────────────────
-(function(){
-  var s = localStorage.getItem(SESSION_KEY);
-  if(s){
-    try{
-      sessao = JSON.parse(s);
-      if(sessao && sessao.nome){
-        esconderLogin();
-        iniciarApp();
-        return;
-      }
-    }catch(e){}
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
   }
-  // Mostra login
-  document.getElementById('loginScreen').classList.remove('hidden');
-})();
-
-// ── Login ────────────────────────────────────────────
-function fazerLogin(){
-  var user = document.getElementById('loginUser').value.trim();
-  var pass = document.getElementById('loginPass').value.trim();
-  var errEl = document.getElementById('loginError');
-  var btn = document.getElementById('loginBtn');
-
-  errEl.textContent = '';
-  if(!user || !pass){ errEl.textContent = 'Preencha todos os campos'; shakeLogin(); return; }
-
-  btn.disabled = true;
-  btn.textContent = 'Verificando...';
-
-  // Tentar online
-  fetch(API_URL, {
-    method: 'POST',
-    headers: {'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify({ acao:'login', usuario:user, senha:pass }),
-    redirect: 'follow'
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(d){
-    if(d.status === 'ok'){
-      sessao = { nome:d.nome, nivel:d.nivel, senha:pass };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(sessao));
-      esconderLogin();
-      iniciarApp();
-    } else {
-      errEl.textContent = d.msg || 'Credenciais inválidas';
-      shakeLogin();
-    }
-  })
-  .catch(function(){
-    // Fallback offline
-    if(CREDS_OFFLINE[user] && CREDS_OFFLINE[user] === pass){
-      sessao = { nome:user, nivel:'gestor', senha:pass };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(sessao));
-      esconderLogin();
-      iniciarApp();
-    } else {
-      errEl.textContent = 'Sem conexão e credenciais inválidas';
-      shakeLogin();
-    }
-  })
-  .finally(function(){
-    btn.disabled = false;
-    btn.textContent = 'Entrar';
-  });
-}
-
-function shakeLogin(){
-  var card = document.querySelector('.login-card');
-  card.classList.add('shake');
-  setTimeout(function(){ card.classList.remove('shake'); }, 500);
-}
-
-function esconderLogin(){
-  document.getElementById('loginScreen').classList.add('hidden');
-}
-
-function logout(){
-  sessao = null;
-  localStorage.removeItem(SESSION_KEY);
-  localStorage.removeItem(CACHE_KEY);
-  document.getElementById('mainApp').style.display = 'none';
-  document.getElementById('loginScreen').classList.remove('hidden');
-  document.getElementById('loginUser').value = '';
-  document.getElementById('loginPass').value = '';
-  document.getElementById('loginError').textContent = '';
-}
-
-// Enter key on password field
-document.addEventListener('DOMContentLoaded', function(){
-  var passField = document.getElementById('loginPass');
-  if(passField){
-    passField.addEventListener('keydown', function(e){
-      if(e.key === 'Enter') fazerLogin();
-    });
-  }
-});
-
-// ── App Init ─────────────────────────────────────────
-function iniciarApp(){
-  document.getElementById('ldScreen').classList.remove('hidden');
-  document.getElementById('mainApp').style.display = 'block';
-
-  document.getElementById('userBadge').textContent = sessao.nome;
-
-  loadSequence([
-    {t:'Autenticando gestor...',p:20},
-    {t:'Conectando à planilha...',p:50},
-    {t:'Carregando requisições...',p:80},
-    {t:'Pronto!',p:100}
-  ], function(){
-    document.getElementById('ldScreen').classList.add('hidden');
-    atualizarDados();
-  });
-}
-
-function loadSequence(steps, cb){
-  var i = 0;
-  function next(){
-    if(i >= steps.length){ setTimeout(cb, 400); return; }
-    document.getElementById('ldText').textContent = steps[i].t;
-    document.getElementById('ldBarTop').style.width = steps[i].p + '%';
-    i++;
-    setTimeout(next, 500);
-  }
-  next();
-}
-
-// ── Fetch Data ───────────────────────────────────────
-function atualizarDados(){
-  var senha = sessao ? sessao.senha : '';
-  var url = API_URL + '?acao=tudo&senha=' + encodeURIComponent(senha);
-
-  fetch(url)
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if(d.erro){
-        toast(d.erro);
-        if(d.autenticado === false){ logout(); }
-        return;
-      }
-      dadosAtuais = d;
-      localStorage.setItem(CACHE_KEY, JSON.stringify(d));
-      setBadge(true);
-      renderPainel(d);
-    })
-    .catch(function(){
-      setBadge(false);
-      var c = localStorage.getItem(CACHE_KEY);
-      if(c){
-        dadosAtuais = JSON.parse(c);
-        renderPainel(dadosAtuais);
-        toast('Modo offline — dados do cache');
-      }
-    });
-}
-
-function setBadge(online){
-  var b = document.getElementById('badgeStatus');
-  b.textContent = online ? 'Online' : 'Offline';
-  b.className = 'badge ' + (online ? 'badge-online' : 'badge-offline');
-}
-
-// ── Format ───────────────────────────────────────────
-function fmt(v){
-  return 'R$ ' + (parseFloat(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-}
-
-// ── Render Panel ─────────────────────────────────────
-function renderPainel(d){
-  var totalItens = 0;
-  d.cidades.forEach(function(c){ c.setores.forEach(function(s){ totalItens += s.itens.length; }); });
-
-  document.getElementById('sTotalGeral').textContent = fmt(d.totalGeral);
-  document.getElementById('sCidades').textContent = d.cidades.length;
-  document.getElementById('sTotalItens').textContent = totalItens;
-  document.getElementById('sAtualizado').textContent = d.timestamp || '—';
-
-  // City cards
-  var grid = document.getElementById('cityGrid');
-  grid.innerHTML = '';
-  d.cidades.forEach(function(c){
-    var itens = 0;
-    c.setores.forEach(function(s){ itens += s.itens.length; });
-    var card = document.createElement('div');
-    card.className = 'city-card';
-    card.setAttribute('data-cidade', c.nome.toLowerCase());
-    card.innerHTML =
-      '<div class="city-name">' + c.nome + '</div>' +
-      '<div class="city-setores">' + c.setores.length + ' setores</div>' +
-      '<div class="city-total">' + fmt(c.totalCidade) + '</div>' +
-      '<div class="city-itens">' + itens + ' itens</div>';
-    card.onclick = function(){ abrirCidade(c.nome); };
-    grid.appendChild(card);
-  });
-
-  // Ranking
-  var sorted = d.cidades.slice().sort(function(a,b){ return b.totalCidade - a.totalCidade; });
-  var rl = document.getElementById('rankingList');
-  rl.innerHTML = '';
-  sorted.forEach(function(c,i){
-    var cls = i===0?'gold':i===1?'silver':i===2?'bronze':'';
-    var item = document.createElement('div');
-    item.className = 'rank-item';
-    item.innerHTML =
-      '<div class="rank-pos ' + cls + '">' + (i+1) + '</div>' +
-      '<div class="rank-name">' + c.nome + '</div>' +
-      '<div class="rank-value">' + fmt(c.totalCidade) + '</div>';
-    rl.appendChild(item);
-  });
-
-  // Sector chart
-  var setorTotais = {};
-  d.cidades.forEach(function(c){
-    c.setores.forEach(function(s){
-      setorTotais[s.nome] = (setorTotais[s.nome]||0) + s.totalSetor;
-    });
-  });
-  var maxSetor = 0;
-  for(var k in setorTotais) if(setorTotais[k]>maxSetor) maxSetor = setorTotais[k];
-
-  var sc = document.getElementById('sectorChart');
-  sc.innerHTML = '';
-  var setorNomes = Object.keys(setorTotais);
-  setorNomes.forEach(function(nome,i){
-    var pct = maxSetor > 0 ? (setorTotais[nome]/maxSetor*100) : 0;
-    var wrap = document.createElement('div');
-    wrap.className = 'sector-bar-wrap';
-    wrap.innerHTML =
-      '<div class="sector-label">' + nome + '</div>' +
-      '<div class="sector-bar-bg"><div class="sector-bar-fill sector-colors-' + (i%5) + '" style="width:' + pct + '%"><span>' + fmt(setorTotais[nome]) + '</span></div></div>';
-    sc.appendChild(wrap);
-  });
-}
-
-// ── Search / Filter ──────────────────────────────────
-function filtrarCidades(){
-  var q = document.getElementById('searchInput').value.toLowerCase();
-  var cards = document.querySelectorAll('.city-card');
-  cards.forEach(function(c){
-    c.style.display = c.getAttribute('data-cidade').indexOf(q) > -1 ? '' : 'none';
-  });
-}
-
-// ── City Detail ──────────────────────────────────────
-function abrirCidade(nome){
-  if(!dadosAtuais) return;
-  var cidade = null;
-  dadosAtuais.cidades.forEach(function(c){ if(c.nome === nome) cidade = c; });
-  if(!cidade) return;
-
-  document.getElementById('panelView').classList.add('hidden');
-  document.getElementById('detailView').classList.add('active');
-
-  // Print banner
-  document.getElementById('printBannerSub').textContent = cidade.nome + ' — Gerado em ' + (dadosAtuais.timestamp||'');
-
-  var setorClasses = {'EDUCAÇÃO':'edu','SAÚDE':'sau','ASSISTÊNCIA SOCIAL':'ass','ADMINISTRAÇÃO':'adm','INFRAESTRUTURA':'inf'};
-
-  var html = '<div class="detail-header"><h2>' + cidade.nome + '</h2><div class="total-big">' + fmt(cidade.totalCidade) + '</div></div>';
-
-  cidade.setores.forEach(function(s){
-    var cls = setorClasses[s.nome] || 'edu';
-    html += '<div class="setor-block">';
-    html += '<div class="setor-block-head ' + cls + '">';
-    html += '<span class="st-name">' + s.nome + '</span>';
-    html += '<span class="st-total">' + fmt(s.totalSetor) + '</span>';
-    html += '</div>';
-
-    if(s.itens.length > 0){
-      html += '<table class="item-table"><thead><tr>';
-      html += '<th>Nº</th><th>ID</th><th>Data</th><th>Descrição</th><th>V. Unit</th><th>Qtd</th><th>Total</th><th>Status</th>';
-      html += '</tr></thead><tbody>';
-      s.itens.forEach(function(item){
-        var stCls = 'status-' + (item.status||'PENDENTE').replace(/\s/g,'');
-        html += '<tr>';
-        html += '<td>' + (item.num||'') + '</td>';
-        html += '<td>' + (item.id||'') + '</td>';
-        html += '<td>' + (item.data||'') + '</td>';
-        html += '<td>' + (item.descricao||'') + '</td>';
-        html += '<td>' + fmt(item.valorUnit) + '</td>';
-        html += '<td>' + (item.quantidade||0) + '</td>';
-        html += '<td>' + fmt(item.total) + '</td>';
-        html += '<td><span class="status-badge ' + stCls + '">' + (item.status||'PENDENTE') + '</span></td>';
-        html += '</tr>';
-      });
-      html += '</tbody></table>';
-    } else {
-      html += '<div style="padding:14px 18px;color:var(--text-dim);font-size:.82rem;">Nenhum item registrado</div>';
-    }
-
-    html += '</div>';
-  });
-
-  document.getElementById('detailContent').innerHTML = html;
-  window.scrollTo(0,0);
-}
-
-function voltarPainel(){
-  document.getElementById('detailView').classList.remove('active');
-  document.getElementById('panelView').classList.remove('hidden');
-  window.scrollTo(0,0);
-}
-
-// ── Toast ────────────────────────────────────────────
-function toast(msg){
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(function(){ t.classList.remove('show'); }, 3000);
-}
-
 </script>
+<script src="app.js"></script>
 </body>
 </html>
