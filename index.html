@@ -24,7 +24,7 @@
   <div class="login-card">
     <div class="brand-icon">📋</div>
     <h2>Requisições</h2>
-    <p class="sub">CRV/LAS — Controle de Requisições</p>
+    <p class="sub">CRV/LAS — Dashboard Executivo</p>
     <select id="loginUser" class="login-field">
       <option value="">Selecione seu nome</option>
       <option value="ALEF">Alef</option>
@@ -42,19 +42,18 @@
 <!-- ══════════════ LOADING ══════════════ -->
 <div id="ldScreen" class="hidden">
   <div class="ld-spinner"></div>
-  <div class="ld-text" id="ldText">Sincronizando...</div>
+  <div class="ld-text" id="ldText">Analisando dados...</div>
 </div>
 <div id="ldBarTop"></div>
 
 <!-- ══════════════ MAIN APP ══════════════ -->
 <div id="mainApp" style="display:none;">
 
-  <!-- Top Bar -->
   <div class="top-bar">
     <div class="top-bar-row1">
       <div class="brand">
         <div class="brand-dot">📋</div>
-        <div class="brand-text"><h1>Requisições</h1><span>CRV/LAS</span></div>
+        <div class="brand-text"><h1>Requisições</h1><span>Dashboard</span></div>
       </div>
       <button class="btn-logout" onclick="logout()">Sair</button>
     </div>
@@ -67,37 +66,37 @@
 
   <div class="container">
 
-    <!-- Stats -->
-    <div class="section-label">Resumo Geral</div>
+    <div class="section-label">Orçamento Total</div>
     <div class="stats-grid">
       <div class="stat-card blue" style="grid-column:1/-1;">
         <span class="s-icon">💰</span>
-        <div class="s-label">Total Geral</div>
+        <div class="s-label">Total Consumido</div>
         <div class="s-value blue" id="statTotal">R$ 0,00</div>
       </div>
     </div>
 
+    <!-- Switch de Exportação -->
+    <div class="relatorio-switch-row" style="margin-bottom: 24px;">
+      <span class="relatorio-switch-label">Resumo para WhatsApp</span>
+      <div class="apple-switch" id="switchRelatorio" onclick="toggleRelatorio()"><div class="apple-switch-track"><div class="apple-switch-thumb"></div></div></div>
+    </div>
+
     <!-- Cidades Grid -->
-    <div class="section-label">Por Cidade</div>
+    <div class="section-label">Detalhes por Cidade (Clique para abrir)</div>
     <div class="stats-grid" id="cidadesGrid"></div>
 
-    <!-- Filtros -->
-    <div class="section-label">Explorar Requisições</div>
-    <div class="search-wrap">
-      <input type="text" id="searchInput" class="search-field" placeholder="Buscar cidade, produto ou ID..." oninput="filtrarGeral()">
-    </div>
-    <div class="filter-row" id="filterRow">
-      <button class="filter-btn active" onclick="filtrarStatus(this,'TODOS')">Todos</button>
-      <button class="filter-btn" onclick="filtrarStatus(this,'PENDENTE')">Pendente</button>
-      <button class="filter-btn" onclick="filtrarStatus(this,'APROVADO')">Aprovado</button>
-      <button class="filter-btn" onclick="filtrarStatus(this,'NEGADO')">Negado</button>
-      <button class="filter-btn" onclick="filtrarStatus(this,'ENTREGUE')">Entregue</button>
+    <!-- RANKING DE CIDADES -->
+    <div class="section-label" style="margin-top:10px;">🏆 Ranking de Gastos por Cidade</div>
+    <div class="ranking-card" id="rankingCidades">
+      <!-- Injetado via JS -->
     </div>
 
-    <!-- Lista de Cidades -->
-    <div id="cidadesList"></div>
+    <!-- RANKING DE SETORES -->
+    <div class="section-label">📈 Consumo Global por Setor</div>
+    <div class="ranking-card" id="rankingSetores">
+      <!-- Injetado via JS -->
+    </div>
 
-    <!-- Timestamp -->
     <p class="sync-time" id="syncTime"></p>
   </div>
 </div>
@@ -111,22 +110,15 @@
   <div class="modal-body" id="cidadeBody"></div>
 </div>
 
-<!-- Success Overlay -->
+<!-- Overlays -->
 <div class="success-overlay" id="successOverlay">
   <div class="success-icon" id="successIcon">✅</div>
-  <div class="success-msg" id="successMsg">Dados carregados!</div>
+  <div class="success-msg" id="successMsg">Ok!</div>
   <div class="success-detail" id="successDetail"></div>
 </div>
-
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
-<!-- Service Worker -->
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(function(){});
-  }
-</script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(function(){}); }</script>
 <script src="app.js"></script>
 </body>
 </html>
