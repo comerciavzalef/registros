@@ -1,624 +1,309 @@
-/* ============================================================
-   REQUISIÇÕES DIGITAL — APP.JS v2.2
-   Apple-Inspired Design · Grupo Carlos Vaz
-   ============================================================ */
+// ============================================================
+//  REQUISIÇÕES DIGITAL — app.js v3.0 (Sincronizado)
+//  Grupo Carlos Vaz — CRV/LAS
+// ============================================================
 
-// ── API ──────────────────────────────────────────────────────
 var API_URL = 'https://script.google.com/macros/s/AKfycbzXuhmVkTDsMGotRuG3-i-YYnx0_nLFWDWjb7hNsTZ2HUg5SzWKDK6jbad_HqOEsnxt/exec';
+var SESSION_KEY = 'cv_requisicoes_sessao';
 
-// ── STATE ────────────────────────────────────────────────────
-var currentUser = null;
-var currentNivel = null;
+var CREDS_OFFLINE = {
+  'ALEF': 'GP.Carlos2026',
+  'CARLOS VAZ': 'GP.Carlos2026'
+};
+
+var sessao = null;
 var dadosCompletos = null;
-var cidadeSelecionada = null;
-var setorSelecionado = null;
+var filtroStatusAtual = 'TODOS';
 var autoRefreshTimer = null;
-var lastSync = null;
-
-// ── CIDADES & SETORES ────────────────────────────────────────
-var CIDADES = ['Ibicuí', 'Nova Canaã', 'Boa Nova', 'Dário Meira', 'Floresta Azul'];
-var SETORES = ['EDUCAÇÃO', 'SAÚDE', 'ASSISTÊNCIA SOCIAL', 'ADMINISTRAÇÃO', 'INFRAESTRUTURA'];
 
 // ══════════════════════════════════════════════════════════════
-//  INIT
+//  INIT & LOGIN
 // ══════════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', function () {
-    initApp();
-});
-
-function initApp() {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(function () { });
-    }
-
-    var saved = localStorage.getItem('requisicoes_session');
-    if (saved) {
-        try {
-            var s = JSON.parse(saved);
-            if (s && s.user && s.nivel) {
-                currentUser = s.user;
-                currentNivel = s.nivel;
-                showApp();
-                return;
-            }
-        } catch (e) { }
-    }
-
-    showLogin();
-}
-
-// ══════════════════════════════════════════════════════════════
-//  LOGIN / LOGOUT
-// ══════════════════════════════════════════════════════════════
-function showLogin() {
-    document.getElementById('loginScreen').classList.add('active');
-    document.getElementById('appScreen').classList.remove('active');
-    var lo = document.getElementById('loadingOverlay');
-    if (lo) lo.classList.remove('active');
-}
-
-function showApp() {
-    document.getElementById('loginScreen').classList.remove('active');
-    document.getElementById('appScreen').classList.add('active');
-
-    var el = document.getElementById('userName');
-    if (el) el.textContent = currentUser;
-
-    var badge = document.getElementById('userBadge');
-    if (badge) {
-        badge.textContent = currentNivel === 'gestor' ? 'Gestor' : 'Colaborador';
-        badge.className = 'user-badge ' + (currentNivel === 'gestor' ? 'gestor' : 'colab');
-    }
-
-    updateSyncTime();
-    carregarDados();
-
-    clearInterval(autoRefreshTimer);
-    autoRefreshTimer = setInterval(function () {
-        carregarDados();
-    }, 300000);
-}
+(function () {
+  var s = localStorage.getItem(SESSION_KEY);
+  if (s) { try { sessao = JSON.parse(s); if (sessao && sessao.nome) { esconderLogin(); iniciarApp(); return; } } catch (e) { } }
+})();
 
 function toggleSenha() {
-    var inp = document.getElementById('loginPass');
-    var icon = document.getElementById('eyeIcon');
-    if (!inp) return;
-    if (inp.type === 'password') {
-        inp.type = 'text';
-        if (icon) icon.textContent = '🙈';
-    } else {
-        inp.type = 'password';
-        if (icon) icon.textContent = '👁️';
-    }
+  var input = document.getElementById('loginPass');
+  var icon = document.getElementById('eyeIcon');
+  if (input.type === 'password') { input.type = 'text'; icon.textContent = '🙈'; } else { input.type = 'password'; icon.textContent = '👁️'; }
 }
 
 function fazerLogin() {
-    var usuario = (document.getElementById('loginUser').value || '').trim().toUpperCase();
-    var senha = (document.getElementById('loginPass').value || '').trim();
+  var user = document.getElementById('loginUser').value.trim().toUpperCase();
+  var pass = document.getElementById('loginPass').value.trim();
+  var err = document.getElementById('loginError');
+  var btn = document.getElementById('loginBtn');
+  
+  err.textContent = '';
+  if (!user || !pass) { err.textContent = 'Preencha todos os campos'; shakeLogin(); return; }
+  
+  btn.disabled = true; btn.textContent = 'Verificando...';
 
-    if (!usuario || !senha) {
-        mostrarToast('Preencha usuário e senha', 'error');
-        return;
-    }
-
-    var btn = document.getElementById('loginBtn');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
-    }
-
-    fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ acao: 'login', usuario: usuario, senha: senha }),
-        redirect: 'follow'
-    })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-            if (d.status === 'ok') {
-                currentUser = d.nome || usuario;
-                currentNivel = d.nivel || 'colaborador';
-
-                localStorage.setItem('requisicoes_session', JSON.stringify({
-                    user: currentUser,
-                    nivel: currentNivel
-                }));
-
-                mostrarToast('Bem-vindo, ' + currentUser, 'success');
-                showApp();
-            } else {
-                mostrarToast(d.msg || d.mensagem || 'Credenciais inválidas', 'error');
-            }
-        })
-        .catch(function () {
-            mostrarToast('Erro de conexão', 'error');
-        })
-        .finally(function () {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = 'Entrar';
-            }
-        });
+  fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ acao: 'login', usuario: user, senha: pass }), redirect: 'follow' })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.status === 'ok') { 
+        sessao = { nome: d.nome, nivel: d.nivel, senha: pass }; 
+        localStorage.setItem(SESSION_KEY, JSON.stringify(sessao)); 
+        esconderLogin(); iniciarApp(); 
+      } else { 
+        err.textContent = d.msg || 'Credenciais inválidas'; shakeLogin(); 
+      }
+    }).catch(function () {
+      if (CREDS_OFFLINE[user] && CREDS_OFFLINE[user] === pass) { 
+        sessao = { nome: user, nivel: 'gestor', senha: pass }; 
+        localStorage.setItem(SESSION_KEY, JSON.stringify(sessao)); 
+        esconderLogin(); iniciarApp(); 
+      } else { 
+        err.textContent = 'Sem conexão e credenciais inválidas'; shakeLogin(); 
+      }
+    }).finally(function () { btn.disabled = false; btn.textContent = 'Entrar'; });
 }
+
+function shakeLogin() { var c = document.querySelector('.login-card'); c.classList.add('shake'); setTimeout(function () { c.classList.remove('shake'); }, 500); }
+function esconderLogin() { document.getElementById('loginScreen').classList.add('hidden'); }
 
 function logout() {
-    currentUser = null;
-    currentNivel = null;
-    dadosCompletos = null;
-    cidadeSelecionada = null;
-    setorSelecionado = null;
-    lastSync = null;
-
-    clearInterval(autoRefreshTimer);
-    localStorage.removeItem('requisicoes_session');
-
-    var u = document.getElementById('loginUser');
-    var s = document.getElementById('loginPass');
-    if (u) u.value = '';
-    if (s) { s.value = ''; s.type = 'password'; }
-
-    showLogin();
+  sessao = null; dadosCompletos = null; localStorage.removeItem(SESSION_KEY);
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  document.getElementById('mainApp').style.display = 'none'; 
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('loginUser').value = ''; 
+  document.getElementById('loginPass').value = ''; 
+  document.getElementById('loginPass').type = 'password';
+  document.getElementById('eyeIcon').textContent = '👁️'; 
+  document.getElementById('loginError').textContent = '';
 }
 
+// Escuta a tecla Enter no input de senha
+document.addEventListener('DOMContentLoaded', function() {
+  var passField = document.getElementById('loginPass');
+  if(passField) passField.addEventListener('keydown', function(e){ if(e.key === 'Enter') fazerLogin(); });
+});
+
 // ══════════════════════════════════════════════════════════════
-//  CARREGAR DADOS
+//  CARREGAR DADOS & RENDERIZAÇÃO
 // ══════════════════════════════════════════════════════════════
+function iniciarApp() {
+  document.getElementById('ldScreen').classList.remove('hidden');
+  document.getElementById('mainApp').style.display = 'block';
+  document.getElementById('userBadge').textContent = sessao.nome;
+  carregarDados();
+  autoRefreshTimer = setInterval(carregarDados, 300000); // Atualiza a cada 5 min
+}
+
 function carregarDados() {
-    var loading = document.getElementById('loadingOverlay');
-    if (loading) loading.classList.add('active');
-
-    var url = API_URL + '?senha=GP.Carlos2026&dados=todos';
-
-    fetch(url)
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-            dadosCompletos = d;
-            lastSync = new Date();
-            updateSyncTime();
-            renderDashboard();
-        })
-        .catch(function (err) {
-            console.error('Erro ao carregar dados:', err);
-            mostrarToast('Erro ao carregar dados', 'error');
-        })
-        .finally(function () {
-            if (loading) loading.classList.remove('active');
-        });
-}
-
-function updateSyncTime() {
-    var el = document.getElementById('syncTime');
-    if (!el) return;
-    if (!lastSync) {
-        el.textContent = 'Carregando...';
-        return;
-    }
-    var h = String(lastSync.getHours()).padStart(2, '0');
-    var m = String(lastSync.getMinutes()).padStart(2, '0');
-    el.textContent = 'Atualizado às ' + h + ':' + m;
-}
-
-// ══════════════════════════════════════════════════════════════
-//  HELPER: pega array de cidades do JSON (compatível com ambos)
-// ══════════════════════════════════════════════════════════════
-function getCidadesArray() {
-    if (!dadosCompletos) return [];
-    return dadosCompletos.cidades || dadosCompletos.dados || [];
-}
-
-function getCidadeNome(cidade) {
-    return cidade.nome || cidade.cidade || '';
-}
-
-function getCidadeTotal(cidade) {
-    return cidade.totalCidade || cidade.total || 0;
-}
-
-// ══════════════════════════════════════════════════════════════
-//  RENDER DASHBOARD
-// ══════════════════════════════════════════════════════════════
-function renderDashboard() {
-    if (!dadosCompletos) return;
-
-    cidadeSelecionada = null;
-    setorSelecionado = null;
-
-    var cidadesView = document.getElementById('cidadesView');
-    var detalheView = document.getElementById('detalheView');
-    if (cidadesView) cidadesView.style.display = '';
-    if (detalheView) detalheView.style.display = 'none';
-
-    renderStats();
-    renderCidadeCards();
-}
-
-function renderStats() {
-    var dados = getCidadesArray();
-    if (!dados.length) return;
-
-    var totalGeral = dadosCompletos.totalGeral || 0;
-    var totalItens = 0;
-    var cidadesComDados = 0;
-    var setoresUnicos = {};
-
-    dados.forEach(function (cidade) {
-        var cidadeTotal = getCidadeTotal(cidade);
-        if (cidadeTotal > 0) cidadesComDados++;
-
-        var setores = cidade.setores || [];
-        setores.forEach(function (setor) {
-            setoresUnicos[setor.nome] = true;
-            if (setor.itens) {
-                totalItens += setor.itens.length;
-            }
-        });
-    });
-
-    var totalSetores = Object.keys(setoresUnicos).length;
-
-    var elTotal = document.getElementById('statTotal');
-    var elCidades = document.getElementById('statCidades');
-    var elSetores = document.getElementById('statSetores');
-    var elItens = document.getElementById('statItens');
-
-    if (elTotal) elTotal.textContent = formatCurrency(totalGeral);
-    if (elCidades) elCidades.textContent = cidadesComDados + '/' + CIDADES.length;
-    if (elSetores) elSetores.textContent = totalSetores;
-    if (elItens) elItens.textContent = totalItens;
-}
-
-function renderCidadeCards() {
-    var container = document.getElementById('cidadeCards');
-    if (!container) return;
-
-    var dados = getCidadesArray();
-    container.innerHTML = '';
-
-    dados.forEach(function (cidade) {
-        var card = document.createElement('div');
-        card.className = 'cidade-card';
-        var cidadeNome = getCidadeNome(cidade);
-        card.onclick = function () { abrirCidade(cidadeNome); };
-
-        var numSetores = cidade.setores ? cidade.setores.length : 0;
-        var numItens = 0;
-        if (cidade.setores) {
-            cidade.setores.forEach(function (s) {
-                if (s.itens) numItens += s.itens.length;
-            });
-        }
-
-        var cidadeTotal = getCidadeTotal(cidade);
-
-        card.innerHTML =
-            '<div class="cidade-card-header">' +
-            '<div class="cidade-card-icon"><i class="fas fa-city"></i></div>' +
-            '<div class="cidade-card-info">' +
-            '<h3 class="cidade-card-name">' + escapeHtml(cidadeNome) + '</h3>' +
-            '<span class="cidade-card-meta">' + numSetores + ' setores · ' + numItens + ' itens</span>' +
-            '</div>' +
-            '<div class="cidade-card-arrow"><i class="fas fa-chevron-right"></i></div>' +
-            '</div>' +
-            '<div class="cidade-card-footer">' +
-            '<span class="cidade-card-total">' + formatCurrency(cidadeTotal) + '</span>' +
-            '</div>';
-
-        container.appendChild(card);
+  fetch(API_URL + '?senha=GP.Carlos2026&dados=todos')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+       document.getElementById('ldScreen').classList.add('hidden');
+       dadosCompletos = d;
+       renderPainel();
+       var hoje = new Date();
+       document.getElementById('syncTime').textContent = 'Atualizado às ' + String(hoje.getHours()).padStart(2,'0') + ':' + String(hoje.getMinutes()).padStart(2,'0');
+       setBadge(true);
+    })
+    .catch(function(e) {
+       document.getElementById('ldScreen').classList.add('hidden');
+       toast('Aviso: Operando offline ou com erro de conexão');
+       setBadge(false);
     });
 }
 
-// ══════════════════════════════════════════════════════════════
-//  DETALHE CIDADE
-// ══════════════════════════════════════════════════════════════
-function abrirCidade(nomeCidade) {
-    if (!dadosCompletos) return;
-
-    var dados = getCidadesArray();
-    cidadeSelecionada = null;
-
-    dados.forEach(function (c) {
-        var nome = getCidadeNome(c);
-        if (nome === nomeCidade) cidadeSelecionada = c;
-    });
-
-    if (!cidadeSelecionada) {
-        mostrarToast('Cidade não encontrada', 'error');
-        return;
-    }
-
-    setorSelecionado = null;
-
-    var cidadesView = document.getElementById('cidadesView');
-    var detalheView = document.getElementById('detalheView');
-    if (cidadesView) cidadesView.style.display = 'none';
-    if (detalheView) detalheView.style.display = '';
-
-    var titleEl = document.getElementById('detalheCidadeNome');
-    var totalEl = document.getElementById('detalheCidadeTotal');
-    if (titleEl) titleEl.textContent = getCidadeNome(cidadeSelecionada);
-    if (totalEl) totalEl.textContent = formatCurrency(getCidadeTotal(cidadeSelecionada));
-
-    renderSetorFilter();
-    renderSetores();
+function setBadge(on) { 
+  var b = document.getElementById('badgeStatus'); 
+  b.textContent = on ? 'Online' : 'Offline'; 
+  b.className = 'badge ' + (on ? 'badge-online' : 'badge-offline'); 
 }
 
-function voltarCidades() {
-    cidadeSelecionada = null;
-    setorSelecionado = null;
+function renderPainel() {
+  if(!dadosCompletos || !dadosCompletos.cidades) return;
+  var grid = document.getElementById('cidadesGrid');
+  var html = '';
+  var totalGeral = 0;
 
-    var cidadesView = document.getElementById('cidadesView');
-    var detalheView = document.getElementById('detalheView');
-    if (cidadesView) cidadesView.style.display = '';
-    if (detalheView) detalheView.style.display = 'none';
+  // Monta os Cards das Cidades
+  dadosCompletos.cidades.forEach(function(cid) {
+     totalGeral += cid.total;
+     html += '<div class="cidade-card" onclick="abrirCidade(\'' + escapeHtml(cid.nome) + '\')">';
+     html += '<div class="cidade-icon">🏙️</div>';
+     html += '<div class="cidade-info">';
+     html += '<div class="cidade-nome">' + escapeHtml(cid.nome) + '</div>';
+     html += '<div class="cidade-meta">' + cid.setores.length + ' setores · ' + cid.itens + ' itens</div>';
+     html += '</div>';
+     html += '<div class="cidade-valor">' + formatCurrency(cid.total) + '</div>';
+     html += '</div>';
+  });
+
+  grid.innerHTML = html;
+  document.getElementById('statTotal').textContent = formatCurrency(totalGeral);
+
+  // Renderiza a lista corrida de requisições debaixo dos cards
+  renderListaGeral();
 }
 
-// ══════════════════════════════════════════════════════════════
-//  SETOR FILTER
-// ══════════════════════════════════════════════════════════════
-function renderSetorFilter() {
-    var container = document.getElementById('setorFilter');
-    if (!container || !cidadeSelecionada) return;
+function renderListaGeral() {
+  if(!dadosCompletos || !dadosCompletos.cidades) return;
+  var list = document.getElementById('cidadesList');
+  var search = document.getElementById('searchInput').value.toLowerCase();
+  var html = '';
 
-    container.innerHTML = '';
+  dadosCompletos.cidades.forEach(function(cid) {
+      var setoresFiltrados = [];
+      cid.setores.forEach(function(setor) {
+          var itensFiltrados = setor.itens.filter(function(item) {
+              var matchBusca = (item.descricao.toLowerCase().indexOf(search) > -1 || item.requisicao.toLowerCase().indexOf(search) > -1 || cid.nome.toLowerCase().indexOf(search) > -1);
+              var matchStatus = (filtroStatusAtual === 'TODOS' || item.status === filtroStatusAtual);
+              return matchBusca && matchStatus;
+          });
+          if(itensFiltrados.length > 0) {
+              setoresFiltrados.push({nome: setor.nome, itens: itensFiltrados, total: setor.total});
+          }
+      });
 
-    var allPill = document.createElement('button');
-    allPill.className = 'setor-pill' + (!setorSelecionado ? ' active' : '');
-    allPill.textContent = 'Todos';
-    allPill.onclick = function () {
-        setorSelecionado = null;
-        renderSetorFilter();
-        renderSetores();
-    };
-    container.appendChild(allPill);
+      if(setoresFiltrados.length > 0) {
+          html += '<div class="section-label" style="margin-top:20px; color:var(--blue);">' + escapeHtml(cid.nome) + '</div>';
+          
+          setoresFiltrados.forEach(function(setor) {
+              html += '<div class="setor-block">';
+              html += '<div class="setor-header"><div class="sh-left"><div class="sh-badge ' + getSetorClass(setor.nome) + '">📂</div><div class="sh-nome">' + escapeHtml(setor.nome) + '</div></div></div>';
+              html += '<div class="setor-items">';
+              
+              setor.itens.forEach(function(item) {
+                  html += '<div class="item-row">';
+                  html += '<div class="item-id">' + escapeHtml(item.requisicao) + '</div>';
+                  html += '<div class="item-desc">' + escapeHtml(item.descricao) + ' <span style="color:var(--text-tertiary); font-size:0.7rem;">(x' + item.quantidade + ')</span></div>';
+                  html += '<div class="item-valor">' + formatCurrency(item.total) + '</div>';
+                  html += '<div class="item-status ' + item.status.toLowerCase() + '">' + item.status + '</div>';
+                  html += '</div>';
+              });
+              html += '</div></div>';
+          });
+      }
+  });
 
-    if (cidadeSelecionada.setores) {
-        cidadeSelecionada.setores.forEach(function (setor) {
-            var pill = document.createElement('button');
-            pill.className = 'setor-pill' + (setorSelecionado === setor.nome ? ' active' : '');
-            pill.textContent = setor.nome;
-            pill.onclick = function () {
-                setorSelecionado = setor.nome;
-                renderSetorFilter();
-                renderSetores();
-            };
-            container.appendChild(pill);
-        });
-    }
+  if(html === '') html = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">Nenhuma requisição encontrada</div></div>';
+  list.innerHTML = html;
 }
 
 // ══════════════════════════════════════════════════════════════
-//  RENDER SETORES
+//  FILTROS & INTERAÇÕES
 // ══════════════════════════════════════════════════════════════
-function renderSetores() {
-    var container = document.getElementById('setoresContainer');
-    if (!container || !cidadeSelecionada) return;
+function filtrarGeral() { renderListaGeral(); }
 
-    container.innerHTML = '';
+function filtrarStatus(btn, status) {
+  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  filtroStatusAtual = status;
+  renderListaGeral();
+}
 
-    if (!cidadeSelecionada.setores || cidadeSelecionada.setores.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Nenhuma requisição nesta cidade</p></div>';
-        return;
-    }
+function abrirCidade(nome) {
+  var cid = dadosCompletos.cidades.find(function(c) { return c.nome === nome; });
+  if(!cid) return;
 
-    var setoresFiltrados = cidadeSelecionada.setores;
-    if (setorSelecionado) {
-        setoresFiltrados = setoresFiltrados.filter(function (s) {
-            return s.nome === setorSelecionado;
-        });
-    }
+  document.getElementById('cidadeModalTitle').textContent = '🏙️ ' + cid.nome;
 
-    var searchVal = (document.getElementById('searchInput') ? document.getElementById('searchInput').value : '').trim().toLowerCase();
+  var h = '<div class="cidade-header"><div class="ch-total">' + formatCurrency(cid.total) + '</div><div style="color:var(--text-tertiary); font-size:0.8rem; margin-top:5px;">' + cid.itens + ' itens cadastrados no total</div></div>';
 
-    setoresFiltrados.forEach(function (setor) {
-        var itens = setor.itens || [];
+  cid.setores.forEach(function(setor) {
+      h += '<div class="setor-block">';
+      h += '<div class="setor-header"><div class="sh-left"><div class="sh-badge ' + getSetorClass(setor.nome) + '">📂</div><div class="sh-nome">' + escapeHtml(setor.nome) + '</div></div><div class="sh-total">' + formatCurrency(setor.total) + '</div></div>';
+      h += '<div class="setor-items">';
+      setor.itens.forEach(function(item) {
+          h += '<div class="item-row">';
+          h += '<div class="item-id">' + escapeHtml(item.requisicao) + '</div>';
+          h += '<div class="item-desc">' + escapeHtml(item.descricao) + ' <span style="color:var(--text-tertiary); font-size:0.7rem;">(x' + item.quantidade + ')</span></div>';
+          h += '<div class="item-valor">' + formatCurrency(item.total) + '</div>';
+          h += '<div class="item-status ' + item.status.toLowerCase() + '">' + item.status + '</div>';
+          h += '</div>';
+      });
+      h += '</div></div>';
+  });
 
-        if (searchVal) {
-            itens = itens.filter(function (item) {
-                var descricao = (item.descricao || item.item || '').toLowerCase();
-                return descricao.indexOf(searchVal) !== -1;
-            });
-            if (itens.length === 0) return;
-        }
+  document.getElementById('cidadeBody').innerHTML = h;
+  document.getElementById('cidadeModal').classList.add('show');
+}
 
-        var block = document.createElement('div');
-        block.className = 'setor-block';
-
-        var subtotal = setor.totalSetor || 0;
-        if (!subtotal) {
-            itens.forEach(function (item) {
-                subtotal += (item.total || item.totalItem || 0);
-            });
-        }
-
-        var header = document.createElement('div');
-        header.className = 'setor-header';
-        header.innerHTML =
-            '<div class="setor-header-left">' +
-            '<i class="fas ' + getSetorIcon(setor.nome) + '"></i>' +
-            '<span class="setor-nome">' + escapeHtml(setor.nome) + '</span>' +
-            '<span class="setor-count">' + itens.length + '</span>' +
-            '</div>' +
-            '<span class="setor-subtotal">' + formatCurrency(subtotal) + '</span>';
-        block.appendChild(header);
-
-        var table = document.createElement('div');
-        table.className = 'items-table';
-
-        var thead = document.createElement('div');
-        thead.className = 'items-table-header';
-        thead.innerHTML =
-            '<span class="col-id">#</span>' +
-            '<span class="col-desc">Item</span>' +
-            '<span class="col-qtd">Qtd</span>' +
-            '<span class="col-unit">Unitário</span>' +
-            '<span class="col-total">Total</span>';
-        table.appendChild(thead);
-
-        itens.forEach(function (item) {
-            var row = document.createElement('div');
-            row.className = 'items-table-row';
-
-            var id = item.id || item.num || item.numero || '-';
-            var desc = item.descricao || item.item || '-';
-            var qtd = item.quantidade || item.qtd || 0;
-            var unitario = item.valorUnit || item.valorUnitario || item.unitario || 0;
-            var total = item.total || item.totalItem || 0;
-
-            row.innerHTML =
-                '<span class="col-id">' + escapeHtml(String(id)) + '</span>' +
-                '<span class="col-desc">' + escapeHtml(desc) + '</span>' +
-                '<span class="col-qtd">' + qtd + '</span>' +
-                '<span class="col-unit">' + formatCurrency(unitario) + '</span>' +
-                '<span class="col-total">' + formatCurrency(total) + '</span>';
-
-            table.appendChild(row);
-        });
-
-        block.appendChild(table);
-        container.appendChild(block);
-    });
-
-    if (container.children.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-search"></i><p>Nenhum item encontrado</p></div>';
-    }
+function fecharCidade() {
+  document.getElementById('cidadeModal').classList.remove('show');
 }
 
 // ══════════════════════════════════════════════════════════════
-//  SEARCH
+//  RESUMO PARA WHATSAPP
 // ══════════════════════════════════════════════════════════════
-function filtrarItens() {
-    if (cidadeSelecionada) {
-        renderSetores();
-    }
+function toggleRelatorio() {
+  var btn = document.getElementById('switchRelatorio');
+  btn.classList.add('on');
+  setTimeout(function(){ btn.classList.remove('on'); }, 1000);
+
+  if(!dadosCompletos) { toast('Carregue os dados primeiro'); return; }
+
+  var texto = '📋 *RESUMO DE REQUISIÇÕES*\n';
+  var d = new Date();
+  texto += '📅 ' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear() + '\n';
+  texto += '━━━━━━━━━━━━━━━━━━━━\n\n';
+
+  var total = 0;
+  dadosCompletos.cidades.forEach(function(cid) {
+      if(cid.itens > 0) {
+          texto += '🏙️ *' + cid.nome.toUpperCase() + '*\n';
+          texto += '   📦 ' + cid.itens + ' itens\n';
+          texto += '   💰 ' + formatCurrency(cid.total) + '\n\n';
+          total += cid.total;
+      }
+  });
+
+  texto += '━━━━━━━━━━━━━━━━━━━━\n';
+  texto += '💰 *TOTAL GERAL: ' + formatCurrency(total) + '*\n\n';
+  texto += '_Gerado por Requisições Digital_';
+
+  if(navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(function() {
+          showSuccess('✅', 'Resumo Copiado!', 'O texto formatado para o WhatsApp foi copiado para a sua área de transferência.');
+      }).catch(function() { toast('Erro ao copiar. Use o PC.'); });
+  } else {
+      toast('Copie o resumo manualmente.');
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
-//  REFRESH
+//  UTILITIES
 // ══════════════════════════════════════════════════════════════
-function refreshDados() {
-    carregarDados();
+function getSetorClass(nome) {
+  var n = nome.toUpperCase();
+  if(n.indexOf('EDUCAÇÃO') > -1) return 'edu';
+  if(n.indexOf('SAÚDE') > -1) return 'sau';
+  if(n.indexOf('ASSISTÊNCIA') > -1) return 'ass';
+  if(n.indexOf('ADMINISTRAÇÃO') > -1) return 'adm';
+  if(n.indexOf('INFRAESTRUTURA') > -1) return 'inf';
+  return 'adm'; // default
 }
 
-// ══════════════════════════════════════════════════════════════
-//  RESUMO WHATSAPP
-// ══════════════════════════════════════════════════════════════
-function gerarResumoWhatsApp() {
-    var dados = getCidadesArray();
-    if (!dados.length) {
-        mostrarToast('Carregue os dados primeiro', 'error');
-        return;
-    }
-
-    var texto = '📋 *REQUISIÇÕES — GRUPO CARLOS VAZ*\n';
-    texto += '📅 ' + formatDate(new Date()) + '\n\n';
-
-    dados.forEach(function (cidade) {
-        var cidadeNome = getCidadeNome(cidade);
-        var cidadeTotal = getCidadeTotal(cidade);
-        if (!cidadeTotal || cidadeTotal === 0) return;
-
-        texto += '🏙️ *' + cidadeNome.toUpperCase() + '* — ' + formatCurrency(cidadeTotal) + '\n';
-
-        if (cidade.setores) {
-            cidade.setores.forEach(function (setor) {
-                var subtotal = setor.totalSetor || 0;
-                var numItens = setor.itens ? setor.itens.length : 0;
-                if (!subtotal && setor.itens) {
-                    setor.itens.forEach(function (i) { subtotal += (i.total || i.totalItem || 0); });
-                }
-                texto += '  └ ' + setor.nome + ': ' + numItens + ' itens · ' + formatCurrency(subtotal) + '\n';
-            });
-        }
-        texto += '\n';
-    });
-
-    texto += '💰 *TOTAL GERAL: ' + formatCurrency(dadosCompletos.totalGeral || 0) + '*\n';
-    texto += '\n_Gerado automaticamente pelo Requisições Digital_';
-
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(texto).then(function () {
-            mostrarToast('Resumo copiado!', 'success');
-        }).catch(function () {
-            fallbackCopy(texto);
-        });
-    } else {
-        fallbackCopy(texto);
-    }
-}
-
-function fallbackCopy(text) {
-    var ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.left = '-9999px';
-    document.body.appendChild(ta);
-    ta.select();
-    try {
-        document.execCommand('copy');
-        mostrarToast('Resumo copiado!', 'success');
-    } catch (e) {
-        mostrarToast('Não foi possível copiar', 'error');
-    }
-    document.body.removeChild(ta);
-}
-
-// ══════════════════════════════════════════════════════════════
-//  TOAST
-// ══════════════════════════════════════════════════════════════
-function mostrarToast(msg, tipo) {
-    var t = document.getElementById('toast');
-    if (!t) return;
-
-    t.textContent = msg;
-    t.className = 'toast ' + (tipo || 'info') + ' show';
-
-    setTimeout(function () {
-        t.classList.remove('show');
-    }, 3000);
-}
-
-// ══════════════════════════════════════════════════════════════
-//  HELPERS
-// ══════════════════════════════════════════════════════════════
 function formatCurrency(val) {
-    if (typeof val !== 'number' || isNaN(val)) val = 0;
-    return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
-
-function formatDate(d) {
-    if (!d) return '-';
-    var day = String(d.getDate()).padStart(2, '0');
-    var month = String(d.getMonth() + 1).padStart(2, '0');
-    var year = d.getFullYear();
-    return day + '/' + month + '/' + year;
+  if (typeof val !== 'number' || isNaN(val)) val = 0;
+  return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
 function escapeHtml(str) {
-    if (!str) return '';
-    var div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+  if (!str) return '';
+  return str.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function getSetorIcon(nome) {
-    var icons = {
-        'EDUCAÇÃO': 'fa-graduation-cap',
-        'SAÚDE': 'fa-heartbeat',
-        'ASSISTÊNCIA SOCIAL': 'fa-hands-helping',
-        'ADMINISTRAÇÃO': 'fa-building',
-        'INFRAESTRUTURA': 'fa-hard-hat'
-    };
-    return icons[nome] || 'fa-folder';
+function showSuccess(icon, msg, detail) {
+  document.getElementById('successIcon').textContent = icon;
+  document.getElementById('successMsg').textContent = msg;
+  document.getElementById('successDetail').textContent = detail || '';
+  var ov = document.getElementById('successOverlay');
+  ov.classList.add('show');
+  setTimeout(function () { ov.classList.remove('show'); }, 3000);
 }
 
-// ══════════════════════════════════════════════════════════════
-//  KEYBOARD SHORTCUT
-// ══════════════════════════════════════════════════════════════
-document.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') {
-        var loginScreen = document.getElementById('loginScreen');
-        if (loginScreen && loginScreen.classList.contains('active')) {
-            fazerLogin();
-        }
-    }
-});
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function () { t.classList.remove('show'); }, 3500);
+}
