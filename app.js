@@ -1,5 +1,5 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v3.0 (Sincronizado)
+//  REQUISIÇÕES DIGITAL — app.js v4.0 (Dashboard Executivo)
 //  Grupo Carlos Vaz — CRV/LAS
 // ============================================================
 
@@ -13,7 +13,6 @@ var CREDS_OFFLINE = {
 
 var sessao = null;
 var dadosCompletos = null;
-var filtroStatusAtual = 'TODOS';
 var autoRefreshTimer = null;
 
 // ══════════════════════════════════════════════════════════════
@@ -77,7 +76,6 @@ function logout() {
   document.getElementById('loginError').textContent = '';
 }
 
-// Escuta a tecla Enter no input de senha
 document.addEventListener('DOMContentLoaded', function() {
   var passField = document.getElementById('loginPass');
   if(passField) passField.addEventListener('keydown', function(e){ if(e.key === 'Enter') fazerLogin(); });
@@ -102,7 +100,7 @@ function carregarDados() {
        dadosCompletos = d;
        renderPainel();
        var hoje = new Date();
-       document.getElementById('syncTime').textContent = 'Atualizado às ' + String(hoje.getHours()).padStart(2,'0') + ':' + String(hoje.getMinutes()).padStart(2,'0');
+       document.getElementById('syncTime').textContent = 'Sincronizado às ' + String(hoje.getHours()).padStart(2,'0') + ':' + String(hoje.getMinutes()).padStart(2,'0');
        setBadge(true);
     })
     .catch(function(e) {
@@ -120,93 +118,87 @@ function setBadge(on) {
 
 function renderPainel() {
   if(!dadosCompletos || !dadosCompletos.cidades) return;
+  
   var grid = document.getElementById('cidadesGrid');
-  var html = '';
+  var htmlCards = '';
   var totalGeral = 0;
+  var arrayCidades = [];
+  var mapSetores = {};
 
-  // Monta os Cards das Cidades
+  // Processamento de Dados Matemáticos
   dadosCompletos.cidades.forEach(function(cid) {
      totalGeral += cid.total;
-     html += '<div class="cidade-card" onclick="abrirCidade(\'' + escapeHtml(cid.nome) + '\')">';
-     html += '<div class="cidade-icon">🏙️</div>';
-     html += '<div class="cidade-info">';
-     html += '<div class="cidade-nome">' + escapeHtml(cid.nome) + '</div>';
-     html += '<div class="cidade-meta">' + cid.setores.length + ' setores · ' + cid.itens + ' itens</div>';
-     html += '</div>';
-     html += '<div class="cidade-valor">' + formatCurrency(cid.total) + '</div>';
-     html += '</div>';
+     arrayCidades.push({ nome: cid.nome, total: cid.total, itens: cid.itens });
+
+     // Monta os Cards Clicáveis
+     htmlCards += '<div class="cidade-card" onclick="abrirCidade(\'' + escapeHtml(cid.nome) + '\')">';
+     htmlCards += '<div class="cidade-icon">🏙️</div>';
+     htmlCards += '<div class="cidade-info"><div class="cidade-nome">' + escapeHtml(cid.nome) + '</div><div class="cidade-meta">' + cid.setores.length + ' setores · ' + cid.itens + ' itens</div></div>';
+     htmlCards += '<div class="cidade-valor">' + formatCurrency(cid.total) + '</div>';
+     htmlCards += '</div>';
+
+     // Agrega Setores para o Ranking
+     cid.setores.forEach(function(setor) {
+         if (!mapSetores[setor.nome]) mapSetores[setor.nome] = { nome: setor.nome, total: 0, itens: 0 };
+         mapSetores[setor.nome].total += setor.total;
+         mapSetores[setor.nome].itens += setor.itens.length;
+     });
   });
 
-  grid.innerHTML = html;
+  grid.innerHTML = htmlCards;
   document.getElementById('statTotal').textContent = formatCurrency(totalGeral);
 
-  // Renderiza a lista corrida de requisições debaixo dos cards
-  renderListaGeral();
+  renderRankings(arrayCidades, mapSetores);
 }
 
-function renderListaGeral() {
-  if(!dadosCompletos || !dadosCompletos.cidades) return;
-  var list = document.getElementById('cidadesList');
-  var search = document.getElementById('searchInput').value.toLowerCase();
-  var html = '';
+// ══════════════════════════════════════════════════════════════
+//  RANKINGS (NOVO DASHBOARD)
+// ══════════════════════════════════════════════════════════════
+function renderRankings(arrayCidades, mapSetores) {
+  // Ordena do maior para o menor gasto
+  arrayCidades.sort(function(a, b) { return b.total - a.total; });
+  var arraySetores = Object.values(mapSetores).sort(function(a, b) { return b.total - a.total; });
 
-  dadosCompletos.cidades.forEach(function(cid) {
-      var setoresFiltrados = [];
-      cid.setores.forEach(function(setor) {
-          var itensFiltrados = setor.itens.filter(function(item) {
-              var matchBusca = (item.descricao.toLowerCase().indexOf(search) > -1 || item.requisicao.toLowerCase().indexOf(search) > -1 || cid.nome.toLowerCase().indexOf(search) > -1);
-              var matchStatus = (filtroStatusAtual === 'TODOS' || item.status === filtroStatusAtual);
-              return matchBusca && matchStatus;
-          });
-          if(itensFiltrados.length > 0) {
-              setoresFiltrados.push({nome: setor.nome, itens: itensFiltrados, total: setor.total});
-          }
-      });
+  // Pega o valor máximo para a barra ser 100%
+  var maxCidade = arrayCidades.length > 0 ? arrayCidades[0].total : 1;
+  var maxSetor = arraySetores.length > 0 ? arraySetores[0].total : 1;
 
-      if(setoresFiltrados.length > 0) {
-          html += '<div class="section-label" style="margin-top:20px; color:var(--blue);">' + escapeHtml(cid.nome) + '</div>';
-          
-          setoresFiltrados.forEach(function(setor) {
-              html += '<div class="setor-block">';
-              html += '<div class="setor-header"><div class="sh-left"><div class="sh-badge ' + getSetorClass(setor.nome) + '">📂</div><div class="sh-nome">' + escapeHtml(setor.nome) + '</div></div></div>';
-              html += '<div class="setor-items">';
-              
-              setor.itens.forEach(function(item) {
-                  html += '<div class="item-row">';
-                  html += '<div class="item-id">' + escapeHtml(item.requisicao) + '</div>';
-                  html += '<div class="item-desc">' + escapeHtml(item.descricao) + ' <span style="color:var(--text-tertiary); font-size:0.7rem;">(x' + item.quantidade + ')</span></div>';
-                  html += '<div class="item-valor">' + formatCurrency(item.total) + '</div>';
-                  html += '<div class="item-status ' + item.status.toLowerCase() + '">' + item.status + '</div>';
-                  html += '</div>';
-              });
-              html += '</div></div>';
-          });
-      }
+  var divCidades = document.getElementById('rankingCidades');
+  var htmlCid = '';
+  arrayCidades.forEach(function(cid, index) {
+      if(cid.total === 0) return; // Ignora se não gastou nada
+      var pct = (cid.total / maxCidade) * 100;
+      htmlCid += '<div class="ranking-item">';
+      htmlCid += '<div class="r-left"><span class="r-pos">' + (index + 1) + '</span><div class="r-info"><span class="r-nome">' + escapeHtml(cid.nome) + '</span><span class="r-meta">' + cid.itens + ' itens faturados</span></div></div>';
+      htmlCid += '<div class="r-right"><span class="r-valor">' + formatCurrency(cid.total) + '</span><div class="r-bar-bg"><div class="r-bar-fill blue" style="width: ' + pct + '%"></div></div></div>';
+      htmlCid += '</div>';
   });
+  if(htmlCid === '') htmlCid = '<div class="empty-state"><div class="empty-text">Sem dados faturados</div></div>';
+  divCidades.innerHTML = htmlCid;
 
-  if(html === '') html = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">Nenhuma requisição encontrada</div></div>';
-  list.innerHTML = html;
+  var divSetores = document.getElementById('rankingSetores');
+  var htmlSet = '';
+  arraySetores.forEach(function(setor, index) {
+      if(setor.total === 0) return;
+      var pct = (setor.total / maxSetor) * 100;
+      htmlSet += '<div class="ranking-item">';
+      htmlSet += '<div class="r-left"><span class="r-pos">' + (index + 1) + '</span><div class="r-info"><span class="r-nome">' + escapeHtml(setor.nome) + '</span><span class="r-meta">' + setor.itens + ' itens gerais</span></div></div>';
+      htmlSet += '<div class="r-right"><span class="r-valor">' + formatCurrency(setor.total) + '</span><div class="r-bar-bg"><div class="r-bar-fill purple" style="width: ' + pct + '%"></div></div></div>';
+      htmlSet += '</div>';
+  });
+  if(htmlSet === '') htmlSet = '<div class="empty-state"><div class="empty-text">Sem dados faturados</div></div>';
+  divSetores.innerHTML = htmlSet;
 }
 
 // ══════════════════════════════════════════════════════════════
-//  FILTROS & INTERAÇÕES
+//  MODAL: DETALHE DA CIDADE
 // ══════════════════════════════════════════════════════════════
-function filtrarGeral() { renderListaGeral(); }
-
-function filtrarStatus(btn, status) {
-  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
-  btn.classList.add('active');
-  filtroStatusAtual = status;
-  renderListaGeral();
-}
-
 function abrirCidade(nome) {
   var cid = dadosCompletos.cidades.find(function(c) { return c.nome === nome; });
   if(!cid) return;
 
   document.getElementById('cidadeModalTitle').textContent = '🏙️ ' + cid.nome;
-
-  var h = '<div class="cidade-header"><div class="ch-total">' + formatCurrency(cid.total) + '</div><div style="color:var(--text-tertiary); font-size:0.8rem; margin-top:5px;">' + cid.itens + ' itens cadastrados no total</div></div>';
+  var h = '<div class="cidade-header"><div class="ch-total">' + formatCurrency(cid.total) + '</div><div style="color:var(--text-tertiary); font-size:0.8rem; margin-top:5px;">' + cid.itens + ' itens lançados</div></div>';
 
   cid.setores.forEach(function(setor) {
       h += '<div class="setor-block">';
@@ -217,7 +209,6 @@ function abrirCidade(nome) {
           h += '<div class="item-id">' + escapeHtml(item.requisicao) + '</div>';
           h += '<div class="item-desc">' + escapeHtml(item.descricao) + ' <span style="color:var(--text-tertiary); font-size:0.7rem;">(x' + item.quantidade + ')</span></div>';
           h += '<div class="item-valor">' + formatCurrency(item.total) + '</div>';
-          h += '<div class="item-status ' + item.status.toLowerCase() + '">' + item.status + '</div>';
           h += '</div>';
       });
       h += '</div></div>';
@@ -241,29 +232,31 @@ function toggleRelatorio() {
 
   if(!dadosCompletos) { toast('Carregue os dados primeiro'); return; }
 
-  var texto = '📋 *RESUMO DE REQUISIÇÕES*\n';
+  var texto = '📋 *ORÇAMENTO DE REQUISIÇÕES*\n';
   var d = new Date();
   texto += '📅 ' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear() + '\n';
   texto += '━━━━━━━━━━━━━━━━━━━━\n\n';
 
   var total = 0;
-  dadosCompletos.cidades.forEach(function(cid) {
+  // Ordena cidades para o WhatsApp igual ao Ranking
+  var cidadesOrdenadas = [...dadosCompletos.cidades].sort(function(a, b) { return b.total - a.total; });
+
+  cidadesOrdenadas.forEach(function(cid) {
       if(cid.itens > 0) {
           texto += '🏙️ *' + cid.nome.toUpperCase() + '*\n';
-          texto += '   📦 ' + cid.itens + ' itens\n';
-          texto += '   💰 ' + formatCurrency(cid.total) + '\n\n';
+          texto += '   💰 ' + formatCurrency(cid.total) + ' (' + cid.itens + ' itens)\n\n';
           total += cid.total;
       }
   });
 
   texto += '━━━━━━━━━━━━━━━━━━━━\n';
-  texto += '💰 *TOTAL GERAL: ' + formatCurrency(total) + '*\n\n';
-  texto += '_Gerado por Requisições Digital_';
+  texto += '📊 *TOTAL GERAL: ' + formatCurrency(total) + '*\n\n';
+  texto += '_Requisições Digital — CRV/LAS_';
 
   if(navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(texto).then(function() {
-          showSuccess('✅', 'Resumo Copiado!', 'O texto formatado para o WhatsApp foi copiado para a sua área de transferência.');
-      }).catch(function() { toast('Erro ao copiar. Use o PC.'); });
+          showSuccess('✅', 'Resumo Copiado!', 'O texto formatado foi copiado para a sua área de transferência.');
+      }).catch(function() { toast('Erro ao copiar.'); });
   } else {
       toast('Copie o resumo manualmente.');
   }
@@ -279,7 +272,7 @@ function getSetorClass(nome) {
   if(n.indexOf('ASSISTÊNCIA') > -1) return 'ass';
   if(n.indexOf('ADMINISTRAÇÃO') > -1) return 'adm';
   if(n.indexOf('INFRAESTRUTURA') > -1) return 'inf';
-  return 'adm'; // default
+  return 'adm';
 }
 
 function formatCurrency(val) {
