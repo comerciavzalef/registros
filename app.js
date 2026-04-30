@@ -7,8 +7,8 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbzXuhmVkTDsMGotRuG3-i-YYn
 var SESSION_KEY = 'cv_requisicoes_sessao';
 
 var CREDS_OFFLINE = {
-  'ALEF': 'GP.Carlos2026',
-  'CARLOS VAZ': 'GP.Carlos2026'
+  'ALEF': '704bd714166d21ac85ed8a26fbde6b9be2d94981934305be4a7915a8bbd0c157',
+  'CARLOS VAZ': '704bd714166d21ac85ed8a26fbde6b9be2d94981934305be4a7915a8bbd0c157'
 };
 
 var sessao = null;
