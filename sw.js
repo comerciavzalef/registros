@@ -2,7 +2,7 @@
    REQUISIÇÕES DIGITAL — SERVICE WORKER v1.0
    ============================================================ */
 
-var CACHE_NAME = 'requisicoes-v1';
+var CACHE_NAME = 'requisicoes-v2';
 var ASSETS = [
     './',
     './index.html',
