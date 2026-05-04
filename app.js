@@ -1,5 +1,6 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v5.0 (Catálogo + Mapeamento OK)
+//  REQUISIÇÕES DIGITAL — app.js v5.2 (Catálogo Refinado)
+//  Grupo Carlos Vaz — CRV/LAS
 // ============================================================
 
 var API_URL = 'https://script.google.com/macros/s/AKfycbzXuhmVkTDsMGotRuG3-i-YYnx0_nLFWDWjb7hNsTZ2HUg5SzWKDK6jbad_HqOEsnxt/exec';
@@ -55,7 +56,6 @@ async function fazerLogin() {
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d.status === 'ok') {
-          // Guarda hash (não a senha em claro) — usado para autorizar ações
           sessao = { nome: d.nome, nivel: d.nivel, hash: senhaHash };
           localStorage.setItem(SESSION_KEY, JSON.stringify(sessao));
           esconderLogin(); iniciarApp();
@@ -116,22 +116,39 @@ function iniciarApp() {
 }
 
 function carregarDados() {
+  if (!dadosCompletos) {
+    var grid = document.getElementById('cidadesGrid');
+    if (grid && !grid.dataset.skeleton) {
+      grid.innerHTML = renderSkeleton(3);
+      grid.dataset.skeleton = '1';
+    }
+  }
+
   fetch(API_URL + '?senha=GP.Carlos2026&dados=todos')
     .then(function (r) { return r.json(); })
     .then(function (d) {
       document.getElementById('ldScreen').classList.add('hidden');
+      var g = document.getElementById('cidadesGrid');
+      if (g) delete g.dataset.skeleton;
       dadosCompletos = d;
       renderPainel();
       var hoje = new Date();
       document.getElementById('syncTime').textContent =
-        'Sincronizado às ' + String(hoje.getHours()).padStart(2, '0') + ':' + String(hoje.getMinutes()).padStart(2, '0');
+        'Sincronizado às ' + String(hoje.getHours()).padStart(2, '0') + ':' +
+        String(hoje.getMinutes()).padStart(2, '0');
       setBadge(true);
     })
     .catch(function () {
       document.getElementById('ldScreen').classList.add('hidden');
-      toast('Aviso: erro de conexão');
+      toast('Erro de conexão');
       setBadge(false);
     });
+}
+
+function renderSkeleton(n) {
+  var h = '';
+  for (var i = 0; i < n; i++) h += '<div class="skeleton-card"></div>';
+  return h;
 }
 
 function setBadge(on) {
@@ -242,7 +259,7 @@ function abrirCidade(nome) {
 function fecharCidade() { document.getElementById('cidadeModal').classList.remove('show'); }
 
 // ══════════════════════════════════════════════════════════════
-//  CATÁLOGO — abrir, listar, salvar
+//  CATÁLOGO
 // ══════════════════════════════════════════════════════════════
 function abrirCatalogo() {
   document.getElementById('catalogoModal').classList.add('show');
@@ -314,15 +331,13 @@ function renderCatalogo(filtro) {
 
   document.getElementById('catalogoBody').innerHTML = h;
 }
-  
+
 function formatNum(v) {
   return (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function parseValorBR(str) {
-  // Aceita "1.234,56" ou "1234.56" ou "1234,56"
   var s = String(str || '').trim().replace(/\s/g, '').replace(/R\$/g, '');
-  // Se tem vírgula, formato BR: remove pontos (milhar) e troca vírgula por ponto
   if (s.indexOf(',') > -1) s = s.replace(/\./g, '').replace(',', '.');
   var n = parseFloat(s);
   return isNaN(n) ? null : n;
@@ -339,20 +354,16 @@ async function salvarItemCatalogo(input) {
     input.value = formatNum(original);
     return;
   }
-  // Sem mudança
   if (Math.abs(novo - original) < 0.001) {
     input.value = formatNum(original);
     return;
   }
 
-  // Pergunta se quer atualizar antigas
-  var msg = 'Atualizar preço de "' + desc + '" para R$ ' + formatNum(novo) +
-            '?\n\nDeseja também atualizar as requisições já APROVADAS/ENTREGUES/NEGADAS deste mês?\n\n' +
-            '• OK = atualiza tudo (atual + antigas do mês)\n' +
-            '• Cancelar = só atualiza pendentes/novas';
+  var msg = 'Atualizar "' + desc + '" para R$ ' + formatNum(novo) +
+            '?\n\nAtualizar também as requisições já APROVADAS/ENTREGUES/NEGADAS deste mês?\n\n' +
+            'OK = sim · Cancelar = só pendentes';
   var atualizarAntigas = confirm(msg);
 
-  // Bloqueia o input enquanto salva
   input.disabled = true;
   input.style.opacity = '0.5';
 
@@ -376,7 +387,6 @@ async function salvarItemCatalogo(input) {
       input.dataset.original = novo;
       input.value = formatNum(novo);
 
-      // Atualiza o cache local
       for (var i = 0; i < catalogo.length; i++) {
         if (catalogo[i].linha === linha) { catalogo[i].valor = novo; break; }
       }
@@ -387,8 +397,10 @@ async function salvarItemCatalogo(input) {
       if (!detail) detail = 'Apenas catálogo';
 
       showSuccess('✅', 'Preço atualizado', detail);
-      // Recarrega dashboard depois de 800ms para refletir
-      setTimeout(carregarDados, 800);
+
+      if (d.atualizadosPendentes > 0 || d.atualizadosAntigos > 0) {
+        setTimeout(carregarDados, 1500);
+      }
     } else {
       toast(d.msg || 'Erro ao salvar');
       input.value = formatNum(original);
