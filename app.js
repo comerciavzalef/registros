@@ -311,6 +311,7 @@ function renderCatalogo(filtro) {
           ' · toque no preço para editar</div>';
 
   lista.forEach(function (it) {
+    lista.forEach(function (it) {
     var codigoHtml = it.codigo
       ? '<span class="cat-cod">' + escapeHtml(it.codigo) + '</span>' +
         '<span class="cat-sep">·</span>'
@@ -321,15 +322,19 @@ function renderCatalogo(filtro) {
          codigoHtml +
          '<span class="cat-desc">' + escapeHtml(it.descricao) + '</span>' +
          '</div>' +
+         '<div class="cat-action-wrap">' + // NOVO WRAPPER PARA INPUT + BOTÃO
          '<div class="cat-valor-wrap">' +
          '<span class="cat-prefix">R$</span>' +
          '<input type="text" inputmode="decimal" class="cat-input" ' +
+         'id="input_cat_' + it.linha + '" ' + // ADICIONADO ID
          'value="' + formatNum(it.valor) + '" ' +
          'data-linha="' + it.linha + '" ' +
          'data-original="' + it.valor + '" ' +
          'data-desc="' + escapeHtml(it.descricao) + '" ' +
          'onfocus="this.select()" ' +
-         'onblur="salvarItemCatalogo(this)">' +
+         'onkeydown="if(event.key === \'Enter\') dispararSalvar(' + it.linha + ')">' + // ACEITA O ENTER AQUI
+         '</div>' +
+         '<button class="cat-save-btn" onclick="dispararSalvar(' + it.linha + ')" title="Salvar Preço">✓</button>' + // NOVO BOTÃO
          '</div></div>';
   });
 
@@ -347,12 +352,16 @@ function parseValorBR(str) {
   return isNaN(n) ? null : n;
 }
 
-async function salvarItemCatalogo(input) {
-  var linha = parseInt(input.dataset.linha);
+// Função que cuida de atualizar a tela na hora e mandar pro Google escondido
+function dispararSalvar(linha) {
+  var input = document.getElementById('input_cat_' + linha);
+  if (!input) return;
+
   var original = parseFloat(input.dataset.original);
   var desc = input.dataset.desc;
   var novo = parseValorBR(input.value);
 
+  // Validações
   if (novo === null || novo < 0) {
     toast('Valor inválido');
     input.value = formatNum(original);
@@ -360,62 +369,76 @@ async function salvarItemCatalogo(input) {
   }
   if (Math.abs(novo - original) < 0.001) {
     input.value = formatNum(original);
+    input.blur(); // Tira o foco
     return;
   }
 
+  // Pergunta antes de fazer
   var msg = 'Atualizar "' + desc + '" para R$ ' + formatNum(novo) +
             '?\n\nAtualizar também as requisições já APROVADAS/ENTREGUES/NEGADAS deste mês?\n\n' +
             'OK = sim · Cancelar = só pendentes';
   var atualizarAntigas = confirm(msg);
 
-  input.disabled = true;
-  input.style.opacity = '0.5';
+  // 1. ATUALIZA A TELA IMEDIATAMENTE (Interface Otimista)
+  input.dataset.original = novo;
+  input.value = formatNum(novo);
+  input.blur(); // Esconde o teclado do celular
+  
+  // Pega o botão do lado do input para mudar o estado dele
+  var btn = input.parentElement.nextElementSibling;
+  if (btn) {
+    btn.innerHTML = '⌛'; // Ícone de carregando
+    btn.disabled = true;
+  }
 
-  try {
-    var resp = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        acao: 'salvarprecoitem',
-        usuario: sessao.nome,
-        senha: sessao.hash,
-        linha: linha,
-        valor: novo,
-        atualizarAntigas: atualizarAntigas
-      }),
-      redirect: 'follow'
-    });
-    var d = await resp.json();
+  // Mostra a notificação de sucesso na hora para o usuário
+  showSuccess('✅', 'Preço alterado!', 'Sincronizando no fundo...');
 
+  // 2. MANDA PRO GOOGLE SHEETS EM SEGUNDO PLANO (Sem "await" para não travar)
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'salvarprecoitem',
+      usuario: sessao.nome,
+      senha: sessao.hash,
+      linha: linha,
+      valor: novo,
+      atualizarAntigas: atualizarAntigas
+    }),
+    redirect: 'follow'
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    // Quando o Google responder, volta o botão ao normal
+    if (btn) { btn.innerHTML = '✓'; btn.disabled = false; }
+    
     if (d.status === 'ok') {
-      input.dataset.original = novo;
-      input.value = formatNum(novo);
-
+      // Atualiza no array local para se a pessoa buscar de novo
       for (var i = 0; i < catalogo.length; i++) {
         if (catalogo[i].linha === linha) { catalogo[i].valor = novo; break; }
       }
-
-      var detail = '';
-      if (d.atualizadosPendentes > 0) detail += d.atualizadosPendentes + ' pendente(s)';
-      if (d.atualizadosAntigos > 0) detail += (detail ? ' · ' : '') + d.atualizadosAntigos + ' antiga(s)';
-      if (!detail) detail = 'Apenas catálogo';
-
-      showSuccess('✅', 'Preço atualizado', detail);
-
+      // Se precisou atualizar pedidos pendentes/antigos, recarrega o dashboard
       if (d.atualizadosPendentes > 0 || d.atualizadosAntigos > 0) {
-        setTimeout(carregarDados, 1500);
+        carregarDados();
       }
     } else {
-      toast(d.msg || 'Erro ao salvar');
-      input.value = formatNum(original);
+      // Se der erro de regra de negócio lá na planilha, desfaz a alteração
+      reverterErro(input, original, btn, d.msg || 'Erro ao salvar');
     }
-  } catch (e) {
-    toast('Erro de conexão');
-    input.value = formatNum(original);
-  } finally {
-    input.disabled = false;
-    input.style.opacity = '1';
-  }
+  })
+  .catch(function(e) {
+    // Se a internet cair, desfaz a alteração
+    reverterErro(input, original, btn, 'Erro de conexão. Valor revertido.');
+  });
+}
+
+// Função de segurança caso a internet caia durante o salvamento
+function reverterErro(input, valorOriginal, btn, msgErro) {
+  input.dataset.original = valorOriginal;
+  input.value = formatNum(valorOriginal);
+  if (btn) { btn.innerHTML = '✓'; btn.disabled = false; }
+  toast(msgErro);
 }
 
 // ══════════════════════════════════════════════════════════════
