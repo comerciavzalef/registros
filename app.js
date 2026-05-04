@@ -273,28 +273,35 @@ function renderCatalogo(filtro) {
   if (filtro) {
     lista = catalogo.filter(function (it) {
       return it.descricao.toLowerCase().indexOf(filtro) > -1 ||
-             it.codigo.toLowerCase().indexOf(filtro) > -1;
+             (it.codigo || '').toLowerCase().indexOf(filtro) > -1;
     });
   }
 
   if (!lista.length) {
     document.getElementById('catalogoBody').innerHTML =
       '<div class="empty-state"><div class="empty-text">' +
-      (filtro ? 'Nenhum item encontrado para "' + escapeHtml(filtro) + '"' : 'Catálogo vazio') +
+      (filtro ? 'Nenhum item para "' + escapeHtml(filtro) + '"' : 'Catálogo vazio') +
       '</div></div>';
     return;
   }
 
-  var h = '<div style="color:var(--text-tertiary);font-size:.7rem;margin-bottom:14px;text-align:center;">' +
-          lista.length + ' item' + (lista.length === 1 ? '' : 's') + ' · toque no preço para editar</div>';
+  var h = '<div class="cat-meta">' + lista.length + ' ' +
+          (lista.length === 1 ? 'item' : 'itens') +
+          ' · toque no preço para editar</div>';
 
   lista.forEach(function (it) {
-    h += '<div class="cat-item" data-linha="' + it.linha + '">' +
+    var codigoHtml = it.codigo
+      ? '<span class="cat-cod">' + escapeHtml(it.codigo) + '</span>' +
+        '<span class="cat-sep">·</span>'
+      : '';
+
+    h += '<div class="cat-item">' +
          '<div class="cat-info">' +
-         (it.codigo ? '<div class="cat-cod">' + escapeHtml(it.codigo) + '</div>' : '') +
-         '<div class="cat-desc">' + escapeHtml(it.descricao) + '</div>' +
+         codigoHtml +
+         '<span class="cat-desc">' + escapeHtml(it.descricao) + '</span>' +
          '</div>' +
          '<div class="cat-valor-wrap">' +
+         '<span class="cat-prefix">R$</span>' +
          '<input type="text" inputmode="decimal" class="cat-input" ' +
          'value="' + formatNum(it.valor) + '" ' +
          'data-linha="' + it.linha + '" ' +
@@ -307,7 +314,7 @@ function renderCatalogo(filtro) {
 
   document.getElementById('catalogoBody').innerHTML = h;
 }
-
+  
 function formatNum(v) {
   return (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
