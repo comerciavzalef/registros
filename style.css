@@ -206,3 +206,59 @@ select.login-field option { background: #1c1c1e; }
   body { background: #000 !important; }
   .bg-scene, .top-bar, .btn-logout, .badge, .relatorio-switch-row { display: none !important; }
 }
+
+/* ══════════════ BOTÃO CATÁLOGO + TELA CATÁLOGO ══════════════ */
+.btn-catalogo {
+  background: var(--blue-soft); color: var(--blue); border: none;
+  border-radius: var(--r-full); padding: 7px 14px;
+  font-size: .72rem; font-weight: 600; cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.btn-catalogo:active { transform: scale(0.96); background: rgba(10,132,255,.25); }
+
+.cat-search {
+  width: 100%; padding: 14px 18px; margin-bottom: 18px;
+  background: rgba(118,118,128,.12); border: 1px solid transparent;
+  border-radius: var(--r-md); color: var(--text-primary);
+  font-size: .92rem; outline: none; transition: all 0.3s ease;
+  font-family: var(--font);
+}
+.cat-search:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); background: rgba(118,118,128,.18); }
+.cat-search::placeholder { color: var(--text-tertiary); }
+
+.cat-item {
+  background: var(--surface-1); border: .5px solid var(--border);
+  border-radius: var(--r-md); padding: 14px 16px;
+  margin-bottom: 10px; display: flex; align-items: center; gap: 14px;
+  backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+  transition: background 0.2s ease;
+}
+.cat-info { flex: 1; min-width: 0; }
+.cat-cod {
+  font-family: var(--mono); font-size: .62rem;
+  color: var(--text-tertiary); font-weight: 600;
+  text-transform: uppercase; letter-spacing: .03em; margin-bottom: 2px;
+}
+.cat-desc {
+  font-size: .88rem; font-weight: 600; color: var(--text-primary);
+  line-height: 1.3; word-break: break-word;
+}
+.cat-valor-wrap { flex-shrink: 0; }
+.cat-input {
+  width: 110px; padding: 9px 12px; text-align: right;
+  background: rgba(48,209,88,.10); color: var(--green);
+  border: 1px solid rgba(48,209,88,.25); border-radius: var(--r-sm);
+  font-size: .92rem; font-weight: 700; font-family: var(--font-rounded);
+  outline: none; transition: all 0.25s ease;
+}
+.cat-input:focus {
+  border-color: var(--green); box-shadow: 0 0 0 3px var(--green-soft);
+  background: rgba(48,209,88,.15);
+}
+.cat-input:disabled { opacity: .5; cursor: not-allowed; }
+
+@media (max-width: 480px) {
+  .cat-input { width: 95px; font-size: .85rem; padding: 8px 10px; }
+  .cat-item { padding: 12px 14px; gap: 10px; }
+  .btn-catalogo { padding: 7px 11px; font-size: .68rem; }
+}
