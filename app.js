@@ -311,7 +311,6 @@ function renderCatalogo(filtro) {
           ' · toque no preço para editar</div>';
 
   lista.forEach(function (it) {
-    lista.forEach(function (it) {
     var codigoHtml = it.codigo
       ? '<span class="cat-cod">' + escapeHtml(it.codigo) + '</span>' +
         '<span class="cat-sep">·</span>'
