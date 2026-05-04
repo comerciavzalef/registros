@@ -121,6 +121,19 @@
   <div class="modal-body" id="cidadeBody"></div>
 </div>
 
+  <!-- ══════════════ MODAL: CATÁLOGO ══════════════ -->
+<div class="modal-full" id="catalogoModal">
+  <div class="modal-bar">
+    <h2>📦 Catálogo de Preços</h2>
+    <button class="modal-close" onclick="fecharCatalogo()">✕</button>
+  </div>
+  <div class="modal-body">
+    <input type="text" id="catalogoSearch" class="cat-search" placeholder="🔍 Buscar item..." oninput="filtrarCatalogo()">
+    <div id="catalogoBody"></div>
+  </div>
+</div>
+
+
 <!-- Overlays -->
 <div class="success-overlay" id="successOverlay">
   <div class="success-icon" id="successIcon">✅</div>
