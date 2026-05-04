@@ -57,13 +57,17 @@
 <div id="mainApp" style="display:none;">
 
   <div class="top-bar">
-    <div class="top-bar-row1">
-      <div class="brand">
-        <div class="brand-dot">📋</div>
-        <div class="brand-text"><h1>Requisições</h1><span>Dashboard</span></div>
-      </div>
-      <button class="btn-logout" onclick="logout()">Sair</button>
-    </div>
+   <div class="top-bar-row1">
+  <div class="brand">
+    <div class="brand-dot">📋</div>
+    <div class="brand-text"><h1>Requisições</h1><span>Dashboard</span></div>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <button class="btn-catalogo" onclick="abrirCatalogo()">📦 Catálogo</button>
+    <button class="btn-logout" onclick="logout()">Sair</button>
+  </div>
+</div>
+
     <div class="top-bar-row2">
       <span class="badge badge-online" id="badgeStatus">Online</span>
       <span class="badge badge-gestor">Gestor</span>
