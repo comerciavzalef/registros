@@ -327,7 +327,6 @@ select.login-field option { background: #1c1c1e; }
   .cat-desc { font-size: .85rem; }
 }
 
-
 /* Wrap de valor com prefixo R$ visualmente separado */
 .cat-valor-wrap {
   flex-shrink: 0;
@@ -392,5 +391,3 @@ select.login-field option { background: #1c1c1e; }
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
-
-
