@@ -262,6 +262,7 @@ function fecharCidade() { document.getElementById('cidadeModal').classList.remov
 //  CATÁLOGO
 // ══════════════════════════════════════════════════════════════
 function abrirCatalogo() {
+  document.body.style.overflow = 'hidden'; // TRAVA O SCROLL DO FUNDO
   document.getElementById('catalogoModal').classList.add('show');
   document.getElementById('catalogoBody').innerHTML =
     '<div style="text-align:center;padding:40px 20px;"><div class="ld-spinner" style="margin:0 auto 16px;"></div>' +
@@ -278,7 +279,10 @@ function abrirCatalogo() {
     .catch(function () { toast('Erro de conexão'); });
 }
 
-function fecharCatalogo() { document.getElementById('catalogoModal').classList.remove('show'); }
+function fecharCatalogo() { 
+  document.body.style.overflow = ''; // DESTRAVA O SCROLL
+  document.getElementById('catalogoModal').classList.remove('show'); 
+}
 
 function filtrarCatalogo() {
   var q = document.getElementById('catalogoSearch').value.toLowerCase().trim();
