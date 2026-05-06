@@ -581,10 +581,7 @@ var payload = {
   senha: sessao.hash    // <-- Faltava isso (motivo do erro de não autorizado)
 };
   if (texto) payload.textoBruto = texto;
-
-  // ... seu código da linha 561 continua igual
-      if (texto) payload.textoBruto = texto;
-
+  
       // === APAGUE O IF(ARQUIVO) ANTIGO (linhas 563 a 568+) E COLE ESTE ABAIXO ===
       if (arquivo) {
         comprimirImagem(arquivo, 1200, function(base64Otimizado) {
