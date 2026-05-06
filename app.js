@@ -124,7 +124,7 @@ function carregarDados() {
     }
   }
 
-  fetch(API_URL + '?senha=GP.Carlos2026&dados=todos')
+  fetch(API_URL + '?userHash=' + sessao.hash + '&dados=todos')
     .then(function (r) { return r.json(); })
     .then(function (d) {
       document.getElementById('ldScreen').classList.add('hidden');
