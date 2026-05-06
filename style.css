@@ -431,3 +431,37 @@ select.login-field option { background: #1c1c1e; }
   box-shadow: none;
   cursor: not-allowed;
 }
+
+/* ══════════════ IMPORTAÇÃO IA ══════════════ */
+.imp-label { display:block; font-size:.72rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; margin:14px 0 6px 4px; letter-spacing:.04em; }
+.imp-meta-box { background:var(--surface-1); border:.5px solid var(--border); border-radius:var(--r-md); padding:14px 16px; margin-bottom:14px; font-size:.84rem; backdrop-filter:blur(40px); }
+.imp-meta-box div { margin-bottom:4px; }
+.imp-legenda { display:flex; flex-wrap:wrap; gap:14px; font-size:.7rem; color:var(--text-secondary); margin-bottom:14px; padding:8px; }
+.leg-dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+.leg-dot.leg-ok { background:var(--green); }
+.leg-dot.leg-novo { background:var(--blue); }
+.leg-dot.leg-div { background:var(--orange); }
+.leg-dot.leg-baixa { background:var(--red); }
+.imp-row { background:var(--surface-1); border:.5px solid var(--border); border-left:3px solid var(--text-tertiary); border-radius:var(--r-md); padding:12px 14px; margin-bottom:10px; backdrop-filter:blur(40px); }
+.imp-row.ok { border-left-color:var(--green); }
+.imp-row.novo { border-left-color:var(--blue); background:rgba(10,132,255,.06); }
+.imp-row.div { border-left-color:var(--orange); background:rgba(255,159,10,.06); }
+.imp-row.baixa { border-left-color:var(--red); background:rgba(255,69,58,.08); }
+.imp-row-head { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.imp-num { font-size:.7rem; font-weight:700; color:var(--text-tertiary); width:24px; text-align:center; flex-shrink:0; }
+.imp-desc { flex:1; background:rgba(118,118,128,.12); border:1px solid transparent; border-radius:var(--r-xs); padding:8px 10px; color:var(--text-primary); font-size:.86rem; font-weight:600; outline:none; }
+.imp-desc:focus { border-color:var(--blue); }
+.imp-row-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:8px; }
+.imp-row-grid label { display:flex; flex-direction:column; font-size:.6rem; color:var(--text-tertiary); text-transform:uppercase; gap:3px; }
+.imp-input { background:rgba(118,118,128,.12); border:1px solid transparent; border-radius:var(--r-xs); padding:6px 8px; color:var(--text-primary); font-size:.78rem; font-weight:600; outline:none; font-family:var(--mono); }
+.imp-input:focus { border-color:var(--blue); }
+.imp-unit { color:var(--green) !important; }
+.imp-status-msg { font-size:.7rem; color:var(--text-secondary); padding:6px 0 4px; font-weight:500; }
+.imp-remove { background:rgba(255,69,58,.12); color:var(--red); border:none; border-radius:var(--r-xs); padding:6px 12px; font-size:.7rem; font-weight:600; cursor:pointer; margin-top:4px; }
+.imp-total-box { background:linear-gradient(145deg,var(--green),#28b84d); color:#fff; padding:16px; border-radius:var(--r-md); text-align:center; font-size:.92rem; margin:16px 0; box-shadow:0 8px 24px rgba(48,209,88,.25); }
+.imp-actions { display:flex; gap:10px; margin-top:16px; }
+.imp-btn-cancel, .imp-btn-confirm { flex:1; padding:14px; border-radius:var(--r-sm); border:none; font-weight:700; font-size:.88rem; cursor:pointer; }
+.imp-btn-cancel { background:var(--surface-2); color:var(--text-secondary); }
+.imp-btn-confirm { background:linear-gradient(145deg,var(--green),#28b84d); color:#fff; box-shadow:0 6px 18px rgba(48,209,88,.3); }
+.imp-btn-confirm:disabled { opacity:.6; cursor:not-allowed; }
+@media (max-width:480px) { .imp-row-grid { grid-template-columns:repeat(2,1fr); } }
