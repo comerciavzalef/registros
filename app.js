@@ -269,7 +269,7 @@ function abrirCatalogo() {
     '<div class="empty-text">Carregando catálogo...</div></div>';
   document.getElementById('catalogoSearch').value = '';
 
-  fetch(API_URL + '?senha=GP.Carlos2026&acao=catalogo')
+  fetch(API_URL + '?userHash=' + sessao.hash + '&acao=catalogo')
     .then(function (r) { return r.json(); })
     .then(function (d) {
       if (d.status !== 'ok') { toast(d.msg || 'Erro ao carregar catálogo'); return; }
