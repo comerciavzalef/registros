@@ -515,3 +515,196 @@ function toast(msg) {
   t.classList.add('show');
   setTimeout(function () { t.classList.remove('show'); }, 3500);
 }
+
+
+// ══════════════════════════════════════════════════════════════
+//  IMPORTAÇÃO INTELIGENTE — IA MULTIMODAL (v6.0)
+// ══════════════════════════════════════════════════════════════
+var importacaoTemp = null;
+
+function abrirImportar() {
+  document.body.style.overflow = 'hidden';
+  document.getElementById('importarModal').classList.add('show');
+  document.getElementById('impStep1').style.display = 'block';
+  document.getElementById('impStep2').style.display = 'none';
+  document.getElementById('impStep3').style.display = 'none';
+  document.getElementById('impTexto').value = '';
+  document.getElementById('impArquivo').value = '';
+  document.getElementById('impPreview').innerHTML = '';
+  importacaoTemp = null;
+}
+
+function fecharImportar() {
+  document.body.style.overflow = '';
+  document.getElementById('importarModal').classList.remove('show');
+}
+
+function escolherCidadeSetor() {
+  var cidade = document.getElementById('impCidade').value;
+  var setor = document.getElementById('impSetor').value;
+  var reqId = document.getElementById('impReqId').value.trim();
+  var arquivo = document.getElementById('impArquivo').files[0];
+  var texto = document.getElementById('impTexto').value.trim();
+
+  if (!cidade || !setor || !reqId) { toast('Preencha cidade, setor e ID'); return; }
+  if (!arquivo && !texto) { toast('Anexe foto OU cole texto'); return; }
+
+  document.getElementById('impStep1').style.display = 'none';
+  document.getElementById('impStep2').style.display = 'block';
+
+  var payload = { acao: 'parsearrequisicao' };
+  if (texto) payload.textoBruto = texto;
+
+  if (arquivo) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      payload.imagemBase64 = e.target.result.split(',')[1];
+      payload.mimeType = arquivo.type;
+      enviarParaIA(payload, cidade, setor, reqId);
+    };
+    reader.readAsDataURL(arquivo);
+  } else {
+    enviarParaIA(payload, cidade, setor, reqId);
+  }
+}
+
+function enviarParaIA(payload, cidade, setor, reqId) {
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload),
+    redirect: 'follow'
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.status !== 'ok') { toast(d.msg || 'Erro na IA'); voltarStep1(); return; }
+      importacaoTemp = { cidade: cidade, setor: setor, reqId: reqId, itens: d.resultado.itens, meta: d.resultado };
+      renderPreviewImportacao();
+    })
+    .catch(function(e) { toast('Erro de conexão'); voltarStep1(); });
+}
+
+function voltarStep1() {
+  document.getElementById('impStep1').style.display = 'block';
+  document.getElementById('impStep2').style.display = 'none';
+  document.getElementById('impStep3').style.display = 'none';
+}
+
+function renderPreviewImportacao() {
+  document.getElementById('impStep2').style.display = 'none';
+  document.getElementById('impStep3').style.display = 'block';
+
+  var meta = importacaoTemp.meta;
+  var itens = importacaoTemp.itens;
+  var totalGeral = 0;
+
+  var h = '<div class="imp-meta-box">';
+  h += '<div><strong>📍 Cidade:</strong> ' + escapeHtml(importacaoTemp.cidade) + ' / ' + escapeHtml(importacaoTemp.setor) + '</div>';
+  h += '<div><strong>🆔 Req ID:</strong> ' + escapeHtml(importacaoTemp.reqId) + '</div>';
+  if (meta.cidade_detectada) h += '<div style="color:var(--text-tertiary);font-size:.7rem;margin-top:6px;">IA detectou: ' + escapeHtml(meta.cidade_detectada) + ' / ' + escapeHtml(meta.setor_detectado || '?') + '</div>';
+  h += '</div>';
+
+  h += '<div class="imp-legenda"><span class="leg-dot leg-ok"></span>OK <span class="leg-dot leg-novo"></span>Novo <span class="leg-dot leg-div"></span>Divergente <span class="leg-dot leg-baixa"></span>Conferir</div>';
+
+  itens.forEach(function(it, idx) {
+    var classe = 'imp-row';
+    if (it.confianca === 'BAIXA') classe += ' baixa';
+    else if (it.status_catalogo === 'NOVO') classe += ' novo';
+    else if (it.status_catalogo === 'DIVERGENTE' || it.status_catalogo === 'MANUAL_PROTEGIDO') classe += ' div';
+    else classe += ' ok';
+
+    totalGeral += parseFloat(it.valor_total) || 0;
+
+    h += '<div class="' + classe + '">';
+    h += '<div class="imp-row-head"><span class="imp-num">' + (idx + 1) + '</span><input class="imp-desc" value="' + escapeHtml(it.descricao_normalizada || it.descricao) + '" data-idx="' + idx + '" data-campo="descricao_normalizada"></div>';
+    h += '<div class="imp-row-grid">';
+    h += '<label>Qtd<input type="number" step="0.01" class="imp-input" value="' + it.quantidade + '" data-idx="' + idx + '" data-campo="quantidade"></label>';
+    h += '<label>Un<input class="imp-input" value="' + escapeHtml(it.unidade_compra) + '" data-idx="' + idx + '" data-campo="unidade_compra"></label>';
+    h += '<label>Por emb<input type="number" step="1" class="imp-input" value="' + (it.qtd_por_embalagem || 1) + '" data-idx="' + idx + '" data-campo="qtd_por_embalagem"></label>';
+    h += '<label>Total R$<input type="number" step="0.01" class="imp-input" value="' + it.valor_total + '" data-idx="' + idx + '" data-campo="valor_total" onchange="recalcUnit(' + idx + ')"></label>';
+    h += '<label>Unit R$<input type="number" step="0.01" class="imp-input imp-unit" value="' + (it.valor_unitario_calc || 0).toFixed(4) + '" data-idx="' + idx + '" data-campo="valor_unitario_calc" id="impUnit' + idx + '"></label>';
+    h += '</div>';
+
+    var statusTxt = '';
+    if (it.status_catalogo === 'NOVO') statusTxt = '🆕 Item novo — entrará no catálogo como AUTO';
+    else if (it.status_catalogo === 'DIVERGENTE') statusTxt = '⚠️ Catálogo: R$ ' + (it.preco_no_catalogo || 0).toFixed(2) + ' (AUTO) → será atualizado';
+    else if (it.status_catalogo === 'MANUAL_PROTEGIDO') statusTxt = '🔒 Catálogo: R$ ' + (it.preco_no_catalogo || 0).toFixed(2) + ' (MANUAL) — protegido, não sobrescreverá';
+    else if (it.status_catalogo === 'OK') statusTxt = '✅ Bate com catálogo';
+    if (it.confianca === 'BAIXA') statusTxt = '⚠️ CONFIRMAR — ' + (it.observacao || 'IA com baixa confiança');
+    h += '<div class="imp-status-msg">' + statusTxt + '</div>';
+    h += '<button class="imp-remove" onclick="removerItemImp(' + idx + ')">🗑️ Remover</button>';
+    h += '</div>';
+  });
+
+  h += '<div class="imp-total-box">💰 Total da Requisição: <strong id="impTotalGeral">R$ ' + totalGeral.toFixed(2).replace('.', ',') + '</strong></div>';
+  h += '<div class="imp-actions">';
+  h += '<button class="imp-btn-cancel" onclick="voltarStep1()">↩️ Refazer</button>';
+  h += '<button class="imp-btn-confirm" onclick="confirmarImportacao()">✅ Confirmar e Lançar</button>';
+  h += '</div>';
+
+  document.getElementById('impPreview').innerHTML = h;
+
+  // Sincroniza inputs com importacaoTemp
+  document.querySelectorAll('#impPreview input').forEach(function(inp) {
+    inp.addEventListener('input', function() {
+      var idx = parseInt(this.dataset.idx);
+      var campo = this.dataset.campo;
+      var val = this.type === 'number' ? parseFloat(this.value) : this.value;
+      importacaoTemp.itens[idx][campo] = val;
+    });
+  });
+}
+
+function recalcUnit(idx) {
+  var it = importacaoTemp.itens[idx];
+  var qtdEmb = it.qtd_por_embalagem || 1;
+  var unit = it.valor_total / (it.quantidade * qtdEmb);
+  it.valor_unitario_calc = unit;
+  document.getElementById('impUnit' + idx).value = unit.toFixed(4);
+  // Recalcula total
+  var t = 0;
+  importacaoTemp.itens.forEach(function(i) { t += parseFloat(i.valor_total) || 0; });
+  document.getElementById('impTotalGeral').textContent = 'R$ ' + t.toFixed(2).replace('.', ',');
+}
+
+function removerItemImp(idx) {
+  if (!confirm('Remover este item?')) return;
+  importacaoTemp.itens.splice(idx, 1);
+  renderPreviewImportacao();
+}
+
+function confirmarImportacao() {
+  if (!importacaoTemp || !importacaoTemp.itens.length) { toast('Sem itens'); return; }
+  var btn = document.querySelector('.imp-btn-confirm');
+  btn.disabled = true; btn.textContent = '⌛ Lançando...';
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'confirmarimportacao',
+      usuario: sessao.nome, senha: sessao.hash,
+      cidade: importacaoTemp.cidade,
+      setor: importacaoTemp.setor,
+      reqId: importacaoTemp.reqId,
+      itens: importacaoTemp.itens
+    }),
+    redirect: 'follow'
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.status === 'ok') {
+        showSuccess('🚀', 'Requisição lançada!', d.itensInseridos + ' itens · R$ ' + d.totalRequisicao.toFixed(2));
+        fecharImportar();
+        carregarDados();
+      } else {
+        toast(d.msg || 'Erro ao lançar');
+        btn.disabled = false; btn.textContent = '✅ Confirmar e Lançar';
+      }
+    })
+    .catch(function() {
+      toast('Erro de conexão');
+      btn.disabled = false; btn.textContent = '✅ Confirmar e Lançar';
+    });
+}
+
