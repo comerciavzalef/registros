@@ -539,6 +539,28 @@ function fecharImportar() {
   document.getElementById('importarModal').classList.remove('show');
 }
 
+// === NOVA FUNÇÃO (Cole acima de escolherCidadeSetor) ===
+function comprimirImagem(file, maxSize, callback) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var width = img.width, height = img.height;
+      if (width > height && width > maxSize) { height *= maxSize / width; width = maxSize; }
+      else if (height > maxSize) { width *= maxSize / height; height = maxSize; }
+      canvas.width = width; canvas.height = height;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      // Retorna base64 comprimido em JPG com 70% de qualidade
+      callback(canvas.toDataURL('image/jpeg', 0.7)); 
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+
 function escolherCidadeSetor() {
   var cidade = document.getElementById('impCidade').value;
   var setor = document.getElementById('impSetor').value;
@@ -552,20 +574,27 @@ function escolherCidadeSetor() {
   document.getElementById('impStep1').style.display = 'none';
   document.getElementById('impStep2').style.display = 'block';
 
-  var payload = { acao: 'parsearrequisicao' };
+  // AQUI ESTÁ A CORREÇÃO DO SEU BUG:
+var payload = { 
+  acao: 'parsearrequisicao',
+  usuario: sessao.nome, // <-- Faltava isso
+  senha: sessao.hash    // <-- Faltava isso (motivo do erro de não autorizado)
+};
   if (texto) payload.textoBruto = texto;
 
-  if (arquivo) {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      payload.imagemBase64 = e.target.result.split(',')[1];
-      payload.mimeType = arquivo.type;
-      enviarParaIA(payload, cidade, setor, reqId);
-    };
-    reader.readAsDataURL(arquivo);
-  } else {
-    enviarParaIA(payload, cidade, setor, reqId);
-  }
+  // ... seu código da linha 561 continua igual
+      if (texto) payload.textoBruto = texto;
+
+      // === APAGUE O IF(ARQUIVO) ANTIGO (linhas 563 a 568+) E COLE ESTE ABAIXO ===
+      if (arquivo) {
+        comprimirImagem(arquivo, 1200, function(base64Otimizado) {
+          payload.imagemBase64 = base64Otimizado.split(',')[1];
+          payload.mimeType = 'image/jpeg';
+          enviarParaIA(payload, cidade, setor, reqId);
+        });
+      } else {
+        enviarParaIA(payload, cidade, setor, reqId);
+      }
 }
 
 function enviarParaIA(payload, cidade, setor, reqId) {
