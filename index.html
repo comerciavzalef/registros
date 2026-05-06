@@ -134,6 +134,53 @@
   </div>
 </div>
 
+  <!-- ══════════════ MODAL: IMPORTAR REQUISIÇÃO (IA) ══════════════ -->
+<div class="modal-full" id="importarModal">
+  <div class="modal-bar">
+    <h2>📥 Importar Requisição (IA)</h2>
+    <button class="modal-close" onclick="fecharImportar()">✕</button>
+  </div>
+  <div class="modal-body">
+
+    <!-- STEP 1 -->
+    <div id="impStep1">
+      <label class="imp-label">🏙️ Cidade</label>
+      <select id="impCidade" class="login-field">
+        <option value="">Selecione...</option>
+        <option>Ibicuí</option><option>Nova Canaã</option><option>Boa Nova</option>
+        <option>Dário Meira</option><option>Floresta Azul</option>
+      </select>
+      <label class="imp-label">📂 Setor</label>
+      <select id="impSetor" class="login-field">
+        <option value="">Selecione...</option>
+        <option>EDUCAÇÃO</option><option>SAÚDE</option><option>ASSISTÊNCIA SOCIAL</option>
+        <option>ADMINISTRAÇÃO</option><option>INFRAESTRUTURA</option>
+      </select>
+      <label class="imp-label">🆔 ID da Requisição</label>
+      <input type="text" id="impReqId" class="login-field" placeholder="Ex: REQ-001">
+      <label class="imp-label">📸 Foto da Requisição</label>
+      <input type="file" id="impArquivo" accept="image/*" capture="environment" class="login-field">
+      <label class="imp-label">📝 OU Texto Bruto (opcional)</label>
+      <textarea id="impTexto" class="login-field" rows="4" placeholder="Cole o texto se preferir..."></textarea>
+      <button class="login-btn" onclick="escolherCidadeSetor()" style="margin-top:14px;background:linear-gradient(145deg,#30d158,#0a84ff);">🤖 Processar com IA</button>
+    </div>
+
+    <!-- STEP 2 (loading) -->
+    <div id="impStep2" style="display:none;text-align:center;padding:60px 20px;">
+      <div class="ld-spinner" style="margin:0 auto 20px;"></div>
+      <div style="color:var(--text-primary);font-weight:600;margin-bottom:6px;">🤖 IA processando...</div>
+      <div style="color:var(--text-tertiary);font-size:.78rem;">Pode levar até 15 segundos</div>
+    </div>
+
+    <!-- STEP 3 (preview) -->
+    <div id="impStep3" style="display:none;">
+      <div id="impPreview"></div>
+    </div>
+
+  </div>
+</div>
+
+
 
 <!-- Overlays -->
 <div class="success-overlay" id="successOverlay">
@@ -142,6 +189,8 @@
   <div class="success-detail" id="successDetail"></div>
 </div>
 <div class="toast" id="toast"></div>
+
+  
 
 <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(function(){}); }</script>
 <script src="app.js"></script>
