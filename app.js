@@ -1,5 +1,5 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v6.4 (Assistente IA)
+//  REQUISIÇÕES DIGITAL — app.js v6.5 (Menu Lateral + Povoar Catálogo)
 //  Grupo Carlos Vaz — CRV/LAS
 // ============================================================
 
@@ -97,6 +97,7 @@ function logout() {
   document.getElementById('eyeIcon').textContent = '👁️';
   document.getElementById('loginError').textContent = '';
   var lgpd = document.getElementById('lgpdCheck'); if (lgpd) lgpd.checked = false;
+  fecharMenuLateral();
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -105,12 +106,40 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // ══════════════════════════════════════════════════════════════
+//  MENU LATERAL (drawer)
+// ══════════════════════════════════════════════════════════════
+function abrirMenuLateral() {
+  document.getElementById('menuLateral').classList.add('show');
+  document.getElementById('menuOverlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharMenuLateral() {
+  var el = document.getElementById('menuLateral');
+  var ov = document.getElementById('menuOverlay');
+  if (el) el.classList.remove('show');
+  if (ov) ov.classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+function menuAcao(acao) {
+  fecharMenuLateral();
+  setTimeout(function() {
+    if (acao === 'ia') abrirAssistenteIA();
+    else if (acao === 'importar') abrirImportar();
+    else if (acao === 'catalogo') abrirCatalogo();
+    else if (acao === 'logout') logout();
+  }, 250);
+}
+
+// ══════════════════════════════════════════════════════════════
 //  CARREGAR DADOS
 // ══════════════════════════════════════════════════════════════
 function iniciarApp() {
   document.getElementById('ldScreen').classList.remove('hidden');
   document.getElementById('mainApp').style.display = 'block';
   document.getElementById('userBadge').textContent = sessao.nome;
+  document.getElementById('menuUserName').textContent = sessao.nome;
   carregarDados();
   autoRefreshTimer = setInterval(carregarDados, 300000);
 }
@@ -634,7 +663,7 @@ function renderPreviewImportacao() {
     var statusTxt = '';
     if (it.status_catalogo === 'NOVO') statusTxt = '🆕 Item novo — entrará no catálogo como AUTO';
     else if (it.status_catalogo === 'DIVERGENTE') statusTxt = '⚠️ Catálogo: R$ ' + (it.preco_no_catalogo || 0).toFixed(2) + ' (AUTO) → será atualizado';
-    else if (it.status_catalogo === 'MANUAL_PROTEGIDO') statusTxt = '🔒 Catálogo: R$ ' + (it.preco_no_catalogo || 0).toFixed(2) + ' (MANUAL) — protegido, não sobrescreverá';
+    else if (it.status_catalogo === 'MANUAL_PROTEGIDO') statusTxt = '🔒 Catálogo: R$ ' + (it.preco_no_catalogo || 0).toFixed(2) + ' (MANUAL) — protegido';
     else if (it.status_catalogo === 'OK') statusTxt = '✅ Bate com catálogo';
     if (it.confianca === 'BAIXA') statusTxt = '⚠️ CONFIRMAR — ' + (it.observacao || 'IA com baixa confiança');
     h += '<div class="imp-status-msg">' + statusTxt + '</div>';
@@ -713,8 +742,11 @@ function confirmarImportacao() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  🤖 ASSISTENTE IA — comandos pré-treinados
+//  🤖 ASSISTENTE IA
 // ══════════════════════════════════════════════════════════════
+var iaComandoAtual = null;
+var iaPovoamentoTemp = null;
+
 function abrirAssistenteIA() {
   document.body.style.overflow = 'hidden';
   document.getElementById('iaModal').classList.add('show');
@@ -722,6 +754,8 @@ function abrirAssistenteIA() {
   document.getElementById('iaStep2').style.display = 'none';
   document.getElementById('iaStep3').style.display = 'none';
   document.getElementById('iaParamWrap').style.display = 'none';
+  document.getElementById('iaPovoarWrap').style.display = 'none';
+  document.getElementById('iaPovoarPreview').style.display = 'none';
   document.getElementById('iaResposta').innerHTML = '';
 
   if (!comandosIA.length) {
@@ -752,7 +786,7 @@ function fecharAssistenteIA() {
 }
 
 function renderListaComandos() {
-  var h = '<div class="ia-intro">Escolha um comando pré-treinado. Cada um custa entre R$ 0,01 e R$ 0,03 e responde em 3-5 segundos.</div>';
+  var h = '<div class="ia-intro">Escolha um comando pré-treinado. Cada um custa entre R$ 0,01 e R$ 0,10 e responde em 3-5 segundos.</div>';
   comandosIA.forEach(function(cmd) {
     h += '<div class="ia-cmd-card" onclick="selecionarComando(\'' + escapeHtml(cmd.comando) + '\')">';
     h += '<div class="ia-cmd-nome">' + escapeHtml(cmd.nome) + '</div>';
@@ -763,27 +797,31 @@ function renderListaComandos() {
   document.getElementById('iaListaCmds').innerHTML = h;
 }
 
-var iaComandoAtual = null;
-
 function selecionarComando(comando) {
   iaComandoAtual = comando;
+
+  // Comando especial: POVOAR_CATALOGO usa fluxo próprio
+  if (comando === 'POVOAR_CATALOGO') {
+    document.getElementById('iaStep1').style.display = 'none';
+    document.getElementById('iaPovoarWrap').style.display = 'block';
+    document.getElementById('iaPovoarLista').value = '';
+    setTimeout(function(){ document.getElementById('iaPovoarLista').focus(); }, 100);
+    return;
+  }
+
   var precisaParam = ['ANALISE_SETOR', 'SUGERIR_PRECO_ITEM', 'BUSCAR_ITEM_CATALOGO'].indexOf(comando) !== -1;
 
   if (precisaParam) {
-    var label = '';
-    var placeholder = '';
+    var label = '', placeholder = '';
     if (comando === 'ANALISE_SETOR') {
       label = '🏢 Qual setor analisar?';
       placeholder = 'Ex: EDUCAÇÃO';
-      document.getElementById('iaParamInput').type = 'text';
     } else if (comando === 'SUGERIR_PRECO_ITEM') {
       label = '💡 Qual item você quer estimar?';
       placeholder = 'Ex: Creme de leite 200g';
-      document.getElementById('iaParamInput').type = 'text';
     } else if (comando === 'BUSCAR_ITEM_CATALOGO') {
       label = '🔍 Sua pergunta';
       placeholder = 'Ex: Quanto custa creme de leite?';
-      document.getElementById('iaParamInput').type = 'text';
     }
     document.getElementById('iaParamLabel').textContent = label;
     document.getElementById('iaParamInput').placeholder = placeholder;
@@ -805,9 +843,12 @@ function confirmarParametro() {
 
 function voltarListaComandos() {
   document.getElementById('iaParamWrap').style.display = 'none';
+  document.getElementById('iaPovoarWrap').style.display = 'none';
+  document.getElementById('iaPovoarPreview').style.display = 'none';
   document.getElementById('iaStep2').style.display = 'none';
   document.getElementById('iaStep3').style.display = 'none';
   document.getElementById('iaStep1').style.display = 'block';
+  iaPovoamentoTemp = null;
 }
 
 function executarIA(comando, parametro) {
@@ -870,7 +911,6 @@ function executarIA(comando, parametro) {
 }
 
 function formatarRespostaIA(texto) {
-  // Converte *negrito* em <strong> e quebras de linha
   var html = escapeHtml(texto);
   html = html.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
   html = html.replace(/\n/g, '<br>');
@@ -888,4 +928,163 @@ function copiarRespostaIA() {
   } else {
     toast('Copie manualmente');
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  🆕 POVOAR CATÁLOGO (fluxo especial)
+// ══════════════════════════════════════════════════════════════
+function processarPovoamento() {
+  var lista = document.getElementById('iaPovoarLista').value.trim();
+  if (!lista) { toast('Cole a lista de itens'); return; }
+
+  var linhas = lista.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length > 1;});
+  if (!linhas.length) { toast('Lista vazia'); return; }
+  if (linhas.length > 50) {
+    toast('Máximo 50 itens. Você tem ' + linhas.length + ' — divida em lotes.');
+    return;
+  }
+
+  document.getElementById('iaPovoarWrap').style.display = 'none';
+  document.getElementById('iaStep2').style.display = 'block';
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'comandoia',
+      usuario: sessao.nome,
+      senha: sessao.hash,
+      comando: 'POVOAR_CATALOGO',
+      parametro: lista
+    }),
+    redirect: 'follow'
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      document.getElementById('iaStep2').style.display = 'none';
+      if (d.status !== 'ok') {
+        toast(d.msg || 'Erro na IA');
+        voltarListaComandos();
+        return;
+      }
+      iaPovoamentoTemp = d;
+      renderPreviewPovoamento();
+    })
+    .catch(function(){
+      toast('Erro de conexão');
+      voltarListaComandos();
+    });
+}
+
+function renderPreviewPovoamento() {
+  document.getElementById('iaPovoarPreview').style.display = 'block';
+
+  var d = iaPovoamentoTemp;
+  var custoUsd = (d.tokensIn * 0.30 / 1000000) + (d.tokensOut * 2.50 / 1000000);
+  var custoBrl = (custoUsd * 5.30).toFixed(4);
+
+  var h = '<div class="ia-resp-header">';
+  h += '<div class="ia-resp-cmd">🆕 POVOAR_CATALOGO</div>';
+  h += '<div class="ia-resp-custo">💰 R$ ' + custoBrl + ' · ' + d.total_processados + ' itens processados</div>';
+  h += '</div>';
+
+  h += '<div class="pov-resumo">';
+  h += '<div class="pov-stat"><div class="pov-stat-num">' + d.total_processados + '</div><div class="pov-stat-lbl">Total IA</div></div>';
+  h += '<div class="pov-stat novo"><div class="pov-stat-num">' + d.novos + '</div><div class="pov-stat-lbl">Novos</div></div>';
+  h += '<div class="pov-stat ja"><div class="pov-stat-num">' + d.ja_existentes + '</div><div class="pov-stat-lbl">Já existem</div></div>';
+  h += '</div>';
+
+  h += '<div class="pov-aviso">📝 Edite os preços antes de confirmar. Itens marcados como "já existe" serão ignorados (não sobrescreve catálogo manual).</div>';
+
+  d.itens.forEach(function(it, idx) {
+    var classe = 'pov-row';
+    if (it.ja_existe) classe += ' ja-existe';
+    else if (it.confianca === 'ALTA') classe += ' alta';
+    else if (it.confianca === 'MEDIA') classe += ' media';
+    else classe += ' baixa';
+
+    h += '<div class="' + classe + '">';
+    h += '<div class="pov-row-head">';
+    h += '<input type="checkbox" class="pov-check" data-idx="' + idx + '" ' + (it.ja_existe ? '' : 'checked') + ' ' + (it.ja_existe ? 'disabled' : '') + '>';
+    h += '<input class="pov-desc" value="' + escapeHtml(it.descricao_normalizada || it.descricao_original || '') + '" data-idx="' + idx + '" data-campo="descricao_normalizada">';
+    h += '</div>';
+    h += '<div class="pov-row-grid">';
+    h += '<label>Unidade<input class="pov-input" value="' + escapeHtml(it.unidade_padrao || 'UN') + '" data-idx="' + idx + '" data-campo="unidade_padrao"></label>';
+    h += '<label>Qtd/Emb<input type="number" step="1" class="pov-input" value="' + (it.qtd_por_embalagem || 1) + '" data-idx="' + idx + '" data-campo="qtd_por_embalagem"></label>';
+    h += '<label>Preço R$<input type="number" step="0.01" class="pov-input pov-preco" value="' + (it.preco_estimado || 0).toFixed(2) + '" data-idx="' + idx + '" data-campo="preco_estimado"></label>';
+    h += '</div>';
+
+    var statusTxt = '';
+    if (it.ja_existe) statusTxt = '🔒 Já existe no catálogo — ignorado';
+    else if (it.confianca === 'ALTA') statusTxt = '✅ Confiança ALTA · ' + (it.observacao || 'Item comum');
+    else if (it.confianca === 'MEDIA') statusTxt = '⚠️ Confiança MÉDIA · ' + (it.observacao || 'Confira o preço');
+    else statusTxt = '🔴 Confiança BAIXA · ' + (it.observacao || 'Item incomum, valide o preço');
+    h += '<div class="pov-status">' + statusTxt + '</div>';
+    h += '</div>';
+  });
+
+  h += '<div class="ia-resp-actions">';
+  h += '<button class="imp-btn-cancel" onclick="voltarListaComandos()">↩️ Cancelar</button>';
+  h += '<button class="imp-btn-confirm" onclick="confirmarPovoamento()">✅ Adicionar ao Catálogo</button>';
+  h += '</div>';
+
+  document.getElementById('iaPovoarPreview').innerHTML = h;
+
+  // Sincroniza inputs
+  document.querySelectorAll('#iaPovoarPreview input').forEach(function(inp) {
+    inp.addEventListener('input', function() {
+      if (this.classList.contains('pov-check')) return;
+      var idx = parseInt(this.dataset.idx);
+      var campo = this.dataset.campo;
+      var val = this.type === 'number' ? parseFloat(this.value) : this.value;
+      iaPovoamentoTemp.itens[idx][campo] = val;
+    });
+  });
+}
+
+function confirmarPovoamento() {
+  if (!iaPovoamentoTemp) return;
+
+  // Filtra só itens marcados (checkbox) e que não existem
+  var itensSelecionados = [];
+  document.querySelectorAll('#iaPovoarPreview .pov-check').forEach(function(chk) {
+    if (chk.checked && !chk.disabled) {
+      var idx = parseInt(chk.dataset.idx);
+      itensSelecionados.push(iaPovoamentoTemp.itens[idx]);
+    }
+  });
+
+  if (!itensSelecionados.length) {
+    toast('Marque pelo menos 1 item para adicionar');
+    return;
+  }
+
+  var btn = document.querySelector('#iaPovoarPreview .imp-btn-confirm');
+  btn.disabled = true; btn.textContent = '⌛ Adicionando...';
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'confirmarpovoamento',
+      usuario: sessao.nome,
+      senha: sessao.hash,
+      itens: itensSelecionados
+    }),
+    redirect: 'follow'
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.status === 'ok') {
+        showSuccess('🎉', 'Catálogo atualizado!', d.inseridos + ' itens adicionados · ' + d.ignorados + ' ignorados');
+        fecharAssistenteIA();
+      } else {
+        toast(d.msg || 'Erro ao adicionar');
+        btn.disabled = false; btn.textContent = '✅ Adicionar ao Catálogo';
+      }
+    })
+    .catch(function(){
+      toast('Erro de conexão');
+      btn.disabled = false; btn.textContent = '✅ Adicionar ao Catálogo';
+    });
 }
