@@ -1,5 +1,5 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v6.5 (Menu Lateral + Povoar Catálogo)
+//  REQUISIÇÕES DIGITAL — app.js v6.6 (Povoar por Categoria)
 //  Grupo Carlos Vaz — CRV/LAS
 // ============================================================
 
@@ -804,8 +804,10 @@ function selecionarComando(comando) {
   if (comando === 'POVOAR_CATALOGO') {
     document.getElementById('iaStep1').style.display = 'none';
     document.getElementById('iaPovoarWrap').style.display = 'block';
-    document.getElementById('iaPovoarLista').value = '';
-    setTimeout(function(){ document.getElementById('iaPovoarLista').focus(); }, 100);
+    var textarea = document.getElementById('iaPovoarLista');
+    textarea.value = '';
+    textarea.placeholder = 'Cole uma lista de itens (um por linha)\nOU\nDigite uma categoria: mercearia seca, açougue, laticínios, limpeza, higiene, hortifruti, bebidas, padaria, congelados, descartáveis, papelaria';
+    setTimeout(function(){ textarea.focus(); }, 100);
     return;
   }
 
@@ -931,16 +933,16 @@ function copiarRespostaIA() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  🆕 POVOAR CATÁLOGO (fluxo especial)
+//  🆕 POVOAR CATÁLOGO (fluxo especial — aceita lista OU categoria)
 // ══════════════════════════════════════════════════════════════
 function processarPovoamento() {
   var lista = document.getElementById('iaPovoarLista').value.trim();
-  if (!lista) { toast('Cole a lista de itens'); return; }
+  if (!lista || lista.length < 3) { toast('Digite uma lista ou categoria'); return; }
 
   var linhas = lista.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length > 1;});
-  if (!linhas.length) { toast('Lista vazia'); return; }
-  if (linhas.length > 50) {
-    toast('Máximo 50 itens. Você tem ' + linhas.length + ' — divida em lotes.');
+
+  if (linhas.length > 60) {
+    toast('Máximo 60 itens por lote. Você tem ' + linhas.length + ' — divida em partes.');
     return;
   }
 
@@ -1030,7 +1032,6 @@ function renderPreviewPovoamento() {
 
   document.getElementById('iaPovoarPreview').innerHTML = h;
 
-  // Sincroniza inputs
   document.querySelectorAll('#iaPovoarPreview input').forEach(function(inp) {
     inp.addEventListener('input', function() {
       if (this.classList.contains('pov-check')) return;
@@ -1045,7 +1046,6 @@ function renderPreviewPovoamento() {
 function confirmarPovoamento() {
   if (!iaPovoamentoTemp) return;
 
-  // Filtra só itens marcados (checkbox) e que não existem
   var itensSelecionados = [];
   document.querySelectorAll('#iaPovoarPreview .pov-check').forEach(function(chk) {
     if (chk.checked && !chk.disabled) {
