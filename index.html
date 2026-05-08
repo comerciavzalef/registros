@@ -34,13 +34,12 @@
       <input type="password" id="loginPass" class="login-field" placeholder="Sua senha" autocomplete="off" style="padding-right:48px; margin-bottom:0;">
       <button type="button" onclick="toggleSenha()" id="eyeBtn" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1.1rem; color:rgba(235,235,245,.3);"><span id="eyeIcon">👁️</span></button>
     </div>
-<div style="margin-bottom: 16px; text-align: left; display: flex; align-items: flex-start; gap: 8px; padding: 0 4px;">
-  <input type="checkbox" id="lgpdCheck" style="margin-top: 3px; width: 16px; height: 16px; accent-color: var(--blue); cursor: pointer;">
-  <label for="lgpdCheck" style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4; cursor: pointer;">
-    Declaro que li e concordo com a recolha de dados estritamente para fins laborais e de acesso ao sistema, conforme a <strong>LGPD</strong>.
-  </label>
-</div>
-    
+    <div style="margin-bottom: 16px; text-align: left; display: flex; align-items: flex-start; gap: 8px; padding: 0 4px;">
+      <input type="checkbox" id="lgpdCheck" style="margin-top: 3px; width: 16px; height: 16px; accent-color: var(--blue); cursor: pointer;">
+      <label for="lgpdCheck" style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4; cursor: pointer;">
+        Declaro que li e concordo com a recolha de dados estritamente para fins laborais e de acesso ao sistema, conforme a <strong>LGPD</strong>.
+      </label>
+    </div>
     <button class="login-btn" id="loginBtn" onclick="fazerLogin()">Entrar</button>
     <div class="login-error" id="loginError"></div>
   </div>
@@ -57,17 +56,18 @@
 <div id="mainApp" style="display:none;">
 
   <div class="top-bar">
-   <div class="top-bar-row1">
-  <div class="brand">
-    <div class="brand-dot">📋</div>
-    <div class="brand-text"><h1>Requisições</h1><span>Dashboard</span></div>
-  </div>
-  <div style="display:flex; gap:8px;">
-  <button class="btn-catalogo" onclick="abrirImportar()" style="background:linear-gradient(145deg,#30d158,#0a84ff);">📥 Importar</button>
-  <button class="btn-catalogo" onclick="abrirCatalogo()">📦 Catálogo</button>
-  <button class="btn-logout" onclick="logout()">Sair</button>
-</div>
-</div>
+    <div class="top-bar-row1">
+      <div class="brand">
+        <div class="brand-dot">📋</div>
+        <div class="brand-text"><h1>Requisições</h1><span>Dashboard</span></div>
+      </div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button class="btn-catalogo btn-ia" onclick="abrirAssistenteIA()">🤖 IA</button>
+        <button class="btn-catalogo" onclick="abrirImportar()" style="background:linear-gradient(145deg,#30d158,#0a84ff);">📥 Importar</button>
+        <button class="btn-catalogo" onclick="abrirCatalogo()">📦 Catálogo</button>
+        <button class="btn-logout" onclick="logout()">Sair</button>
+      </div>
+    </div>
 
     <div class="top-bar-row2">
       <span class="badge badge-online" id="badgeStatus">Online</span>
@@ -87,27 +87,19 @@
       </div>
     </div>
 
-    <!-- Switch de Exportação -->
     <div class="relatorio-switch-row" style="margin-bottom: 24px;">
       <span class="relatorio-switch-label">Resumo para WhatsApp</span>
       <div class="apple-switch" id="switchRelatorio" onclick="toggleRelatorio()"><div class="apple-switch-track"><div class="apple-switch-thumb"></div></div></div>
     </div>
 
-    <!-- Cidades Grid -->
     <div class="section-label">Detalhes por Cidade (Clique para abrir)</div>
     <div class="stats-grid" id="cidadesGrid"></div>
 
-    <!-- RANKING DE CIDADES -->
     <div class="section-label" style="margin-top:10px;">🏆 Ranking de Gastos por Cidade</div>
-    <div class="ranking-card" id="rankingCidades">
-      <!-- Injetado via JS -->
-    </div>
+    <div class="ranking-card" id="rankingCidades"></div>
 
-    <!-- RANKING DE SETORES -->
     <div class="section-label">📈 Consumo Global por Setor</div>
-    <div class="ranking-card" id="rankingSetores">
-      <!-- Injetado via JS -->
-    </div>
+    <div class="ranking-card" id="rankingSetores"></div>
 
     <p class="sync-time" id="syncTime"></p>
   </div>
@@ -122,7 +114,7 @@
   <div class="modal-body" id="cidadeBody"></div>
 </div>
 
-  <!-- ══════════════ MODAL: CATÁLOGO ══════════════ -->
+<!-- ══════════════ MODAL: CATÁLOGO ══════════════ -->
 <div class="modal-full" id="catalogoModal">
   <div class="modal-bar">
     <h2>📦 Catálogo de Preços</h2>
@@ -134,7 +126,7 @@
   </div>
 </div>
 
-  <!-- ══════════════ MODAL: IMPORTAR REQUISIÇÃO (IA) ══════════════ -->
+<!-- ══════════════ MODAL: IMPORTAR REQUISIÇÃO (IA) ══════════════ -->
 <div class="modal-full" id="importarModal">
   <div class="modal-bar">
     <h2>📥 Importar Requisição (IA)</h2>
@@ -142,7 +134,6 @@
   </div>
   <div class="modal-body">
 
-    <!-- STEP 1 -->
     <div id="impStep1">
       <label class="imp-label">🏙️ Cidade</label>
       <select id="impCidade" class="login-field">
@@ -165,14 +156,12 @@
       <button class="login-btn" onclick="escolherCidadeSetor()" style="margin-top:14px;background:linear-gradient(145deg,#30d158,#0a84ff);">🤖 Processar com IA</button>
     </div>
 
-    <!-- STEP 2 (loading) -->
     <div id="impStep2" style="display:none;text-align:center;padding:60px 20px;">
       <div class="ld-spinner" style="margin:0 auto 20px;"></div>
       <div style="color:var(--text-primary);font-weight:600;margin-bottom:6px;">🤖 IA processando...</div>
-      <div style="color:var(--text-tertiary);font-size:.78rem;">Pode levar até 15 segundos</div>
+      <div style="color:var(--text-tertiary);font-size:.78rem;">Pode levar até 5 segundos</div>
     </div>
 
-    <!-- STEP 3 (preview) -->
     <div id="impStep3" style="display:none;">
       <div id="impPreview"></div>
     </div>
@@ -180,7 +169,39 @@
   </div>
 </div>
 
+<!-- ══════════════ MODAL: ASSISTENTE IA ══════════════ -->
+<div class="modal-full" id="iaModal">
+  <div class="modal-bar">
+    <h2>🤖 Assistente IA</h2>
+    <button class="modal-close" onclick="fecharAssistenteIA()">✕</button>
+  </div>
+  <div class="modal-body">
 
+    <div id="iaStep1">
+      <div id="iaListaCmds"></div>
+    </div>
+
+    <div id="iaParamWrap" style="display:none;">
+      <label class="imp-label" id="iaParamLabel">Parâmetro</label>
+      <input type="text" id="iaParamInput" class="login-field" placeholder="Digite aqui...">
+      <div class="imp-actions">
+        <button class="imp-btn-cancel" onclick="voltarListaComandos()">↩️ Voltar</button>
+        <button class="imp-btn-confirm" onclick="confirmarParametro()">🤖 Executar</button>
+      </div>
+    </div>
+
+    <div id="iaStep2" style="display:none;text-align:center;padding:60px 20px;">
+      <div class="ld-spinner" style="margin:0 auto 20px;"></div>
+      <div style="color:var(--text-primary);font-weight:600;margin-bottom:6px;">🤖 Pensando...</div>
+      <div style="color:var(--text-tertiary);font-size:.78rem;">3 a 5 segundos</div>
+    </div>
+
+    <div id="iaStep3" style="display:none;">
+      <div id="iaResposta"></div>
+    </div>
+
+  </div>
+</div>
 
 <!-- Overlays -->
 <div class="success-overlay" id="successOverlay">
@@ -189,8 +210,6 @@
   <div class="success-detail" id="successDetail"></div>
 </div>
 <div class="toast" id="toast"></div>
-
-  
 
 <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(function(){}); }</script>
 <script src="app.js"></script>
