@@ -1,5 +1,5 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v5.2 (Catálogo Refinado)
+//  REQUISIÇÕES DIGITAL — app.js v6.4 (Assistente IA)
 //  Grupo Carlos Vaz — CRV/LAS
 // ============================================================
 
@@ -9,6 +9,7 @@ var SESSION_KEY = 'cv_requisicoes_sessao';
 var sessao = null;
 var dadosCompletos = null;
 var catalogo = [];
+var comandosIA = [];
 var autoRefreshTimer = null;
 
 // ══════════════════════════════════════════════════════════════
@@ -46,7 +47,6 @@ async function fazerLogin() {
 
   try {
     var senhaHash = await gerarHash(pass);
-
     fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -86,7 +86,7 @@ function shakeLogin() {
 function esconderLogin() { document.getElementById('loginScreen').classList.add('hidden'); }
 
 function logout() {
-  sessao = null; dadosCompletos = null; catalogo = [];
+  sessao = null; dadosCompletos = null; catalogo = []; comandosIA = [];
   localStorage.removeItem(SESSION_KEY);
   if (autoRefreshTimer) clearInterval(autoRefreshTimer);
   document.getElementById('mainApp').style.display = 'none';
@@ -262,7 +262,7 @@ function fecharCidade() { document.getElementById('cidadeModal').classList.remov
 //  CATÁLOGO
 // ══════════════════════════════════════════════════════════════
 function abrirCatalogo() {
-  document.body.style.overflow = 'hidden'; // TRAVA O SCROLL DO FUNDO
+  document.body.style.overflow = 'hidden';
   document.getElementById('catalogoModal').classList.add('show');
   document.getElementById('catalogoBody').innerHTML =
     '<div style="text-align:center;padding:40px 20px;"><div class="ld-spinner" style="margin:0 auto 16px;"></div>' +
@@ -279,9 +279,9 @@ function abrirCatalogo() {
     .catch(function () { toast('Erro de conexão'); });
 }
 
-function fecharCatalogo() { 
-  document.body.style.overflow = ''; // DESTRAVA O SCROLL
-  document.getElementById('catalogoModal').classList.remove('show'); 
+function fecharCatalogo() {
+  document.body.style.overflow = '';
+  document.getElementById('catalogoModal').classList.remove('show');
 }
 
 function filtrarCatalogo() {
@@ -321,19 +321,19 @@ function renderCatalogo(filtro) {
          codigoHtml +
          '<span class="cat-desc">' + escapeHtml(it.descricao) + '</span>' +
          '</div>' +
-         '<div class="cat-action-wrap">' + // NOVO WRAPPER PARA INPUT + BOTÃO
+         '<div class="cat-action-wrap">' +
          '<div class="cat-valor-wrap">' +
          '<span class="cat-prefix">R$</span>' +
          '<input type="text" inputmode="decimal" class="cat-input" ' +
-         'id="input_cat_' + it.linha + '" ' + // ADICIONADO ID
+         'id="input_cat_' + it.linha + '" ' +
          'value="' + formatNum(it.valor) + '" ' +
          'data-linha="' + it.linha + '" ' +
          'data-original="' + it.valor + '" ' +
          'data-desc="' + escapeHtml(it.descricao) + '" ' +
          'onfocus="this.select()" ' +
-         'onkeydown="if(event.key === \'Enter\') dispararSalvar(' + it.linha + ')">' + // ACEITA O ENTER AQUI
+         'onkeydown="if(event.key === \'Enter\') dispararSalvar(' + it.linha + ')">' +
          '</div>' +
-         '<button class="cat-save-btn" onclick="dispararSalvar(' + it.linha + ')" title="Salvar Preço">✓</button>' + // NOVO BOTÃO
+         '<button class="cat-save-btn" onclick="dispararSalvar(' + it.linha + ')" title="Salvar Preço">✓</button>' +
          '</div></div>';
   });
 
@@ -351,7 +351,6 @@ function parseValorBR(str) {
   return isNaN(n) ? null : n;
 }
 
-// Função que cuida de atualizar a tela na hora e mandar pro Google escondido
 function dispararSalvar(linha) {
   var input = document.getElementById('input_cat_' + linha);
   if (!input) return;
@@ -360,7 +359,6 @@ function dispararSalvar(linha) {
   var desc = input.dataset.desc;
   var novo = parseValorBR(input.value);
 
-  // Validações
   if (novo === null || novo < 0) {
     toast('Valor inválido');
     input.value = formatNum(original);
@@ -368,32 +366,27 @@ function dispararSalvar(linha) {
   }
   if (Math.abs(novo - original) < 0.001) {
     input.value = formatNum(original);
-    input.blur(); // Tira o foco
+    input.blur();
     return;
   }
 
-  // Pergunta antes de fazer
   var msg = 'Atualizar "' + desc + '" para R$ ' + formatNum(novo) +
             '?\n\nAtualizar também as requisições já APROVADAS/ENTREGUES/NEGADAS deste mês?\n\n' +
             'OK = sim · Cancelar = só pendentes';
   var atualizarAntigas = confirm(msg);
 
-  // 1. ATUALIZA A TELA IMEDIATAMENTE (Interface Otimista)
   input.dataset.original = novo;
   input.value = formatNum(novo);
-  input.blur(); // Esconde o teclado do celular
-  
-  // Pega o botão do lado do input para mudar o estado dele
+  input.blur();
+
   var btn = input.parentElement.nextElementSibling;
   if (btn) {
-    btn.innerHTML = '⌛'; // Ícone de carregando
+    btn.innerHTML = '⌛';
     btn.disabled = true;
   }
 
-  // Mostra a notificação de sucesso na hora para o usuário
   showSuccess('✅', 'Preço alterado!', 'Sincronizando no fundo...');
 
-  // 2. MANDA PRO GOOGLE SHEETS EM SEGUNDO PLANO (Sem "await" para não travar)
   fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -409,30 +402,23 @@ function dispararSalvar(linha) {
   })
   .then(function(r) { return r.json(); })
   .then(function(d) {
-    // Quando o Google responder, volta o botão ao normal
     if (btn) { btn.innerHTML = '✓'; btn.disabled = false; }
-    
     if (d.status === 'ok') {
-      // Atualiza no array local para se a pessoa buscar de novo
       for (var i = 0; i < catalogo.length; i++) {
         if (catalogo[i].linha === linha) { catalogo[i].valor = novo; break; }
       }
-      // Se precisou atualizar pedidos pendentes/antigos, recarrega o dashboard
       if (d.atualizadosPendentes > 0 || d.atualizadosAntigos > 0) {
         carregarDados();
       }
     } else {
-      // Se der erro de regra de negócio lá na planilha, desfaz a alteração
       reverterErro(input, original, btn, d.msg || 'Erro ao salvar');
     }
   })
   .catch(function(e) {
-    // Se a internet cair, desfaz a alteração
     reverterErro(input, original, btn, 'Erro de conexão. Valor revertido.');
   });
 }
 
-// Função de segurança caso a internet caia durante o salvamento
 function reverterErro(input, valorOriginal, btn, msgErro) {
   input.dataset.original = valorOriginal;
   input.value = formatNum(valorOriginal);
@@ -516,9 +502,8 @@ function toast(msg) {
   setTimeout(function () { t.classList.remove('show'); }, 3500);
 }
 
-
 // ══════════════════════════════════════════════════════════════
-//  IMPORTAÇÃO INTELIGENTE — IA MULTIMODAL (v6.0)
+//  IMPORTAÇÃO IA — PARSING DE FOTO
 // ══════════════════════════════════════════════════════════════
 var importacaoTemp = null;
 
@@ -539,7 +524,6 @@ function fecharImportar() {
   document.getElementById('importarModal').classList.remove('show');
 }
 
-// === NOVA FUNÇÃO (Cole acima de escolherCidadeSetor) ===
 function comprimirImagem(file, maxSize, callback) {
   var reader = new FileReader();
   reader.onload = function(e) {
@@ -552,14 +536,12 @@ function comprimirImagem(file, maxSize, callback) {
       canvas.width = width; canvas.height = height;
       var ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
-      // Retorna base64 comprimido em JPG com 70% de qualidade
-      callback(canvas.toDataURL('image/jpeg', 0.7)); 
+      callback(canvas.toDataURL('image/jpeg', 0.65));
     };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
-
 
 function escolherCidadeSetor() {
   var cidade = document.getElementById('impCidade').value;
@@ -574,24 +556,22 @@ function escolherCidadeSetor() {
   document.getElementById('impStep1').style.display = 'none';
   document.getElementById('impStep2').style.display = 'block';
 
-  // AQUI ESTÁ A CORREÇÃO DO SEU BUG:
-var payload = { 
-  acao: 'parsearrequisicao',
-  usuario: sessao.nome, // <-- Faltava isso
-  senha: sessao.hash    // <-- Faltava isso (motivo do erro de não autorizado)
-};
+  var payload = {
+    acao: 'parsearrequisicao',
+    usuario: sessao.nome,
+    senha: sessao.hash
+  };
   if (texto) payload.textoBruto = texto;
-  
-      // === APAGUE O IF(ARQUIVO) ANTIGO (linhas 563 a 568+) E COLE ESTE ABAIXO ===
-      if (arquivo) {
-        comprimirImagem(arquivo, 1200, function(base64Otimizado) {
-          payload.imagemBase64 = base64Otimizado.split(',')[1];
-          payload.mimeType = 'image/jpeg';
-          enviarParaIA(payload, cidade, setor, reqId);
-        });
-      } else {
-        enviarParaIA(payload, cidade, setor, reqId);
-      }
+
+  if (arquivo) {
+    comprimirImagem(arquivo, 800, function(base64Otimizado) {
+      payload.imagemBase64 = base64Otimizado.split(',')[1];
+      payload.mimeType = 'image/jpeg';
+      enviarParaIA(payload, cidade, setor, reqId);
+    });
+  } else {
+    enviarParaIA(payload, cidade, setor, reqId);
+  }
 }
 
 function enviarParaIA(payload, cidade, setor, reqId) {
@@ -670,7 +650,6 @@ function renderPreviewImportacao() {
 
   document.getElementById('impPreview').innerHTML = h;
 
-  // Sincroniza inputs com importacaoTemp
   document.querySelectorAll('#impPreview input').forEach(function(inp) {
     inp.addEventListener('input', function() {
       var idx = parseInt(this.dataset.idx);
@@ -687,7 +666,6 @@ function recalcUnit(idx) {
   var unit = it.valor_total / (it.quantidade * qtdEmb);
   it.valor_unitario_calc = unit;
   document.getElementById('impUnit' + idx).value = unit.toFixed(4);
-  // Recalcula total
   var t = 0;
   importacaoTemp.itens.forEach(function(i) { t += parseFloat(i.valor_total) || 0; });
   document.getElementById('impTotalGeral').textContent = 'R$ ' + t.toFixed(2).replace('.', ',');
@@ -734,3 +712,180 @@ function confirmarImportacao() {
     });
 }
 
+// ══════════════════════════════════════════════════════════════
+//  🤖 ASSISTENTE IA — comandos pré-treinados
+// ══════════════════════════════════════════════════════════════
+function abrirAssistenteIA() {
+  document.body.style.overflow = 'hidden';
+  document.getElementById('iaModal').classList.add('show');
+  document.getElementById('iaStep1').style.display = 'block';
+  document.getElementById('iaStep2').style.display = 'none';
+  document.getElementById('iaStep3').style.display = 'none';
+  document.getElementById('iaParamWrap').style.display = 'none';
+  document.getElementById('iaResposta').innerHTML = '';
+
+  if (!comandosIA.length) {
+    document.getElementById('iaListaCmds').innerHTML =
+      '<div style="text-align:center;padding:40px 20px;"><div class="ld-spinner" style="margin:0 auto 16px;"></div>' +
+      '<div class="empty-text">Carregando comandos...</div></div>';
+
+    fetch(API_URL + '?userHash=' + sessao.hash + '&acao=comandos')
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (d.status === 'ok') {
+          comandosIA = d.comandos || [];
+          renderListaComandos();
+        } else {
+          document.getElementById('iaListaCmds').innerHTML =
+            '<div class="empty-state"><div class="empty-text">Erro ao carregar comandos</div></div>';
+        }
+      })
+      .catch(function(){ toast('Erro de conexão'); });
+  } else {
+    renderListaComandos();
+  }
+}
+
+function fecharAssistenteIA() {
+  document.body.style.overflow = '';
+  document.getElementById('iaModal').classList.remove('show');
+}
+
+function renderListaComandos() {
+  var h = '<div class="ia-intro">Escolha um comando pré-treinado. Cada um custa entre R$ 0,01 e R$ 0,03 e responde em 3-5 segundos.</div>';
+  comandosIA.forEach(function(cmd) {
+    h += '<div class="ia-cmd-card" onclick="selecionarComando(\'' + escapeHtml(cmd.comando) + '\')">';
+    h += '<div class="ia-cmd-nome">' + escapeHtml(cmd.nome) + '</div>';
+    h += '<div class="ia-cmd-desc">' + escapeHtml(cmd.descricao) + '</div>';
+    h += '<div class="ia-cmd-meta">💰 ~R$ ' + escapeHtml(cmd.custo) + '</div>';
+    h += '</div>';
+  });
+  document.getElementById('iaListaCmds').innerHTML = h;
+}
+
+var iaComandoAtual = null;
+
+function selecionarComando(comando) {
+  iaComandoAtual = comando;
+  var precisaParam = ['ANALISE_SETOR', 'SUGERIR_PRECO_ITEM', 'BUSCAR_ITEM_CATALOGO'].indexOf(comando) !== -1;
+
+  if (precisaParam) {
+    var label = '';
+    var placeholder = '';
+    if (comando === 'ANALISE_SETOR') {
+      label = '🏢 Qual setor analisar?';
+      placeholder = 'Ex: EDUCAÇÃO';
+      document.getElementById('iaParamInput').type = 'text';
+    } else if (comando === 'SUGERIR_PRECO_ITEM') {
+      label = '💡 Qual item você quer estimar?';
+      placeholder = 'Ex: Creme de leite 200g';
+      document.getElementById('iaParamInput').type = 'text';
+    } else if (comando === 'BUSCAR_ITEM_CATALOGO') {
+      label = '🔍 Sua pergunta';
+      placeholder = 'Ex: Quanto custa creme de leite?';
+      document.getElementById('iaParamInput').type = 'text';
+    }
+    document.getElementById('iaParamLabel').textContent = label;
+    document.getElementById('iaParamInput').placeholder = placeholder;
+    document.getElementById('iaParamInput').value = '';
+    document.getElementById('iaParamWrap').style.display = 'block';
+    document.getElementById('iaStep1').style.display = 'none';
+    setTimeout(function(){ document.getElementById('iaParamInput').focus(); }, 100);
+  } else {
+    executarIA(comando, '');
+  }
+}
+
+function confirmarParametro() {
+  var valor = document.getElementById('iaParamInput').value.trim();
+  if (!valor) { toast('Preencha o campo'); return; }
+  document.getElementById('iaParamWrap').style.display = 'none';
+  executarIA(iaComandoAtual, valor);
+}
+
+function voltarListaComandos() {
+  document.getElementById('iaParamWrap').style.display = 'none';
+  document.getElementById('iaStep2').style.display = 'none';
+  document.getElementById('iaStep3').style.display = 'none';
+  document.getElementById('iaStep1').style.display = 'block';
+}
+
+function executarIA(comando, parametro) {
+  document.getElementById('iaStep1').style.display = 'none';
+  document.getElementById('iaParamWrap').style.display = 'none';
+  document.getElementById('iaStep2').style.display = 'block';
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'comandoia',
+      usuario: sessao.nome,
+      senha: sessao.hash,
+      comando: comando,
+      parametro: parametro
+    }),
+    redirect: 'follow'
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      document.getElementById('iaStep2').style.display = 'none';
+      document.getElementById('iaStep3').style.display = 'block';
+
+      if (d.status === 'ok') {
+        var resp = (d.resposta || '').toString();
+        var custoTxt = '';
+        if (d.fromCache) {
+          custoTxt = '⚡ Resposta de cache (R$ 0,00)';
+        } else {
+          var custoUsd = (d.tokensIn * 0.30 / 1000000) + (d.tokensOut * 2.50 / 1000000);
+          var custoBrl = (custoUsd * 5.30).toFixed(4);
+          custoTxt = '💰 Custo: R$ ' + custoBrl + ' · ' + (d.tokensIn + d.tokensOut) + ' tokens';
+        }
+
+        var h = '<div class="ia-resp-header">' +
+                '<div class="ia-resp-cmd">' + escapeHtml(comando) + '</div>' +
+                '<div class="ia-resp-custo">' + custoTxt + '</div>' +
+                '</div>';
+        h += '<div class="ia-resp-texto" id="iaRespTexto">' + formatarRespostaIA(resp) + '</div>';
+        h += '<div class="ia-resp-actions">';
+        h += '<button class="imp-btn-cancel" onclick="voltarListaComandos()">↩️ Outro Comando</button>';
+        h += '<button class="imp-btn-confirm" onclick="copiarRespostaIA()">📋 Copiar para WhatsApp</button>';
+        h += '</div>';
+        document.getElementById('iaResposta').innerHTML = h;
+      } else {
+        var hErr = '<div class="ia-resp-header"><div class="ia-resp-cmd">❌ Erro</div></div>';
+        hErr += '<div class="ia-resp-texto" style="color:var(--red);">' + escapeHtml(d.msg || 'Erro desconhecido') + '</div>';
+        hErr += '<div class="ia-resp-actions"><button class="imp-btn-cancel" onclick="voltarListaComandos()">↩️ Voltar</button></div>';
+        document.getElementById('iaResposta').innerHTML = hErr;
+      }
+    })
+    .catch(function(){
+      document.getElementById('iaStep2').style.display = 'none';
+      document.getElementById('iaStep3').style.display = 'block';
+      document.getElementById('iaResposta').innerHTML =
+        '<div class="ia-resp-header"><div class="ia-resp-cmd">❌ Erro de conexão</div></div>' +
+        '<div class="ia-resp-actions"><button class="imp-btn-cancel" onclick="voltarListaComandos()">↩️ Voltar</button></div>';
+    });
+}
+
+function formatarRespostaIA(texto) {
+  // Converte *negrito* em <strong> e quebras de linha
+  var html = escapeHtml(texto);
+  html = html.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
+
+function copiarRespostaIA() {
+  var el = document.getElementById('iaRespTexto');
+  if (!el) return;
+  var texto = el.innerText || el.textContent || '';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto).then(function(){
+      showSuccess('✅', 'Copiado!', 'Cole no WhatsApp');
+    }).catch(function(){ toast('Erro ao copiar'); });
+  } else {
+    toast('Copie manualmente');
+  }
+}
