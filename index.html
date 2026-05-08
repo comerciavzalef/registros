@@ -61,12 +61,9 @@
         <div class="brand-dot">📋</div>
         <div class="brand-text"><h1>Requisições</h1><span>Dashboard</span></div>
       </div>
-      <div style="display:flex; gap:6px; flex-wrap:wrap;">
-        <button class="btn-catalogo btn-ia" onclick="abrirAssistenteIA()">🤖 IA</button>
-        <button class="btn-catalogo" onclick="abrirImportar()" style="background:linear-gradient(145deg,#30d158,#0a84ff);">📥 Importar</button>
-        <button class="btn-catalogo" onclick="abrirCatalogo()">📦 Catálogo</button>
-        <button class="btn-logout" onclick="logout()">Sair</button>
-      </div>
+      <button class="menu-trigger" onclick="abrirMenuLateral()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
     </div>
 
     <div class="top-bar-row2">
@@ -105,6 +102,64 @@
   </div>
 </div>
 
+<!-- ══════════════ MENU LATERAL (DRAWER) ══════════════ -->
+<div class="menu-overlay" id="menuOverlay" onclick="fecharMenuLateral()"></div>
+<aside class="menu-lateral" id="menuLateral">
+  <div class="menu-header">
+    <div class="menu-avatar">👤</div>
+    <div class="menu-userinfo">
+      <div class="menu-username" id="menuUserName">Usuário</div>
+      <div class="menu-userrole">Gestor · CRV/LAS</div>
+    </div>
+    <button class="menu-close" onclick="fecharMenuLateral()" aria-label="Fechar">✕</button>
+  </div>
+
+  <nav class="menu-nav">
+    <div class="menu-section-label">Ferramentas</div>
+
+    <button class="menu-item" onclick="menuAcao('ia')">
+      <div class="menu-icon ia">🤖</div>
+      <div class="menu-text">
+        <div class="menu-title">Assistente IA</div>
+        <div class="menu-sub">Resumos, análises, povoar catálogo</div>
+      </div>
+      <div class="menu-chevron">›</div>
+    </button>
+
+    <button class="menu-item" onclick="menuAcao('importar')">
+      <div class="menu-icon importar">📥</div>
+      <div class="menu-text">
+        <div class="menu-title">Importar Requisição</div>
+        <div class="menu-sub">Foto ou texto via IA</div>
+      </div>
+      <div class="menu-chevron">›</div>
+    </button>
+
+    <button class="menu-item" onclick="menuAcao('catalogo')">
+      <div class="menu-icon catalogo">📦</div>
+      <div class="menu-text">
+        <div class="menu-title">Catálogo de Preços</div>
+        <div class="menu-sub">Editar preços manualmente</div>
+      </div>
+      <div class="menu-chevron">›</div>
+    </button>
+
+    <div class="menu-divider"></div>
+
+    <button class="menu-item menu-logout" onclick="menuAcao('logout')">
+      <div class="menu-icon sair">🚪</div>
+      <div class="menu-text">
+        <div class="menu-title">Sair da Conta</div>
+        <div class="menu-sub">Encerrar sessão</div>
+      </div>
+    </button>
+  </nav>
+
+  <div class="menu-footer">
+    <div class="menu-version">v6.5 · CRV/LAS</div>
+  </div>
+</aside>
+
 <!-- ══════════════ MODAL: DETALHE CIDADE ══════════════ -->
 <div class="modal-full" id="cidadeModal">
   <div class="modal-bar">
@@ -126,7 +181,7 @@
   </div>
 </div>
 
-<!-- ══════════════ MODAL: IMPORTAR REQUISIÇÃO (IA) ══════════════ -->
+<!-- ══════════════ MODAL: IMPORTAR REQUISIÇÃO ══════════════ -->
 <div class="modal-full" id="importarModal">
   <div class="modal-bar">
     <h2>📥 Importar Requisição (IA)</h2>
@@ -181,6 +236,7 @@
       <div id="iaListaCmds"></div>
     </div>
 
+    <!-- Pergunta de parâmetro (1 campo) -->
     <div id="iaParamWrap" style="display:none;">
       <label class="imp-label" id="iaParamLabel">Parâmetro</label>
       <input type="text" id="iaParamInput" class="login-field" placeholder="Digite aqui...">
@@ -190,12 +246,31 @@
       </div>
     </div>
 
+    <!-- Povoar catálogo (textarea grande + processar) -->
+    <div id="iaPovoarWrap" style="display:none;">
+      <div class="ia-pov-intro">
+        🆕 <strong>Povoar Catálogo com IA</strong><br>
+        Cole abaixo a lista de itens (um por linha). A IA estima o preço de mercado de cada um e adiciona ao catálogo. Máximo 50 itens por vez.
+      </div>
+      <label class="imp-label">📝 Lista de itens (1 por linha)</label>
+      <textarea id="iaPovoarLista" class="login-field" rows="10" placeholder="Ex:&#10;Creme de leite 200g&#10;Leite condensado&#10;Açúcar refinado&#10;Óleo de soja&#10;..."></textarea>
+      <div class="imp-actions">
+        <button class="imp-btn-cancel" onclick="voltarListaComandos()">↩️ Voltar</button>
+        <button class="imp-btn-confirm" onclick="processarPovoamento()">🤖 Estimar Preços</button>
+      </div>
+    </div>
+
+    <!-- Preview do povoamento -->
+    <div id="iaPovoarPreview" style="display:none;"></div>
+
+    <!-- Loading -->
     <div id="iaStep2" style="display:none;text-align:center;padding:60px 20px;">
       <div class="ld-spinner" style="margin:0 auto 20px;"></div>
       <div style="color:var(--text-primary);font-weight:600;margin-bottom:6px;">🤖 Pensando...</div>
-      <div style="color:var(--text-tertiary);font-size:.78rem;">3 a 5 segundos</div>
+      <div style="color:var(--text-tertiary);font-size:.78rem;">3 a 8 segundos</div>
     </div>
 
+    <!-- Resposta normal -->
     <div id="iaStep3" style="display:none;">
       <div id="iaResposta"></div>
     </div>
