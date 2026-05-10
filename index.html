@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <title>Requisições — CRV/LAS</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23000'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='%230a84ff' font-family='Arial' font-weight='900' font-size='40'%3E📋%3C/text%3E%3C/svg%3E">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -29,7 +29,6 @@
       <option value="">Selecione seu nome</option>
       <option value="ALEF">Alef</option>
       <option value="CARLOS VAZ">Carlos Vaz</option>
-      <!-- ✏️ v6.7 — Tarefa 8 -->
       <option value="LUANA">Luana</option>
     </select>
     <div style="position:relative; margin-bottom:14px;">
@@ -158,8 +157,7 @@
   </nav>
 
   <div class="menu-footer">
-    <!-- ✏️ v6.7 — Tarefa 9 -->
-    <div class="menu-version">v6.7 · CRV/LAS</div>
+    <div class="menu-version">v6.8 · CRV/LAS</div>
   </div>
 </aside>
 
@@ -194,21 +192,21 @@
 
     <div id="impStep1">
       <label class="imp-label">🏙️ Cidade</label>
-      <select id="impCidade" class="login-field">
-        <option value="">Selecione...</option>
-        <option>Ibicuí</option><option>Nova Canaã</option><option>Boa Nova</option>
-        <option>Dário Meira</option><option>Floresta Azul</option>
-      </select>
+      <div class="imp-select-row">
+        <select id="impCidade" class="login-field" style="flex:1;margin-bottom:0;"></select>
+        <button class="imp-add-btn" onclick="adicionarCidade()" title="Adicionar cidade">＋</button>
+        <button class="imp-del-btn" onclick="removerCidade()" title="Remover cidade selecionada">－</button>
+      </div>
       <label class="imp-label">📂 Setor</label>
-      <select id="impSetor" class="login-field">
-        <option value="">Selecione...</option>
-        <option>EDUCAÇÃO</option><option>SAÚDE</option><option>ASSISTÊNCIA SOCIAL</option>
-        <option>ADMINISTRAÇÃO</option><option>INFRAESTRUTURA</option>
-      </select>
+      <div class="imp-select-row">
+        <select id="impSetor" class="login-field" style="flex:1;margin-bottom:0;"></select>
+        <button class="imp-add-btn" onclick="adicionarSetor()" title="Adicionar setor">＋</button>
+        <button class="imp-del-btn" onclick="removerSetor()" title="Remover setor selecionado">－</button>
+      </div>
       <label class="imp-label">🆔 ID da Requisição</label>
       <input type="text" id="impReqId" class="login-field" placeholder="Ex: REQ-001">
-      <label class="imp-label">📸 Foto da Requisição</label>
-      <input type="file" id="impArquivo" accept="image/*" capture="environment" class="login-field">
+      <label class="imp-label">📸 Foto ou Arquivo da Requisição</label>
+      <input type="file" id="impArquivo" accept="image/*,.pdf,.doc,.docx" class="login-field">
       <label class="imp-label">📝 OU Texto Bruto (opcional)</label>
       <textarea id="impTexto" class="login-field" rows="4" placeholder="Cole o texto se preferir..."></textarea>
       <button class="login-btn" onclick="escolherCidadeSetor()" style="margin-top:14px;background:linear-gradient(145deg,#30d158,#0a84ff);">🤖 Processar com IA</button>
@@ -233,7 +231,6 @@
     <h2>🤖 Assistente IA</h2>
     <button class="modal-close" onclick="fecharAssistenteIA()">✕</button>
   </div>
-  <!-- ✏️ v6.7 — Tarefa 4: overflow-x hidden no modal-body -->
   <div class="modal-body" style="overflow-x:hidden;">
 
     <div id="iaStep1">
@@ -264,24 +261,24 @@
       </div>
     </div>
 
-    <!-- ✏️ v6.7 — Tarefa 3: Atualizar preços por lista -->
-    <div id="iaAtualizarWrap" style="display:none;">
-      <div class="ia-pov-intro" style="border-color:rgba(10,132,255,.25);background:linear-gradient(145deg,rgba(10,132,255,.08),rgba(100,210,255,.08));">
-        💲 <strong style="color:var(--blue);">Atualizar Preços por Lista</strong><br>
-        Cole uma lista de itens com preços. A IA busca cada item no catálogo e atualiza o preço. Itens não encontrados são ignorados (não cria novos).
-      </div>
-      <label class="imp-label">📝 Lista de itens com preços (1 por linha)</label>
-      <textarea id="iaAtualizarLista" class="login-field" rows="10" placeholder="Ex:&#10;Creme de leite 200g - R$ 3,50&#10;Leite condensado - R$ 4,20&#10;Açúcar 5kg - R$ 22,00"></textarea>
-      <div class="imp-actions">
-        <button class="imp-btn-cancel" onclick="voltarListaComandos()">↩️ Voltar</button>
-        <button class="imp-btn-confirm" onclick="processarAtualizacaoPrecos()">💲 Buscar e Comparar</button>
-      </div>
-    </div>
-
     <!-- Preview do povoamento -->
     <div id="iaPovoarPreview" style="display:none;"></div>
 
-    <!-- ✏️ v6.7 — Tarefa 3: Preview da atualização de preços -->
+    <!-- ✏️ v6.7 — Tarefa 3 — Atualizar preços lista -->
+    <div id="iaAtualizarWrap" style="display:none;">
+      <div class="ia-pov-intro">
+        📋 <strong>Atualizar Preços em Lote</strong><br>
+        Cole abaixo a lista com item e preço novo (um por linha). A IA identifica cada item no catálogo e sugere a atualização.
+      </div>
+      <label class="imp-label">📝 Lista de preços (1 por linha)</label>
+      <textarea id="iaAtualizarLista" class="login-field" rows="10" placeholder="Ex:&#10;Creme de leite 200g - R$ 4,50&#10;Leite condensado - R$ 6,80&#10;Açúcar 5kg - R$ 18,90"></textarea>
+      <div class="imp-actions">
+        <button class="imp-btn-cancel" onclick="voltarListaComandos()">↩️ Voltar</button>
+        <button class="imp-btn-confirm" onclick="processarAtualizacaoPrecos()">🤖 Processar</button>
+      </div>
+    </div>
+
+    <!-- Preview da atualização de preços -->
     <div id="iaAtualizarPreview" style="display:none;"></div>
 
     <!-- Loading -->

@@ -1,8 +1,8 @@
 /* ============================================================
-   REQUISIÇÕES DIGITAL — SERVICE WORKER v6.7                // ✏️ v6.7 — Tarefa 9
+   REQUISIÇÕES DIGITAL — SERVICE WORKER v1.0
    ============================================================ */
 
-var CACHE_NAME = 'requisicoes-v6.7';                         // ✏️ v6.7 — Tarefa 9
+var CACHE_NAME = 'requisicoes-v6.8';
 var ASSETS = [
     './',
     './index.html',
