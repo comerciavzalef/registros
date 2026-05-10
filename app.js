@@ -1,5 +1,5 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v6.6 (Povoar por Categoria)
+//  REQUISIÇÕES DIGITAL — app.js v6.7 (Atualizar Preços + UX)  // ✏️ v6.7 — Tarefa 9
 //  Grupo Carlos Vaz — CRV/LAS
 // ============================================================
 
@@ -11,6 +11,9 @@ var dadosCompletos = null;
 var catalogo = [];
 var comandosIA = [];
 var autoRefreshTimer = null;
+
+// ✏️ v6.7 — Tarefa 6: flag para controle do popstate
+var _insidePopstate = false;
 
 // ══════════════════════════════════════════════════════════════
 //  INIT & LOGIN
@@ -105,6 +108,30 @@ document.addEventListener('DOMContentLoaded', function () {
   if (passField) passField.addEventListener('keydown', function (e) { if (e.key === 'Enter') fazerLogin(); });
 });
 
+// ✏️ v6.7 — Tarefa 6: handler do botão Voltar (Android)
+window.addEventListener('popstate', function () {
+  _insidePopstate = true;
+  var modais = [
+    { id: 'iaModal', fn: fecharAssistenteIA },
+    { id: 'importarModal', fn: fecharImportar },
+    { id: 'catalogoModal', fn: fecharCatalogo },
+    { id: 'cidadeModal', fn: fecharCidade }
+  ];
+  for (var i = 0; i < modais.length; i++) {
+    var el = document.getElementById(modais[i].id);
+    if (el && el.classList.contains('show')) {
+      modais[i].fn();
+      _insidePopstate = false;
+      return;
+    }
+  }
+  var menu = document.getElementById('menuLateral');
+  if (menu && menu.classList.contains('show')) {
+    fecharMenuLateral();
+  }
+  _insidePopstate = false;
+});
+
 // ══════════════════════════════════════════════════════════════
 //  MENU LATERAL (drawer)
 // ══════════════════════════════════════════════════════════════
@@ -112,14 +139,17 @@ function abrirMenuLateral() {
   document.getElementById('menuLateral').classList.add('show');
   document.getElementById('menuOverlay').classList.add('show');
   document.body.style.overflow = 'hidden';
+  history.pushState({ modal: 'menuLateral' }, '', ''); // ✏️ v6.7 — Tarefa 6
 }
 
 function fecharMenuLateral() {
   var el = document.getElementById('menuLateral');
   var ov = document.getElementById('menuOverlay');
+  var wasOpen = el && el.classList.contains('show'); // ✏️ v6.7 — Tarefa 6
   if (el) el.classList.remove('show');
   if (ov) ov.classList.remove('show');
   document.body.style.overflow = '';
+  if (wasOpen && !_insidePopstate) history.back(); // ✏️ v6.7 — Tarefa 6
 }
 
 function menuAcao(acao) {
@@ -284,8 +314,15 @@ function abrirCidade(nome) {
 
   document.getElementById('cidadeBody').innerHTML = h;
   document.getElementById('cidadeModal').classList.add('show');
+  history.pushState({ modal: 'cidadeModal' }, '', ''); // ✏️ v6.7 — Tarefa 6
 }
-function fecharCidade() { document.getElementById('cidadeModal').classList.remove('show'); }
+
+function fecharCidade() {
+  var el = document.getElementById('cidadeModal');
+  var wasOpen = el && el.classList.contains('show'); // ✏️ v6.7 — Tarefa 6
+  el.classList.remove('show');
+  if (wasOpen && !_insidePopstate) history.back(); // ✏️ v6.7 — Tarefa 6
+}
 
 // ══════════════════════════════════════════════════════════════
 //  CATÁLOGO
@@ -297,6 +334,7 @@ function abrirCatalogo() {
     '<div style="text-align:center;padding:40px 20px;"><div class="ld-spinner" style="margin:0 auto 16px;"></div>' +
     '<div class="empty-text">Carregando catálogo...</div></div>';
   document.getElementById('catalogoSearch').value = '';
+  history.pushState({ modal: 'catalogoModal' }, '', ''); // ✏️ v6.7 — Tarefa 6
 
   fetch(API_URL + '?userHash=' + sessao.hash + '&acao=catalogo')
     .then(function (r) { return r.json(); })
@@ -309,8 +347,11 @@ function abrirCatalogo() {
 }
 
 function fecharCatalogo() {
+  var el = document.getElementById('catalogoModal');
+  var wasOpen = el && el.classList.contains('show'); // ✏️ v6.7 — Tarefa 6
   document.body.style.overflow = '';
-  document.getElementById('catalogoModal').classList.remove('show');
+  el.classList.remove('show');
+  if (wasOpen && !_insidePopstate) history.back(); // ✏️ v6.7 — Tarefa 6
 }
 
 function filtrarCatalogo() {
@@ -546,11 +587,15 @@ function abrirImportar() {
   document.getElementById('impArquivo').value = '';
   document.getElementById('impPreview').innerHTML = '';
   importacaoTemp = null;
+  history.pushState({ modal: 'importarModal' }, '', ''); // ✏️ v6.7 — Tarefa 6
 }
 
 function fecharImportar() {
+  var el = document.getElementById('importarModal');
+  var wasOpen = el && el.classList.contains('show'); // ✏️ v6.7 — Tarefa 6
   document.body.style.overflow = '';
-  document.getElementById('importarModal').classList.remove('show');
+  el.classList.remove('show');
+  if (wasOpen && !_insidePopstate) history.back(); // ✏️ v6.7 — Tarefa 6
 }
 
 function comprimirImagem(file, maxSize, callback) {
@@ -645,7 +690,7 @@ function renderPreviewImportacao() {
     var classe = 'imp-row';
     if (it.confianca === 'BAIXA') classe += ' baixa';
     else if (it.status_catalogo === 'NOVO') classe += ' novo';
-    else if (it.status_catalogo === 'DIVERGENTE' || it.status_catalogo === 'MANUAL_PROTEGIDO') classe += ' div';
+    else if (it.status_catalogo === 'DIVERGENTE') classe += ' div';
     else classe += ' ok';
 
     totalGeral += parseFloat(it.valor_total) || 0;
@@ -662,8 +707,7 @@ function renderPreviewImportacao() {
 
     var statusTxt = '';
     if (it.status_catalogo === 'NOVO') statusTxt = '🆕 Item novo — entrará no catálogo como AUTO';
-    else if (it.status_catalogo === 'DIVERGENTE') statusTxt = '⚠️ Catálogo: R$ ' + (it.preco_no_catalogo || 0).toFixed(2) + ' (AUTO) → será atualizado';
-    else if (it.status_catalogo === 'MANUAL_PROTEGIDO') statusTxt = '🔒 Catálogo: R$ ' + (it.preco_no_catalogo || 0).toFixed(2) + ' (MANUAL) — protegido';
+    else if (it.status_catalogo === 'DIVERGENTE') statusTxt = '⚠️ Catálogo: R$ ' + (it.preco_no_catalogo || 0).toFixed(2) + ' → será atualizado';
     else if (it.status_catalogo === 'OK') statusTxt = '✅ Bate com catálogo';
     if (it.confianca === 'BAIXA') statusTxt = '⚠️ CONFIRMAR — ' + (it.observacao || 'IA com baixa confiança');
     h += '<div class="imp-status-msg">' + statusTxt + '</div>';
@@ -746,6 +790,7 @@ function confirmarImportacao() {
 // ══════════════════════════════════════════════════════════════
 var iaComandoAtual = null;
 var iaPovoamentoTemp = null;
+var iaAtualizacaoTemp = null; // ✏️ v6.7 — Tarefa 3
 
 function abrirAssistenteIA() {
   document.body.style.overflow = 'hidden';
@@ -756,7 +801,10 @@ function abrirAssistenteIA() {
   document.getElementById('iaParamWrap').style.display = 'none';
   document.getElementById('iaPovoarWrap').style.display = 'none';
   document.getElementById('iaPovoarPreview').style.display = 'none';
+  document.getElementById('iaAtualizarWrap').style.display = 'none'; // ✏️ v6.7 — Tarefa 3
+  document.getElementById('iaAtualizarPreview').style.display = 'none'; // ✏️ v6.7 — Tarefa 3
   document.getElementById('iaResposta').innerHTML = '';
+  history.pushState({ modal: 'iaModal' }, '', ''); // ✏️ v6.7 — Tarefa 6
 
   if (!comandosIA.length) {
     document.getElementById('iaListaCmds').innerHTML =
@@ -781,8 +829,11 @@ function abrirAssistenteIA() {
 }
 
 function fecharAssistenteIA() {
+  var el = document.getElementById('iaModal');
+  var wasOpen = el && el.classList.contains('show'); // ✏️ v6.7 — Tarefa 6
   document.body.style.overflow = '';
-  document.getElementById('iaModal').classList.remove('show');
+  el.classList.remove('show');
+  if (wasOpen && !_insidePopstate) history.back(); // ✏️ v6.7 — Tarefa 6
 }
 
 function renderListaComandos() {
@@ -800,7 +851,6 @@ function renderListaComandos() {
 function selecionarComando(comando) {
   iaComandoAtual = comando;
 
-  // Comando especial: POVOAR_CATALOGO usa fluxo próprio
   if (comando === 'POVOAR_CATALOGO') {
     document.getElementById('iaStep1').style.display = 'none';
     document.getElementById('iaPovoarWrap').style.display = 'block';
@@ -808,6 +858,17 @@ function selecionarComando(comando) {
     textarea.value = '';
     textarea.placeholder = 'Cole uma lista de itens (um por linha)\nOU\nDigite uma categoria: mercearia seca, açougue, laticínios, limpeza, higiene, hortifruti, bebidas, padaria, congelados, descartáveis, papelaria';
     setTimeout(function(){ textarea.focus(); }, 100);
+    return;
+  }
+
+  // ✏️ v6.7 — Tarefa 3: fluxo ATUALIZAR_PRECOS_LISTA
+  if (comando === 'ATUALIZAR_PRECOS_LISTA') {
+    document.getElementById('iaStep1').style.display = 'none';
+    document.getElementById('iaAtualizarWrap').style.display = 'block';
+    var txtArea = document.getElementById('iaAtualizarLista');
+    txtArea.value = '';
+    txtArea.placeholder = 'Cole a lista de itens com preços (um por linha)\nEx:\nCreme de leite 200g - R$ 3,50\nLeite condensado - R$ 4,20\nAçúcar 5kg - R$ 22,00';
+    setTimeout(function(){ txtArea.focus(); }, 100);
     return;
   }
 
@@ -847,10 +908,13 @@ function voltarListaComandos() {
   document.getElementById('iaParamWrap').style.display = 'none';
   document.getElementById('iaPovoarWrap').style.display = 'none';
   document.getElementById('iaPovoarPreview').style.display = 'none';
+  document.getElementById('iaAtualizarWrap').style.display = 'none'; // ✏️ v6.7 — Tarefa 3
+  document.getElementById('iaAtualizarPreview').style.display = 'none'; // ✏️ v6.7 — Tarefa 3
   document.getElementById('iaStep2').style.display = 'none';
   document.getElementById('iaStep3').style.display = 'none';
   document.getElementById('iaStep1').style.display = 'block';
   iaPovoamentoTemp = null;
+  iaAtualizacaoTemp = null; // ✏️ v6.7 — Tarefa 3
 }
 
 function executarIA(comando, parametro) {
@@ -912,17 +976,36 @@ function executarIA(comando, parametro) {
     });
 }
 
+// ✏️ v6.7 — Tarefa 4: detectar blocos de código e renderizar como <pre><code>
 function formatarRespostaIA(texto) {
-  var html = escapeHtml(texto);
-  html = html.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
-  html = html.replace(/\n/g, '<br>');
+  var partes = texto.split(/(```[\s\S]*?```)/g);
+  var html = '';
+  partes.forEach(function(parte) {
+    if (parte.indexOf('```') === 0) {
+      var codigo = parte.replace(/^```\w*\n?/, '').replace(/\n?```$/, '');
+      html += '<pre class="ia-code-block"><code>' + escapeHtml(codigo) + '</code></pre>';
+    } else {
+      var escaped = escapeHtml(parte);
+      escaped = escaped.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
+      escaped = escaped.replace(/\n/g, '<br>');
+      html += escaped;
+    }
+  });
   return html;
 }
 
+// ✏️ v6.7 — Tarefa 5: limpar JSON cru antes de copiar
 function copiarRespostaIA() {
   var el = document.getElementById('iaRespTexto');
   if (!el) return;
   var texto = el.innerText || el.textContent || '';
+  texto = texto.replace(/^```\w*$/gm, '').trim();
+  try {
+    var json = JSON.parse(texto);
+    if (json && typeof json === 'object') {
+      texto = _formatarJsonParaTexto(json);
+    }
+  } catch(e) {}
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(texto).then(function(){
       showSuccess('✅', 'Copiado!', 'Cole no WhatsApp');
@@ -930,6 +1013,37 @@ function copiarRespostaIA() {
   } else {
     toast('Copie manualmente');
   }
+}
+
+// ✏️ v6.7 — Tarefa 5: formatar JSON como texto legível
+function _formatarJsonParaTexto(obj) {
+  if (Array.isArray(obj)) {
+    return obj.map(function(item) { return _formatarItemTexto(item); }).join('\n\n');
+  }
+  if (obj.itens && Array.isArray(obj.itens)) {
+    return obj.itens.map(function(item) { return _formatarItemTexto(item); }).join('\n\n');
+  }
+  return _formatarItemTexto(obj);
+}
+
+function _formatarItemTexto(item) {
+  var linhas = [];
+  var nome = item.item || item.descricao || item.descricao_normalizada || item.descricao_original || '';
+  if (nome) linhas.push('Item: ' + nome);
+  if (item.preco_estimado !== undefined) linhas.push('Preço: R$ ' + parseFloat(item.preco_estimado).toFixed(2));
+  else if (item.preco !== undefined) linhas.push('Preço: R$ ' + parseFloat(item.preco).toFixed(2));
+  else if (item.preco_novo !== undefined) linhas.push('Preço: R$ ' + parseFloat(item.preco_novo).toFixed(2));
+  if (item.unidade || item.unidade_padrao) linhas.push('Unidade: ' + (item.unidade || item.unidade_padrao));
+  if (item.confianca) linhas.push('Confiança: ' + item.confianca);
+  if (item.observacao) linhas.push('Observação: ' + item.observacao);
+  if (!linhas.length) {
+    Object.keys(item).forEach(function(k) {
+      if (typeof item[k] !== 'object' && item[k] !== null && item[k] !== undefined) {
+        linhas.push(k + ': ' + item[k]);
+      }
+    });
+  }
+  return linhas.join('\n');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -978,6 +1092,7 @@ function processarPovoamento() {
     });
 }
 
+// ✏️ v6.7 — Tarefa 7: botão 🗑️ para remover item do preview
 function renderPreviewPovoamento() {
   document.getElementById('iaPovoarPreview').style.display = 'block';
 
@@ -1008,6 +1123,8 @@ function renderPreviewPovoamento() {
     h += '<div class="' + classe + '">';
     h += '<div class="pov-row-head">';
     h += '<input type="checkbox" class="pov-check" data-idx="' + idx + '" ' + (it.ja_existe ? '' : 'checked') + ' ' + (it.ja_existe ? 'disabled' : '') + '>';
+    // ✏️ v6.7 — Tarefa 7: botão remover ao lado do checkbox
+    h += '<button class="pov-remove-btn" onclick="removerItemPovoamento(' + idx + ')" title="Remover item">🗑️</button>';
     h += '<input class="pov-desc" value="' + escapeHtml(it.descricao_normalizada || it.descricao_original || '') + '" data-idx="' + idx + '" data-campo="descricao_normalizada">';
     h += '</div>';
     h += '<div class="pov-row-grid">';
@@ -1041,6 +1158,16 @@ function renderPreviewPovoamento() {
       iaPovoamentoTemp.itens[idx][campo] = val;
     });
   });
+}
+
+// ✏️ v6.7 — Tarefa 7: remover item individual do preview
+function removerItemPovoamento(idx) {
+  if (!confirm('Remover este item da sugestão?')) return;
+  iaPovoamentoTemp.itens.splice(idx, 1);
+  iaPovoamentoTemp.total_processados = iaPovoamentoTemp.itens.length;
+  iaPovoamentoTemp.ja_existentes = iaPovoamentoTemp.itens.filter(function(i){ return i.ja_existe; }).length;
+  iaPovoamentoTemp.novos = iaPovoamentoTemp.itens.filter(function(i){ return !i.ja_existe; }).length;
+  renderPreviewPovoamento();
 }
 
 function confirmarPovoamento() {
@@ -1086,5 +1213,166 @@ function confirmarPovoamento() {
     .catch(function(){
       toast('Erro de conexão');
       btn.disabled = false; btn.textContent = '✅ Adicionar ao Catálogo';
+    });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  💲 ATUALIZAR PREÇOS POR LISTA (fluxo especial)  // ✏️ v6.7 — Tarefa 3
+// ══════════════════════════════════════════════════════════════
+function processarAtualizacaoPrecos() {
+  var lista = document.getElementById('iaAtualizarLista').value.trim();
+  if (!lista || lista.length < 3) { toast('Digite a lista de itens com preços'); return; }
+
+  var linhas = lista.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 1; });
+  if (linhas.length > 50) {
+    toast('Máximo 50 itens. Você tem ' + linhas.length);
+    return;
+  }
+
+  document.getElementById('iaAtualizarWrap').style.display = 'none';
+  document.getElementById('iaStep2').style.display = 'block';
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'comandoia',
+      usuario: sessao.nome,
+      senha: sessao.hash,
+      comando: 'ATUALIZAR_PRECOS_LISTA',
+      parametro: lista
+    }),
+    redirect: 'follow'
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      document.getElementById('iaStep2').style.display = 'none';
+      if (d.status !== 'ok') {
+        toast(d.msg || 'Erro na IA');
+        voltarListaComandos();
+        return;
+      }
+      iaAtualizacaoTemp = d;
+      renderPreviewAtualizacao();
+    })
+    .catch(function(){
+      toast('Erro de conexão');
+      voltarListaComandos();
+    });
+}
+
+function renderPreviewAtualizacao() {
+  document.getElementById('iaAtualizarPreview').style.display = 'block';
+
+  var d = iaAtualizacaoTemp;
+  var custoUsd = (d.tokensIn * 0.30 / 1000000) + (d.tokensOut * 2.50 / 1000000);
+  var custoBrl = (custoUsd * 5.30).toFixed(4);
+
+  var h = '<div class="ia-resp-header">';
+  h += '<div class="ia-resp-cmd">💲 ATUALIZAR_PRECOS_LISTA</div>';
+  h += '<div class="ia-resp-custo">💰 R$ ' + custoBrl + ' · ' + d.total_processados + ' itens processados</div>';
+  h += '</div>';
+
+  h += '<div class="pov-resumo">';
+  h += '<div class="pov-stat"><div class="pov-stat-num">' + d.total_processados + '</div><div class="pov-stat-lbl">Total</div></div>';
+  h += '<div class="pov-stat novo"><div class="pov-stat-num">' + d.encontrados + '</div><div class="pov-stat-lbl">Encontrados</div></div>';
+  h += '<div class="pov-stat ja"><div class="pov-stat-num">' + d.nao_encontrados + '</div><div class="pov-stat-lbl">Não encontrados</div></div>';
+  h += '</div>';
+
+  h += '<div class="pov-aviso">💲 Revise os preços antes de confirmar. Itens NÃO encontrados no catálogo serão ignorados (não cria novos).</div>';
+
+  d.itens.forEach(function(it, idx) {
+    var classe = 'pov-row';
+    if (!it.encontrado) classe += ' ja-existe';
+    else classe += ' alta';
+
+    var precoAtual = parseFloat(it.preco_atual) || 0;
+    var precoNovo = parseFloat(it.preco_novo) || 0;
+    var diffPct = precoAtual > 0 ? ((precoNovo - precoAtual) / precoAtual * 100).toFixed(1) : '—';
+
+    h += '<div class="' + classe + '">';
+    h += '<div class="pov-row-head">';
+    h += '<input type="checkbox" class="pov-check" data-idx="' + idx + '" ' + (it.encontrado && precoNovo > 0 ? 'checked' : '') + ' ' + (!it.encontrado ? 'disabled' : '') + '>';
+    h += '<span class="pov-desc" style="background:transparent;border:none;padding:8px 10px;font-size:.86rem;font-weight:600;color:var(--text-primary);">' + escapeHtml(it.descricao_normalizada || it.descricao_original || '') + '</span>';
+    h += '</div>';
+
+    if (it.encontrado) {
+      h += '<div class="pov-row-grid">';
+      h += '<label>Atual R$<input type="number" step="0.01" class="pov-input" value="' + precoAtual.toFixed(2) + '" disabled></label>';
+      h += '<label>Novo R$<input type="number" step="0.01" class="pov-input pov-preco" value="' + precoNovo.toFixed(2) + '" data-idx="' + idx + '" data-campo="preco_novo"></label>';
+      h += '<label>Variação<input class="pov-input" value="' + diffPct + '%" disabled></label>';
+      h += '</div>';
+    }
+
+    var statusTxt = '';
+    if (!it.encontrado) statusTxt = '❌ Não encontrado no catálogo — será ignorado';
+    else if (Math.abs(precoNovo - precoAtual) < 0.01) statusTxt = '✅ Preço igual ao catálogo';
+    else statusTxt = '💲 Preço será atualizado · ' + (it.observacao || '');
+    h += '<div class="pov-status">' + statusTxt + '</div>';
+    h += '</div>';
+  });
+
+  h += '<div class="ia-resp-actions">';
+  h += '<button class="imp-btn-cancel" onclick="voltarListaComandos()">↩️ Cancelar</button>';
+  h += '<button class="imp-btn-confirm" onclick="confirmarAtualizacaoPrecosFront()">✅ Atualizar Preços</button>';
+  h += '</div>';
+
+  document.getElementById('iaAtualizarPreview').innerHTML = h;
+
+  document.querySelectorAll('#iaAtualizarPreview .pov-input:not([disabled])').forEach(function(inp) {
+    inp.addEventListener('input', function() {
+      var idx = parseInt(this.dataset.idx);
+      var campo = this.dataset.campo;
+      if (campo && !isNaN(idx)) {
+        var val = this.type === 'number' ? parseFloat(this.value) : this.value;
+        iaAtualizacaoTemp.itens[idx][campo] = val;
+      }
+    });
+  });
+}
+
+function confirmarAtualizacaoPrecosFront() {
+  if (!iaAtualizacaoTemp) return;
+
+  var itensSelecionados = [];
+  document.querySelectorAll('#iaAtualizarPreview .pov-check').forEach(function(chk) {
+    if (chk.checked && !chk.disabled) {
+      var idx = parseInt(chk.dataset.idx);
+      itensSelecionados.push(iaAtualizacaoTemp.itens[idx]);
+    }
+  });
+
+  if (!itensSelecionados.length) {
+    toast('Marque pelo menos 1 item para atualizar');
+    return;
+  }
+
+  var btn = document.querySelector('#iaAtualizarPreview .imp-btn-confirm');
+  btn.disabled = true; btn.textContent = '⌛ Atualizando...';
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'confirmaratualizacaoprecos',
+      usuario: sessao.nome,
+      senha: sessao.hash,
+      itens: itensSelecionados
+    }),
+    redirect: 'follow'
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.status === 'ok') {
+        showSuccess('💲', 'Preços atualizados!', d.atualizados + ' atualizados · ' + d.ignorados + ' ignorados');
+        fecharAssistenteIA();
+      } else {
+        toast(d.msg || 'Erro ao atualizar');
+        btn.disabled = false; btn.textContent = '✅ Atualizar Preços';
+      }
+    })
+    .catch(function(){
+      toast('Erro de conexão');
+      btn.disabled = false; btn.textContent = '✅ Atualizar Preços';
     });
 }
