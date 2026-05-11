@@ -119,7 +119,8 @@ document.addEventListener('DOMContentLoaded', function () {
 // ✏️ v6.7 — Tarefa 6 — History API (botão voltar Android)
 window.addEventListener('popstate', function () {
   _insidePopstate = true;
-  if (document.getElementById('iaModal').classList.contains('show')) fecharAssistenteIA();
+  if (document.getElementById('editReqModal').classList.contains('show')) fecharEditReq();
+  else if (document.getElementById('iaModal').classList.contains('show')) fecharAssistenteIA();
   else if (document.getElementById('importarModal').classList.contains('show')) fecharImportar();
   else if (document.getElementById('catalogoModal').classList.contains('show')) fecharCatalogo();
   else if (document.getElementById('cidadeModal').classList.contains('show')) fecharCidade();
@@ -288,7 +289,7 @@ function renderRankings(arrayCidades, mapSetores) {
 function abrirCidade(nome) {
   var cid = dadosCompletos.cidades.find(function (c) { return c.nome === nome; });
   if (!cid) return;
-  document.getElementById('cidadeModalTitle').innerHTML = '<svg width="18" height="18"><use href="#icon-building"/></svg> ' + escapeHtml(cid.nome);
+  document.getElementById('cidadeModalTitle').textContent = cid.nome;
 
   var h = '<div class="cidade-header"><div class="ch-total">' + formatCurrency(cid.total) +
           '</div><div style="color:var(--text-tertiary);font-size:0.8rem;margin-top:5px;">' +
@@ -298,24 +299,46 @@ function abrirCidade(nome) {
     h += '<div class="empty-state"><div class="empty-text">Nenhuma requisição.</div></div>';
   } else {
     cid.setores.forEach(function (setor) {
+      // Agrupar itens por reqId
+      var reqMap = {};
+      setor.itens.forEach(function (it) {
+        var rid = it.requisicao || '-';
+        if (!reqMap[rid]) reqMap[rid] = { itens: [], total: 0 };
+        reqMap[rid].itens.push(it);
+        reqMap[rid].total += it.total;
+      });
+
       h += '<div class="setor-block"><div class="setor-header"><div class="sh-left">' +
-           '<div class="sh-badge ' + getSetorClass(setor.nome) + '"><svg width="14" height="14"><use href="#icon-folder"/></svg></div>' +
+           '<div class="sh-badge ' + getSetorClass(setor.nome) + '">&#128194;</div>' +
            '<div class="sh-nome">' + escapeHtml(setor.nome) + '</div></div>' +
            '<div class="sh-total">' + formatCurrency(setor.total) + '</div></div>' +
            '<div class="setor-items">';
-      setor.itens.forEach(function (it) {
-        h += '<div class="item-row"><div class="item-id">' + escapeHtml(it.requisicao || '-') +
-             '</div><div class="item-desc">' + escapeHtml(it.descricao) +
-             ' <span style="color:var(--text-tertiary);font-size:0.7rem;">(x' + it.quantidade + ')</span></div>' +
-             '<div class="item-valor">' + formatCurrency(it.total) + '</div></div>';
+
+      Object.keys(reqMap).forEach(function (rid) {
+        var grp = reqMap[rid];
+        // Cabeçalho da requisição — clicável para editar
+        h += '<div class="req-group-header" onclick="editarRequisicao(\'' + escapeHtml(cid.nome) + '\',\'' +
+             escapeHtml(setor.nome) + '\',\'' + escapeHtml(rid) + '\')" title="Clique para editar">' +
+             '<div class="req-group-left"><span class="req-group-id">' + escapeHtml(rid) + '</span>' +
+             '<span class="req-group-count">' + grp.itens.length + ' itens</span></div>' +
+             '<div class="req-group-right"><span class="req-group-total">' + formatCurrency(grp.total) + '</span>' +
+             '<span class="req-group-edit">Editar</span></div></div>';
+        // Itens da requisição
+        grp.itens.forEach(function (it) {
+          h += '<div class="item-row"><div class="item-id">' + escapeHtml(it.requisicao || '-') +
+               '</div><div class="item-desc">' + escapeHtml(it.descricao) +
+               ' <span style="color:var(--text-tertiary);font-size:0.7rem;">(x' + it.quantidade + ')</span></div>' +
+               '<div class="item-valor">' + formatCurrency(it.total) + '</div></div>';
+        });
       });
+
       h += '</div></div>';
     });
   }
 
   document.getElementById('cidadeBody').innerHTML = h;
   document.getElementById('cidadeModal').classList.add('show');
-  history.pushState({ modal: 'cidade' }, '', '');              // ✏️ v6.7 — Tarefa 6
+  history.pushState({ modal: 'cidade' }, '', '');
 }
 function fecharCidade() {
   var wasOpen = document.getElementById('cidadeModal').classList.contains('show');
@@ -1418,4 +1441,207 @@ function confirmarAtualizacaoPrecosFront() {
       toast('Erro de conexão');
       btn.disabled = false; btn.textContent = 'Atualizar Preços';
     });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ✏️ EDITAR REQUISIÇÃO JÁ LANÇADA (v8.0)
+// ══════════════════════════════════════════════════════════════
+var edicaoReqTemp = null;
+
+function editarRequisicao(cidade, setor, reqId) {
+  if (!dadosCompletos) { toast('Dados não carregados'); return; }
+
+  var cid = dadosCompletos.cidades.find(function(c) { return c.nome === cidade; });
+  if (!cid) { toast('Cidade não encontrada'); return; }
+  var setorObj = cid.setores.find(function(s) { return s.nome === setor; });
+  if (!setorObj) { toast('Setor não encontrado'); return; }
+
+  var itens = setorObj.itens.filter(function(it) { return it.requisicao === reqId; });
+  if (!itens.length) { toast('Nenhum item encontrado'); return; }
+
+  edicaoReqTemp = {
+    cidade: cidade,
+    setor: setor,
+    reqId: reqId,
+    itens: itens.map(function(it) {
+      return {
+        linha: it.linha,
+        descricao: it.descricao,
+        valorUnit: it.valorUnit,
+        quantidade: it.quantidade,
+        um: it.um,
+        total: it.total,
+        status: it.status,
+        data: it.data
+      };
+    })
+  };
+
+  renderEdicaoRequisicao();
+  document.getElementById('editReqModal').classList.add('show');
+  history.pushState({ modal: 'editReq' }, '', '');
+}
+
+function fecharEditReq() {
+  var wasOpen = document.getElementById('editReqModal').classList.contains('show');
+  document.getElementById('editReqModal').classList.remove('show');
+  if (wasOpen && !_insidePopstate) history.back();
+}
+
+function renderEdicaoRequisicao() {
+  if (!edicaoReqTemp) return;
+
+  document.getElementById('editReqTitle').textContent = 'Editar ' + edicaoReqTemp.reqId;
+
+  var itens = edicaoReqTemp.itens;
+  var totalGeral = 0;
+
+  var h = '<div class="imp-meta-box">';
+  h += '<div><strong>Cidade:</strong> ' + escapeHtml(edicaoReqTemp.cidade) + '</div>';
+  h += '<div><strong>Setor:</strong> ' + escapeHtml(edicaoReqTemp.setor) + '</div>';
+  h += '<div><strong>Requisição:</strong> ' + escapeHtml(edicaoReqTemp.reqId) + '</div>';
+  if (itens[0] && itens[0].data) h += '<div><strong>Data:</strong> ' + escapeHtml(itens[0].data) + '</div>';
+  h += '</div>';
+
+  itens.forEach(function(it, idx) {
+    totalGeral += it.total || 0;
+    var statusClass = '';
+    if (it.status === 'APROVADO') statusClass = ' ok';
+    else if (it.status === 'NEGADO') statusClass = ' baixa';
+    else if (it.status === 'ENTREGUE') statusClass = ' ok';
+    else statusClass = ' novo';
+
+    h += '<div class="imp-row' + statusClass + '">';
+    h += '<div class="imp-row-head"><span class="imp-num">' + (idx + 1) + '</span>';
+    h += '<input class="imp-desc" value="' + escapeHtml(it.descricao) + '" data-idx="' + idx + '" data-campo="descricao"></div>';
+    h += '<div class="imp-row-grid">';
+    h += '<label>V. Unit R$<input type="number" step="0.01" class="imp-input" value="' + (it.valorUnit || 0).toFixed(2) + '" data-idx="' + idx + '" data-campo="valorUnit" onchange="recalcEditTotal(' + idx + ')"></label>';
+    h += '<label>Qtd<input type="number" step="0.01" class="imp-input" value="' + (it.quantidade || 0) + '" data-idx="' + idx + '" data-campo="quantidade" onchange="recalcEditTotal(' + idx + ')"></label>';
+    h += '<label>Un<input class="imp-input" value="' + escapeHtml(it.um || '') + '" data-idx="' + idx + '" data-campo="um"></label>';
+    h += '<label>Total R$<input type="number" step="0.01" class="imp-input imp-unit" value="' + (it.total || 0).toFixed(2) + '" data-idx="' + idx + '" data-campo="total" id="editTotal' + idx + '" readonly></label>';
+    h += '<label>Status<select class="imp-input" data-idx="' + idx + '" data-campo="status" style="font-family:var(--font);font-size:.75rem;">';
+    ['PENDENTE', 'APROVADO', 'NEGADO', 'ENTREGUE'].forEach(function(st) {
+      h += '<option value="' + st + '"' + (it.status === st ? ' selected' : '') + '>' + st + '</option>';
+    });
+    h += '</select></label>';
+    h += '</div>';
+    h += '<button class="imp-remove" onclick="removerItemEdit(' + idx + ')">Remover item</button>';
+    h += '</div>';
+  });
+
+  h += '<div class="imp-total-box">Total: <strong id="editTotalGeral">R$ ' + totalGeral.toFixed(2).replace('.', ',') + '</strong></div>';
+  h += '<div class="imp-actions">';
+  h += '<button class="imp-btn-cancel" onclick="fecharEditReq()">Cancelar</button>';
+  h += '<button class="imp-btn-confirm" id="btnSalvarEdit" onclick="salvarEdicaoRequisicao()">Salvar Alterações</button>';
+  h += '</div>';
+
+  document.getElementById('editReqBody').innerHTML = h;
+
+  // Bind input listeners
+  document.querySelectorAll('#editReqBody input[data-campo], #editReqBody select[data-campo]').forEach(function(inp) {
+    inp.addEventListener('input', function() {
+      var idx = parseInt(this.dataset.idx);
+      var campo = this.dataset.campo;
+      if (this.tagName === 'SELECT') {
+        edicaoReqTemp.itens[idx][campo] = this.value;
+      } else if (this.type === 'number') {
+        edicaoReqTemp.itens[idx][campo] = parseFloat(this.value) || 0;
+      } else {
+        edicaoReqTemp.itens[idx][campo] = this.value;
+      }
+    });
+  });
+}
+
+function recalcEditTotal(idx) {
+  var it = edicaoReqTemp.itens[idx];
+  var novoTotal = (it.valorUnit || 0) * (it.quantidade || 0);
+  it.total = novoTotal;
+  var el = document.getElementById('editTotal' + idx);
+  if (el) el.value = novoTotal.toFixed(2);
+
+  // Recalcular total geral
+  var t = 0;
+  edicaoReqTemp.itens.forEach(function(i) { t += i.total || 0; });
+  var tEl = document.getElementById('editTotalGeral');
+  if (tEl) tEl.textContent = 'R$ ' + t.toFixed(2).replace('.', ',');
+}
+
+function removerItemEdit(idx) {
+  if (!edicaoReqTemp || !edicaoReqTemp.itens[idx]) return;
+  if (!confirm('Remover "' + edicaoReqTemp.itens[idx].descricao + '"?\n\nIsso remove permanentemente da planilha.')) return;
+
+  var item = edicaoReqTemp.itens[idx];
+  var btn = event.target;
+  btn.disabled = true; btn.textContent = 'Removendo...';
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'removeritrequisicao',
+      usuario: sessao.nome,
+      senha: sessao.hash,
+      cidade: edicaoReqTemp.cidade,
+      linha: item.linha
+    }),
+    redirect: 'follow'
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.status === 'ok') {
+      edicaoReqTemp.itens.splice(idx, 1);
+      if (edicaoReqTemp.itens.length === 0) {
+        showSuccess('', 'Item removido', 'Requisição ficou vazia');
+        fecharEditReq();
+        carregarDados();
+      } else {
+        toast('Item removido');
+        renderEdicaoRequisicao();
+      }
+    } else {
+      toast(d.msg || 'Erro ao remover');
+      btn.disabled = false; btn.textContent = 'Remover item';
+    }
+  })
+  .catch(function() {
+    toast('Erro de conexão');
+    btn.disabled = false; btn.textContent = 'Remover item';
+  });
+}
+
+function salvarEdicaoRequisicao() {
+  if (!edicaoReqTemp || !edicaoReqTemp.itens.length) { toast('Sem itens'); return; }
+
+  var btn = document.getElementById('btnSalvarEdit');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'salvareditrequisicao',
+      usuario: sessao.nome,
+      senha: sessao.hash,
+      cidade: edicaoReqTemp.cidade,
+      itens: edicaoReqTemp.itens
+    }),
+    redirect: 'follow'
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.status === 'ok') {
+      showSuccess('', 'Requisição atualizada!', d.atualizados + ' itens salvos');
+      fecharEditReq();
+      fecharCidade();
+      carregarDados();
+    } else {
+      toast(d.msg || 'Erro ao salvar');
+      btn.disabled = false; btn.textContent = 'Salvar Alterações';
+    }
+  })
+  .catch(function() {
+    toast('Erro de conexão');
+    btn.disabled = false; btn.textContent = 'Salvar Alterações';
+  });
 }

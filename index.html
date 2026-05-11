@@ -1,41 +1,18 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Requisições — CRV/LAS</title>
-  <meta name="description" content="Registro de Requisições — Grupo Carlos Vaz">
-
-  <!-- Theme color (barra de status Android + Chrome) -->
-  <meta name="theme-color" content="#3B5BDB">
-  <meta name="color-scheme" content="dark">
-
-  <!-- Manifest PWA -->
-  <link rel="manifest" href="manifest.json">
-
-  <!-- iOS / Safari -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Requisições">
-  <link rel="apple-touch-icon" sizes="180x180" href="requisicoes-icon-180.png">
-  <link rel="apple-touch-icon" sizes="167x167" href="requisicoes-icon-167.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="requisicoes-icon-152.png">
-  <link rel="apple-touch-icon" href="requisicoes-icon-180.png">
-
-  <!-- Favicons -->
-  <link rel="icon" type="image/png" sizes="32x32" href="requisicoes-favicon-32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="requisicoes-favicon-16.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="requisicoes-icon-192.png">
-
-  <!-- Fontes -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="style.css?v=8.1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0c0e14">
+<link rel="manifest" href="manifest.json">
+<title>Requisições — CRV/LAS</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230c0e14'/%3E%3Ctext x='50' y='62' text-anchor='middle' fill='%236b8aad' font-family='Inter,Arial' font-weight='800' font-size='34'%3ECRV%3C/text%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=8.2">
 </head>
-
 <body style="background-color: #0c0e14; margin: 0; padding: 0;">
 
 <!-- SVG Sprite -->
@@ -351,6 +328,15 @@
   </div>
 </div>
 
+<!-- ══════════════ MODAL: EDITAR REQUISIÇÃO ══════════════ -->
+<div class="modal-full" id="editReqModal">
+  <div class="modal-bar">
+    <h2 id="editReqTitle">Editar Requisição</h2>
+    <button class="modal-close" onclick="fecharEditReq()">✕</button>
+  </div>
+  <div class="modal-body" id="editReqBody"></div>
+</div>
+
 <!-- Overlays -->
 <div class="success-overlay" id="successOverlay">
   <div class="success-icon" id="successIcon"></div>
@@ -360,6 +346,6 @@
 <div class="toast" id="toast"></div>
 
 <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(function(){}); }</script>
-<script src="app.js?v=8.1"></script>
+<script src="app.js?v=8.2"></script>
 </body>
 </html>

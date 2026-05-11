@@ -1175,6 +1175,43 @@ button:focus-visible, .menu-item:focus-visible, .ia-cmd-card:focus-visible, .cid
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+/* ══════════════ REQUISIÇÃO GROUP HEADER ══════════════ */
+.req-group-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px;
+  margin: 4px 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: all .2s var(--ease);
+}
+.req-group-header:hover {
+  border-color: var(--accent-mid);
+  background: var(--surface-3);
+}
+.req-group-header:active { transform: scale(0.99); }
+.req-group-left { display: flex; align-items: center; gap: 10px; }
+.req-group-id {
+  font-family: var(--mono); font-size: .72rem; font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-mid);
+  padding: 2px 8px; border-radius: var(--r-sm);
+}
+.req-group-count { font-size: .68rem; color: var(--text-tertiary); font-weight: 500; }
+.req-group-right { display: flex; align-items: center; gap: 10px; }
+.req-group-total {
+  font-size: .82rem; font-weight: 700; color: var(--success);
+  font-variant-numeric: tabular-nums;
+}
+.req-group-edit {
+  font-size: .62rem; font-weight: 700; color: var(--accent);
+  text-transform: uppercase; letter-spacing: .06em;
+  opacity: 0; transition: opacity .2s;
+}
+.req-group-header:hover .req-group-edit { opacity: 1; }
+
 /* ══════════════ SAFE AREA (NOTCH) ══════════════ */
 @supports (padding: env(safe-area-inset-top)) {
   .top-bar { padding-top: calc(12px + env(safe-area-inset-top)); }
