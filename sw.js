@@ -2,7 +2,7 @@
    REQUISIÇÕES DIGITAL — SERVICE WORKER v1.0
    ============================================================ */
 
-var CACHE_NAME = 'requisicoes-v7.0';
+var CACHE_NAME = 'requisicoes-v7.1';
 var ASSETS = [
     './',
     './index.html',
@@ -42,15 +42,15 @@ self.addEventListener('fetch', function (e) {
         return;
     }
 
-    // Static assets → cache first, fallback network
+    // Static assets → network first, fallback cache (always gets latest)
     e.respondWith(
-        caches.match(e.request).then(function (cached) {
-            return cached || fetch(e.request).then(function (response) {
-                return caches.open(CACHE_NAME).then(function (cache) {
-                    cache.put(e.request, response.clone());
-                    return response;
-                });
+        fetch(e.request).then(function (response) {
+            return caches.open(CACHE_NAME).then(function (cache) {
+                cache.put(e.request, response.clone());
+                return response;
             });
+        }).catch(function () {
+            return caches.match(e.request);
         })
     );
 });
