@@ -1,31 +1,31 @@
 {
-  "name": " Registro Digital — CRV/LAS",
-  "short_name": "REQUISIÇÕES",
-  "description": "Registro de Requisições— Grupo Carlos Vaz",
+  "name": "Registro Digital — CRV/LAS",
+  "short_name": "Requisições",
+  "description": "Registro de Requisições — Grupo Carlos Vaz",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0c0e14",
-  "theme_color": "#0c0e14",
+  "background_color": "#0B0D10",
+  "theme_color": "#3B5BDB",
   "categories": ["business", "productivity"],
   "lang": "pt-BR",
   "dir": "ltr",
   "icons": [
     {
-      "src": "godmode-icon-192.png",
+      "src": "requisicoes-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "godmode-icon-512.png",
+      "src": "requisicoes-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "godmode-maskable-512.png",
+      "src": "requisicoes-icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
