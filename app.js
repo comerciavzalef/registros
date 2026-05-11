@@ -1,5 +1,5 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v6.8
+//  REQUISIÇÕES DIGITAL — app.js v7.0
 //  Grupo Carlos Vaz — CRV/LAS
 // ============================================================
 
@@ -169,9 +169,17 @@ function carregarDados() {
     }
   }
 
+  var bar = document.getElementById('ldBarTop');
+  bar.style.transition = 'width 2s ease';
+  bar.style.width = '70%';
+
   fetch(API_URL + '?userHash=' + sessao.hash + '&dados=todos')
     .then(function (r) { return r.json(); })
     .then(function (d) {
+      bar.style.transition = 'width .3s ease';
+      bar.style.width = '100%';
+      setTimeout(function() { bar.style.transition = 'width .3s ease, opacity .3s'; bar.style.opacity = '0'; setTimeout(function(){ bar.style.width = '0'; bar.style.opacity = '1'; }, 300); }, 200);
+
       document.getElementById('ldScreen').classList.add('hidden');
       var g = document.getElementById('cidadesGrid');
       if (g) delete g.dataset.skeleton;
@@ -184,6 +192,7 @@ function carregarDados() {
       setBadge(true);
     })
     .catch(function () {
+      bar.style.width = '0';
       document.getElementById('ldScreen').classList.add('hidden');
       toast('Erro de conexão');
       setBadge(false);
@@ -652,6 +661,11 @@ function abrirImportar() {
   document.getElementById('impTexto').value = '';
   document.getElementById('impArquivo').value = '';
   document.getElementById('impPreview').innerHTML = '';
+  var hoje = new Date();
+  document.getElementById('impData').value = hoje.getFullYear() + '-' +
+    String(hoje.getMonth() + 1).padStart(2, '0') + '-' +
+    String(hoje.getDate()).padStart(2, '0');
+  document.getElementById('impReqId').value = '';
   importacaoTemp = null;
   popularSelectsCidadeSetor();
 }
@@ -686,10 +700,12 @@ function escolherCidadeSetor() {
   var cidade = document.getElementById('impCidade').value;
   var setor = document.getElementById('impSetor').value;
   var reqId = document.getElementById('impReqId').value.trim();
+  var dataReq = document.getElementById('impData').value;
   var arquivo = document.getElementById('impArquivo').files[0];
   var texto = document.getElementById('impTexto').value.trim();
 
   if (!cidade || !setor || !reqId) { toast('Preencha cidade, setor e ID'); return; }
+  if (!dataReq) { toast('Informe a data da requisição'); return; }
   if (!arquivo && !texto) { toast('Anexe foto OU cole texto'); return; }
 
   document.getElementById('impStep1').style.display = 'none';
@@ -706,14 +722,14 @@ function escolherCidadeSetor() {
     comprimirImagem(arquivo, 800, function(base64Otimizado) {
       payload.imagemBase64 = base64Otimizado.split(',')[1];
       payload.mimeType = 'image/jpeg';
-      enviarParaIA(payload, cidade, setor, reqId);
+      enviarParaIA(payload, cidade, setor, reqId, dataReq);
     });
   } else {
-    enviarParaIA(payload, cidade, setor, reqId);
+    enviarParaIA(payload, cidade, setor, reqId, dataReq);
   }
 }
 
-function enviarParaIA(payload, cidade, setor, reqId) {
+function enviarParaIA(payload, cidade, setor, reqId, dataReq) {
   fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -723,7 +739,7 @@ function enviarParaIA(payload, cidade, setor, reqId) {
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (d.status !== 'ok') { toast(d.msg || 'Erro na IA'); voltarStep1(); return; }
-      importacaoTemp = { cidade: cidade, setor: setor, reqId: reqId, itens: d.resultado.itens, meta: d.resultado };
+      importacaoTemp = { cidade: cidade, setor: setor, reqId: reqId, data: dataReq, itens: d.resultado.itens, meta: d.resultado };
       renderPreviewImportacao();
     })
     .catch(function(e) { toast('Erro de conexão'); voltarStep1(); });
@@ -746,6 +762,10 @@ function renderPreviewImportacao() {
   var h = '<div class="imp-meta-box">';
   h += '<div><strong>📍 Cidade:</strong> ' + escapeHtml(importacaoTemp.cidade) + ' / ' + escapeHtml(importacaoTemp.setor) + '</div>';
   h += '<div><strong>🆔 Req ID:</strong> ' + escapeHtml(importacaoTemp.reqId) + '</div>';
+  if (importacaoTemp.data) {
+    var partes = importacaoTemp.data.split('-');
+    h += '<div><strong>📅 Data:</strong> ' + partes[2] + '/' + partes[1] + '/' + partes[0] + '</div>';
+  }
   if (meta.cidade_detectada) h += '<div style="color:var(--text-tertiary);font-size:.7rem;margin-top:6px;">IA detectou: ' + escapeHtml(meta.cidade_detectada) + ' / ' + escapeHtml(meta.setor_detectado || '?') + '</div>';
   h += '</div>';
 
@@ -830,6 +850,7 @@ function confirmarImportacao() {
       cidade: importacaoTemp.cidade,
       setor: importacaoTemp.setor,
       reqId: importacaoTemp.reqId,
+      data: importacaoTemp.data,
       itens: importacaoTemp.itens
     }),
     redirect: 'follow'
