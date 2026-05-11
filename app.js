@@ -1,6 +1,7 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v7.0
+//  REQUISIÇÕES DIGITAL — app.js v8.1 PREMIUM
 //  Grupo Carlos Vaz — CRV/LAS
+//  v8.1: paleta neutra, SVG icons, zero emojis estruturais
 // ============================================================
 
 var API_URL = 'https://script.google.com/macros/s/AKfycbzXuhmVkTDsMGotRuG3-i-YYnx0_nLFWDWjb7hNsTZ2HUg5SzWKDK6jbad_HqOEsnxt/exec';
@@ -30,8 +31,13 @@ var iaAtualizacaoTemp = null;                                 // ✏️ v6.7 —
 function toggleSenha() {
   var input = document.getElementById('loginPass');
   var icon = document.getElementById('eyeIcon');
-  if (input.type === 'password') { input.type = 'text'; icon.textContent = '🙈'; }
-  else { input.type = 'password'; icon.textContent = '👁️'; }
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.innerHTML = '<use href="#icon-eye-off"/>';
+  } else {
+    input.type = 'password';
+    icon.innerHTML = '<use href="#icon-eye"/>';
+  }
 }
 
 async function fazerLogin() {
@@ -96,7 +102,7 @@ function logout() {
   document.getElementById('loginUser').value = '';
   document.getElementById('loginPass').value = '';
   document.getElementById('loginPass').type = 'password';
-  document.getElementById('eyeIcon').textContent = '👁️';
+  document.getElementById('eyeIcon').innerHTML = '<use href="#icon-eye"/>';
   document.getElementById('loginError').textContent = '';
   var lgpd = document.getElementById('lgpdCheck'); if (lgpd) lgpd.checked = false;
   fecharMenuLateral();
@@ -225,7 +231,7 @@ function renderPainel() {
     arrayCidades.push({ nome: cid.nome, total: cid.total, itens: cid.itens });
 
     htmlCards += '<div class="cidade-card" onclick="abrirCidade(\'' + escapeHtml(cid.nome) + '\')">';
-    htmlCards += '<div class="cidade-icon">🏙️</div>';
+    htmlCards += '<div class="cidade-icon"><svg width="18" height="18"><use href="#icon-building"/></svg></div>';
     htmlCards += '<div class="cidade-info"><div class="cidade-nome">' + escapeHtml(cid.nome) +
                  '</div><div class="cidade-meta">' + cid.setores.length + ' setores · ' + cid.itens + ' itens</div></div>';
     htmlCards += '<div class="cidade-valor">' + formatCurrency(cid.total) + '</div>';
@@ -282,7 +288,7 @@ function renderRankings(arrayCidades, mapSetores) {
 function abrirCidade(nome) {
   var cid = dadosCompletos.cidades.find(function (c) { return c.nome === nome; });
   if (!cid) return;
-  document.getElementById('cidadeModalTitle').textContent = '🏙️ ' + cid.nome;
+  document.getElementById('cidadeModalTitle').innerHTML = '<svg width="18" height="18"><use href="#icon-building"/></svg> ' + escapeHtml(cid.nome);
 
   var h = '<div class="cidade-header"><div class="ch-total">' + formatCurrency(cid.total) +
           '</div><div style="color:var(--text-tertiary);font-size:0.8rem;margin-top:5px;">' +
@@ -293,7 +299,7 @@ function abrirCidade(nome) {
   } else {
     cid.setores.forEach(function (setor) {
       h += '<div class="setor-block"><div class="setor-header"><div class="sh-left">' +
-           '<div class="sh-badge ' + getSetorClass(setor.nome) + '">📂</div>' +
+           '<div class="sh-badge ' + getSetorClass(setor.nome) + '"><svg width="14" height="14"><use href="#icon-folder"/></svg></div>' +
            '<div class="sh-nome">' + escapeHtml(setor.nome) + '</div></div>' +
            '<div class="sh-total">' + formatCurrency(setor.total) + '</div></div>' +
            '<div class="setor-items">';
@@ -443,11 +449,11 @@ function dispararSalvar(linha) {
 
   var btn = input.parentElement.nextElementSibling;
   if (btn) {
-    btn.innerHTML = '⌛';
+    btn.innerHTML = '...';
     btn.disabled = true;
   }
 
-  showSuccess('✅', 'Preço alterado!', 'Sincronizando no fundo...');
+  showSuccess('', 'Preço alterado!', 'Sincronizando no fundo...');
 
   fetch(API_URL, {
     method: 'POST',
@@ -519,7 +525,7 @@ function toggleRelatorio() {
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(texto).then(function () {
-      showSuccess('✅', 'Resumo Copiado!', 'Cole no WhatsApp');
+      showSuccess('', 'Resumo copiado!', 'Cole no WhatsApp');
     }).catch(function () { toast('Erro ao copiar'); });
   } else { toast('Copie manualmente'); }
 }
@@ -760,11 +766,11 @@ function renderPreviewImportacao() {
   var totalGeral = 0;
 
   var h = '<div class="imp-meta-box">';
-  h += '<div><strong>📍 Cidade:</strong> ' + escapeHtml(importacaoTemp.cidade) + ' / ' + escapeHtml(importacaoTemp.setor) + '</div>';
-  h += '<div><strong>🆔 Req ID:</strong> ' + escapeHtml(importacaoTemp.reqId) + '</div>';
+  h += '<div><strong>Cidade:</strong> ' + escapeHtml(importacaoTemp.cidade) + ' / ' + escapeHtml(importacaoTemp.setor) + '</div>';
+  h += '<div><strong>Req ID:</strong> ' + escapeHtml(importacaoTemp.reqId) + '</div>';
   if (importacaoTemp.data) {
     var partes = importacaoTemp.data.split('-');
-    h += '<div><strong>📅 Data:</strong> ' + partes[2] + '/' + partes[1] + '/' + partes[0] + '</div>';
+    h += '<div><strong>Data:</strong> ' + partes[2] + '/' + partes[1] + '/' + partes[0] + '</div>';
   }
   if (meta.cidade_detectada) h += '<div style="color:var(--text-tertiary);font-size:.7rem;margin-top:6px;">IA detectou: ' + escapeHtml(meta.cidade_detectada) + ' / ' + escapeHtml(meta.setor_detectado || '?') + '</div>';
   h += '</div>';
@@ -791,20 +797,20 @@ function renderPreviewImportacao() {
     h += '</div>';
 
     var statusTxt = '';
-    if (it.status_catalogo === 'NOVO') statusTxt = '🆕 Item novo — entrará no catálogo como AUTO';
-    else if (it.status_catalogo === 'DIVERGENTE') statusTxt = '⚠️ Catálogo: R$ ' + (it.preco_no_catalogo || 0).toFixed(2) + ' (AUTO) → será atualizado';
-    else if (it.status_catalogo === 'MANUAL_PROTEGIDO') statusTxt = '🔒 Catálogo: R$ ' + (it.preco_no_catalogo || 0).toFixed(2) + ' (MANUAL) — protegido';
-    else if (it.status_catalogo === 'OK') statusTxt = '✅ Bate com catálogo';
-    if (it.confianca === 'BAIXA') statusTxt = '⚠️ CONFIRMAR — ' + (it.observacao || 'IA com baixa confiança');
+    if (it.status_catalogo === 'NOVO') statusTxt = 'Item novo — entrará no catálogo como AUTO';
+    else if (it.status_catalogo === 'DIVERGENTE') statusTxt = 'Catálogo: R$ ' + (it.preco_no_catalogo || 0).toFixed(2) + ' (AUTO) — será atualizado';
+    else if (it.status_catalogo === 'MANUAL_PROTEGIDO') statusTxt = 'Catálogo: R$ ' + (it.preco_no_catalogo || 0).toFixed(2) + ' (MANUAL) — protegido';
+    else if (it.status_catalogo === 'OK') statusTxt = 'Bate com catálogo';
+    if (it.confianca === 'BAIXA') statusTxt = 'CONFIRMAR — ' + (it.observacao || 'IA com baixa confiança');
     h += '<div class="imp-status-msg">' + statusTxt + '</div>';
-    h += '<button class="imp-remove" onclick="removerItemImp(' + idx + ')">🗑️ Remover</button>';
+    h += '<button class="imp-remove" onclick="removerItemImp(' + idx + ')">Remover</button>';
     h += '</div>';
   });
 
-  h += '<div class="imp-total-box">💰 Total da Requisição: <strong id="impTotalGeral">R$ ' + totalGeral.toFixed(2).replace('.', ',') + '</strong></div>';
+  h += '<div class="imp-total-box">Total da Requisição: <strong id="impTotalGeral">R$ ' + totalGeral.toFixed(2).replace('.', ',') + '</strong></div>';
   h += '<div class="imp-actions">';
-  h += '<button class="imp-btn-cancel" onclick="voltarStep1()">↩️ Refazer</button>';
-  h += '<button class="imp-btn-confirm" onclick="confirmarImportacao()">✅ Confirmar e Lançar</button>';
+  h += '<button class="imp-btn-cancel" onclick="voltarStep1()">Refazer</button>';
+  h += '<button class="imp-btn-confirm" onclick="confirmarImportacao()">Confirmar e Lançar</button>';
   h += '</div>';
 
   document.getElementById('impPreview').innerHTML = h;
@@ -839,7 +845,7 @@ function removerItemImp(idx) {
 function confirmarImportacao() {
   if (!importacaoTemp || !importacaoTemp.itens.length) { toast('Sem itens'); return; }
   var btn = document.querySelector('.imp-btn-confirm');
-  btn.disabled = true; btn.textContent = '⌛ Lançando...';
+  btn.disabled = true; btn.textContent = 'Lançando...';
 
   fetch(API_URL, {
     method: 'POST',
@@ -858,22 +864,22 @@ function confirmarImportacao() {
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (d.status === 'ok') {
-        showSuccess('🚀', 'Requisição lançada!', d.itensInseridos + ' itens · R$ ' + d.totalRequisicao.toFixed(2));
+        showSuccess('', 'Requisição lançada!', d.itensInseridos + ' itens · R$ ' + d.totalRequisicao.toFixed(2));
         fecharImportar();
         carregarDados();
       } else {
         toast(d.msg || 'Erro ao lançar');
-        btn.disabled = false; btn.textContent = '✅ Confirmar e Lançar';
+        btn.disabled = false; btn.textContent = 'Confirmar e Lançar';
       }
     })
     .catch(function() {
       toast('Erro de conexão');
-      btn.disabled = false; btn.textContent = '✅ Confirmar e Lançar';
+      btn.disabled = false; btn.textContent = 'Confirmar e Lançar';
     });
 }
 
 // ══════════════════════════════════════════════════════════════
-//  🤖 ASSISTENTE IA
+//  ASSISTENTE IA
 // ══════════════════════════════════════════════════════════════
 var iaComandoAtual = null;
 var iaPovoamentoTemp = null;
@@ -927,7 +933,7 @@ function renderListaComandos() {
     h += '<div class="ia-cmd-card" onclick="selecionarComando(\'' + escapeHtml(cmd.comando) + '\')">';
     h += '<div class="ia-cmd-nome">' + escapeHtml(cmd.nome) + '</div>';
     h += '<div class="ia-cmd-desc">' + escapeHtml(cmd.descricao) + '</div>';
-    h += '<div class="ia-cmd-meta">💰 ~R$ ' + escapeHtml(cmd.custo) + '</div>';
+    h += '<div class="ia-cmd-meta">~R$ ' + escapeHtml(cmd.custo) + '</div>';
     h += '</div>';
   });
   document.getElementById('iaListaCmds').innerHTML = h;
@@ -961,13 +967,13 @@ function selecionarComando(comando) {
   if (precisaParam) {
     var label = '', placeholder = '';
     if (comando === 'ANALISE_SETOR') {
-      label = '🏢 Qual setor analisar?';
+      label = 'Qual setor analisar?';
       placeholder = 'Ex: EDUCAÇÃO';
     } else if (comando === 'SUGERIR_PRECO_ITEM') {
-      label = '💡 Qual item você quer estimar?';
+      label = 'Qual item você quer estimar?';
       placeholder = 'Ex: Creme de leite 200g';
     } else if (comando === 'BUSCAR_ITEM_CATALOGO') {
-      label = '🔍 Sua pergunta';
+      label = 'Sua pergunta';
       placeholder = 'Ex: Quanto custa creme de leite?';
     }
     document.getElementById('iaParamLabel').textContent = label;
@@ -1027,11 +1033,11 @@ function executarIA(comando, parametro) {
         var resp = (d.resposta || '').toString();
         var custoTxt = '';
         if (d.fromCache) {
-          custoTxt = '⚡ Resposta de cache (R$ 0,00)';
+          custoTxt = 'Resposta de cache (R$ 0,00)';
         } else {
           var custoUsd = (d.tokensIn * 0.30 / 1000000) + (d.tokensOut * 2.50 / 1000000);
           var custoBrl = (custoUsd * 5.30).toFixed(4);
-          custoTxt = '💰 Custo: R$ ' + custoBrl + ' · ' + (d.tokensIn + d.tokensOut) + ' tokens';
+          custoTxt = 'Custo: R$ ' + custoBrl + ' · ' + (d.tokensIn + d.tokensOut) + ' tokens';
         }
 
         var h = '<div class="ia-resp-header">' +
@@ -1040,14 +1046,14 @@ function executarIA(comando, parametro) {
                 '</div>';
         h += '<div class="ia-resp-texto" id="iaRespTexto">' + formatarRespostaIA(resp) + '</div>';
         h += '<div class="ia-resp-actions">';
-        h += '<button class="imp-btn-cancel" onclick="voltarListaComandos()">↩️ Outro Comando</button>';
-        h += '<button class="imp-btn-confirm" onclick="copiarRespostaIA()">📋 Copiar para WhatsApp</button>';
+        h += '<button class="imp-btn-cancel" onclick="voltarListaComandos()">Outro Comando</button>';
+        h += '<button class="imp-btn-confirm" onclick="copiarRespostaIA()">Copiar para WhatsApp</button>';
         h += '</div>';
         document.getElementById('iaResposta').innerHTML = h;
       } else {
-        var hErr = '<div class="ia-resp-header"><div class="ia-resp-cmd">❌ Erro</div></div>';
-        hErr += '<div class="ia-resp-texto" style="color:var(--red);">' + escapeHtml(d.msg || 'Erro desconhecido') + '</div>';
-        hErr += '<div class="ia-resp-actions"><button class="imp-btn-cancel" onclick="voltarListaComandos()">↩️ Voltar</button></div>';
+        var hErr = '<div class="ia-resp-header"><div class="ia-resp-cmd">Erro</div></div>';
+        hErr += '<div class="ia-resp-texto" style="color:var(--danger);">' + escapeHtml(d.msg || 'Erro desconhecido') + '</div>';
+        hErr += '<div class="ia-resp-actions"><button class="imp-btn-cancel" onclick="voltarListaComandos()">Voltar</button></div>';
         document.getElementById('iaResposta').innerHTML = hErr;
       }
     })
@@ -1055,8 +1061,8 @@ function executarIA(comando, parametro) {
       document.getElementById('iaStep2').style.display = 'none';
       document.getElementById('iaStep3').style.display = 'block';
       document.getElementById('iaResposta').innerHTML =
-        '<div class="ia-resp-header"><div class="ia-resp-cmd">❌ Erro de conexão</div></div>' +
-        '<div class="ia-resp-actions"><button class="imp-btn-cancel" onclick="voltarListaComandos()">↩️ Voltar</button></div>';
+        '<div class="ia-resp-header"><div class="ia-resp-cmd">Erro de conexão</div></div>' +
+        '<div class="ia-resp-actions"><button class="imp-btn-cancel" onclick="voltarListaComandos()">Voltar</button></div>';
     });
 }
 
@@ -1089,7 +1095,7 @@ function copiarRespostaIA() {
   } catch (e) {}
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(texto).then(function(){
-      showSuccess('✅', 'Copiado!', 'Cole no WhatsApp');
+      showSuccess('', 'Copiado!', 'Cole no WhatsApp');
     }).catch(function(){ toast('Erro ao copiar'); });
   } else {
     toast('Copie manualmente');
@@ -1127,7 +1133,7 @@ function _formatarItemTexto(item, num) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  🆕 POVOAR CATÁLOGO (fluxo especial — aceita lista OU categoria)
+//  POVOAR CATÁLOGO (fluxo especial — aceita lista OU categoria)
 // ══════════════════════════════════════════════════════════════
 function processarPovoamento() {
   var lista = document.getElementById('iaPovoarLista').value.trim();
@@ -1180,8 +1186,8 @@ function renderPreviewPovoamento() {
   var custoBrl = (custoUsd * 5.30).toFixed(4);
 
   var h = '<div class="ia-resp-header">';
-  h += '<div class="ia-resp-cmd">🆕 POVOAR_CATALOGO</div>';
-  h += '<div class="ia-resp-custo">💰 R$ ' + custoBrl + ' · ' + d.total_processados + ' itens processados</div>';
+  h += '<div class="ia-resp-cmd">POVOAR_CATALOGO</div>';
+  h += '<div class="ia-resp-custo">R$ ' + custoBrl + ' · ' + d.total_processados + ' itens processados</div>';
   h += '</div>';
 
   h += '<div class="pov-resumo">';
@@ -1190,7 +1196,7 @@ function renderPreviewPovoamento() {
   h += '<div class="pov-stat ja"><div class="pov-stat-num">' + d.ja_existentes + '</div><div class="pov-stat-lbl">Já existem</div></div>';
   h += '</div>';
 
-  h += '<div class="pov-aviso">📝 Edite os preços antes de confirmar. Itens marcados como "já existe" serão ignorados (não sobrescreve catálogo manual).</div>';
+  h += '<div class="pov-aviso">Edite os preços antes de confirmar. Itens marcados como "já existe" serão ignorados (não sobrescreve catálogo manual).</div>';
 
   d.itens.forEach(function(it, idx) {
     var classe = 'pov-row';
@@ -1203,7 +1209,7 @@ function renderPreviewPovoamento() {
     h += '<div class="pov-row-head">';
     h += '<input type="checkbox" class="pov-check" data-idx="' + idx + '" ' + (it.ja_existe ? '' : 'checked') + ' ' + (it.ja_existe ? 'disabled' : '') + '>';
     h += '<input class="pov-desc" value="' + escapeHtml(it.descricao_normalizada || it.descricao_original || '') + '" data-idx="' + idx + '" data-campo="descricao_normalizada">';
-    h += '<button class="pov-remove-btn" onclick="removerItemPovoamento(' + idx + ')">🗑️</button>'; // ✏️ v6.7 — Tarefa 7
+    h += '<button class="pov-remove-btn" onclick="removerItemPovoamento(' + idx + ')"><svg width="12" height="12"><use href="#icon-trash"/></svg></button>';
     h += '</div>';
     h += '<div class="pov-row-grid">';
     h += '<label>Unidade<input class="pov-input" value="' + escapeHtml(it.unidade_padrao || 'UN') + '" data-idx="' + idx + '" data-campo="unidade_padrao"></label>';
@@ -1212,17 +1218,17 @@ function renderPreviewPovoamento() {
     h += '</div>';
 
     var statusTxt = '';
-    if (it.ja_existe) statusTxt = '🔒 Já existe no catálogo — ignorado';
-    else if (it.confianca === 'ALTA') statusTxt = '✅ Confiança ALTA · ' + (it.observacao || 'Item comum');
-    else if (it.confianca === 'MEDIA') statusTxt = '⚠️ Confiança MÉDIA · ' + (it.observacao || 'Confira o preço');
-    else statusTxt = '🔴 Confiança BAIXA · ' + (it.observacao || 'Item incomum, valide o preço');
+    if (it.ja_existe) statusTxt = 'Já existe no catálogo — ignorado';
+    else if (it.confianca === 'ALTA') statusTxt = 'Confiança ALTA · ' + (it.observacao || 'Item comum');
+    else if (it.confianca === 'MEDIA') statusTxt = 'Confiança MÉDIA · ' + (it.observacao || 'Confira o preço');
+    else statusTxt = 'Confiança BAIXA · ' + (it.observacao || 'Item incomum, valide o preço');
     h += '<div class="pov-status">' + statusTxt + '</div>';
     h += '</div>';
   });
 
   h += '<div class="ia-resp-actions">';
-  h += '<button class="imp-btn-cancel" onclick="voltarListaComandos()">↩️ Cancelar</button>';
-  h += '<button class="imp-btn-confirm" onclick="confirmarPovoamento()">✅ Adicionar ao Catálogo</button>';
+  h += '<button class="imp-btn-cancel" onclick="voltarListaComandos()">Cancelar</button>';
+  h += '<button class="imp-btn-confirm" onclick="confirmarPovoamento()">Adicionar ao Catálogo</button>';
   h += '</div>';
 
   document.getElementById('iaPovoarPreview').innerHTML = h;
@@ -1255,7 +1261,7 @@ function confirmarPovoamento() {
   }
 
   var btn = document.querySelector('#iaPovoarPreview .imp-btn-confirm');
-  btn.disabled = true; btn.textContent = '⌛ Adicionando...';
+  btn.disabled = true; btn.textContent = 'Adicionando...';
 
   fetch(API_URL, {
     method: 'POST',
@@ -1271,16 +1277,16 @@ function confirmarPovoamento() {
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (d.status === 'ok') {
-        showSuccess('🎉', 'Catálogo atualizado!', d.inseridos + ' itens adicionados · ' + d.ignorados + ' ignorados');
+        showSuccess('', 'Catálogo atualizado!', d.inseridos + ' itens adicionados · ' + d.ignorados + ' ignorados');
         fecharAssistenteIA();
       } else {
         toast(d.msg || 'Erro ao adicionar');
-        btn.disabled = false; btn.textContent = '✅ Adicionar ao Catálogo';
+        btn.disabled = false; btn.textContent = 'Adicionar ao Catálogo';
       }
     })
     .catch(function(){
       toast('Erro de conexão');
-      btn.disabled = false; btn.textContent = '✅ Adicionar ao Catálogo';
+      btn.disabled = false; btn.textContent = 'Adicionar ao Catálogo';
     });
 }
 
@@ -1335,8 +1341,8 @@ function renderPreviewAtualizacao() {
   var custoBrl = (custoUsd * 5.30).toFixed(4);
 
   var h = '<div class="ia-resp-header">';
-  h += '<div class="ia-resp-cmd">📋 ATUALIZAR_PRECOS_LISTA</div>';
-  h += '<div class="ia-resp-custo">💰 R$ ' + custoBrl + ' · ' + (d.itens || []).length + ' itens</div>';
+  h += '<div class="ia-resp-cmd">ATUALIZAR_PRECOS_LISTA</div>';
+  h += '<div class="ia-resp-custo">R$ ' + custoBrl + ' · ' + (d.itens || []).length + ' itens</div>';
   h += '</div>';
 
   (d.itens || []).forEach(function(it, idx) {
@@ -1350,14 +1356,14 @@ function renderPreviewAtualizacao() {
     h += '<label>Atual R$<input class="pov-input" value="' + (it.preco_atual || 0).toFixed(2) + '" readonly></label>';
     h += '<label>Novo R$<input type="number" step="0.01" class="pov-input pov-preco" value="' + (it.preco_novo || 0).toFixed(2) + '" data-idx="' + idx + '" data-campo="preco_novo"></label>';
     h += '</div>';
-    var status = it.encontrado ? '✅ Encontrado no catálogo' : '⚠️ Não encontrado — será ignorado';
+    var status = it.encontrado ? 'Encontrado no catálogo' : 'Não encontrado — será ignorado';
     h += '<div class="pov-status">' + status + '</div>';
     h += '</div>';
   });
 
   h += '<div class="ia-resp-actions">';
-  h += '<button class="imp-btn-cancel" onclick="voltarListaComandos()">↩️ Cancelar</button>';
-  h += '<button class="imp-btn-confirm" onclick="confirmarAtualizacaoPrecosFront()">✅ Atualizar Preços</button>';
+  h += '<button class="imp-btn-cancel" onclick="voltarListaComandos()">Cancelar</button>';
+  h += '<button class="imp-btn-confirm" onclick="confirmarAtualizacaoPrecosFront()">Atualizar Preços</button>';
   h += '</div>';
 
   document.getElementById('iaAtualizarPreview').innerHTML = h;
@@ -1384,7 +1390,7 @@ function confirmarAtualizacaoPrecosFront() {
   if (!selecionados.length) { toast('Marque pelo menos 1 item'); return; }
 
   var btn = document.querySelector('#iaAtualizarPreview .imp-btn-confirm');
-  btn.disabled = true; btn.textContent = '⌛ Atualizando...';
+  btn.disabled = true; btn.textContent = 'Atualizando...';
 
   fetch(API_URL, {
     method: 'POST',
@@ -1400,16 +1406,16 @@ function confirmarAtualizacaoPrecosFront() {
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (d.status === 'ok') {
-        showSuccess('🎉', 'Preços atualizados!', d.atualizados + ' itens');
+        showSuccess('', 'Preços atualizados!', d.atualizados + ' itens');
         fecharAssistenteIA();
         carregarDados();
       } else {
         toast(d.msg || 'Erro');
-        btn.disabled = false; btn.textContent = '✅ Atualizar Preços';
+        btn.disabled = false; btn.textContent = 'Atualizar Preços';
       }
     })
     .catch(function() {
       toast('Erro de conexão');
-      btn.disabled = false; btn.textContent = '✅ Atualizar Preços';
+      btn.disabled = false; btn.textContent = 'Atualizar Preços';
     });
 }

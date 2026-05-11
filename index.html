@@ -6,23 +6,53 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#0c0e14">
 <link rel="manifest" href="manifest.json">
 <title>Requisições — CRV/LAS</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23000'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='%230a84ff' font-family='Arial' font-weight='900' font-size='40'%3E📋%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230c0e14'/%3E%3Ctext x='50' y='62' text-anchor='middle' fill='%236b8aad' font-family='Inter,Arial' font-weight='800' font-size='34'%3ECRV%3C/text%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=7.1">
+<link rel="stylesheet" href="style.css?v=8.1">
 </head>
-<body>
+<body style="background-color: #0c0e14; margin: 0; padding: 0;">
 
-<div class="bg-scene">
-  <div class="orb"></div><div class="orb"></div><div class="orb"></div>
-</div>
+<!-- SVG Sprite -->
+<svg id="svgSprite" xmlns="http://www.w3.org/2000/svg" style="display:none;">
+  <symbol id="icon-menu" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="icon-x" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="icon-search" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="icon-dashboard" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+  <symbol id="icon-eye" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="icon-eye-off" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></symbol>
+  <symbol id="icon-sparkles" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M12 2l2.09 6.26L20 10l-5.91 1.74L12 18l-2.09-6.26L4 10l5.91-1.74L12 2z"/><path d="M20 16l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z"/></symbol>
+  <symbol id="icon-download" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+  <symbol id="icon-file" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
+  <symbol id="icon-clipboard" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></symbol>
+  <symbol id="icon-user" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="icon-logout" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+  <symbol id="icon-chevron-right" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><polyline points="9 18 15 12 9 6"/></symbol>
+  <symbol id="icon-building" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="9" y1="22" x2="9" y2="2"/><line x1="15" y1="22" x2="15" y2="2"/><line x1="4" y1="12" x2="20" y2="12"/></symbol>
+  <symbol id="icon-bar-chart" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></symbol>
+  <symbol id="icon-camera" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
+  <symbol id="icon-upload" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+  <symbol id="icon-calendar" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="icon-tag" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></symbol>
+  <symbol id="icon-check" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="icon-trash" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="icon-folder" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="icon-image" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></symbol>
+  <symbol id="icon-dollar" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></symbol>
+  <symbol id="icon-trophy" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></symbol>
+  <symbol id="icon-plus" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="icon-minus" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="icon-package" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></symbol>
+</svg>
+
+<div class="bg-scene"></div>
 
 <!-- ══════════════ LOGIN ══════════════ -->
 <div id="loginScreen">
   <div class="login-card">
-    <div class="brand-icon">📋</div>
+    <div class="brand-icon">CRV</div>
     <h2>Requisições</h2>
     <p class="sub">CRV/LAS — Dashboard Executivo</p>
     <select id="loginUser" class="login-field">
@@ -33,11 +63,11 @@
     </select>
     <div style="position:relative; margin-bottom:14px;">
       <input type="password" id="loginPass" class="login-field" placeholder="Sua senha" autocomplete="off" style="padding-right:48px; margin-bottom:0;">
-      <button type="button" onclick="toggleSenha()" id="eyeBtn" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1.1rem; color:rgba(235,235,245,.3);"><span id="eyeIcon">👁️</span></button>
+      <button type="button" onclick="toggleSenha()" id="eyeBtn" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text-tertiary);"><svg id="eyeIcon" width="18" height="18" style="display:block;"><use href="#icon-eye"/></svg></button>
     </div>
     <div style="margin-bottom: 16px; text-align: left; display: flex; align-items: flex-start; gap: 8px; padding: 0 4px;">
-      <input type="checkbox" id="lgpdCheck" style="margin-top: 3px; width: 16px; height: 16px; accent-color: var(--blue); cursor: pointer;">
-      <label for="lgpdCheck" style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4; cursor: pointer;">
+      <input type="checkbox" id="lgpdCheck" style="margin-top: 3px; width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer;">
+      <label for="lgpdCheck" style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; cursor: pointer;">
         Declaro que li e concordo com a recolha de dados estritamente para fins laborais e de acesso ao sistema, conforme a <strong>LGPD</strong>.
       </label>
     </div>
@@ -59,7 +89,7 @@
   <div class="top-bar">
     <div class="top-bar-row1">
       <div class="brand">
-        <div class="brand-dot">📋</div>
+        <div class="brand-dot">CRV</div>
         <div class="brand-text"><h1>Requisições</h1><span>Dashboard</span></div>
       </div>
       <button class="menu-trigger" onclick="abrirMenuLateral()" aria-label="Menu">
@@ -79,7 +109,7 @@
     <div class="section-label">Orçamento Total</div>
     <div class="stats-grid">
       <div class="stat-card blue" style="grid-column:1/-1;">
-        <span class="s-icon">💰</span>
+        <span class="s-icon"></span>
         <div class="s-label">Total Consumido</div>
         <div class="s-value blue" id="statTotal">R$ 0,00</div>
       </div>
@@ -93,10 +123,10 @@
     <div class="section-label">Detalhes por Cidade (Clique para abrir)</div>
     <div class="stats-grid" id="cidadesGrid"></div>
 
-    <div class="section-label" style="margin-top:10px;">🏆 Ranking de Gastos por Cidade</div>
+    <div class="section-label" style="margin-top:10px;">Ranking de Gastos por Cidade</div>
     <div class="ranking-card" id="rankingCidades"></div>
 
-    <div class="section-label">📈 Consumo Global por Setor</div>
+    <div class="section-label">Consumo Global por Setor</div>
     <div class="ranking-card" id="rankingSetores"></div>
 
     <p class="sync-time" id="syncTime"></p>
@@ -107,48 +137,48 @@
 <div class="menu-overlay" id="menuOverlay" onclick="fecharMenuLateral()"></div>
 <aside class="menu-lateral" id="menuLateral">
   <div class="menu-header">
-    <div class="menu-avatar">👤</div>
+    <div class="menu-avatar"><svg width="18" height="18"><use href="#icon-user"/></svg></div>
     <div class="menu-userinfo">
       <div class="menu-username" id="menuUserName">Usuário</div>
       <div class="menu-userrole">Gestor · CRV/LAS</div>
     </div>
-    <button class="menu-close" onclick="fecharMenuLateral()" aria-label="Fechar">✕</button>
+    <button class="menu-close" onclick="fecharMenuLateral()" aria-label="Fechar"><svg width="14" height="14"><use href="#icon-x"/></svg></button>
   </div>
 
   <nav class="menu-nav">
     <div class="menu-section-label">Ferramentas</div>
 
     <button class="menu-item" onclick="menuAcao('ia')">
-      <div class="menu-icon ia">🤖</div>
+      <div class="menu-icon ia"><svg width="18" height="18"><use href="#icon-sparkles"/></svg></div>
       <div class="menu-text">
         <div class="menu-title">Assistente IA</div>
         <div class="menu-sub">Resumos, análises, povoar catálogo</div>
       </div>
-      <div class="menu-chevron">›</div>
+      <div class="menu-chevron"><svg width="14" height="14"><use href="#icon-chevron-right"/></svg></div>
     </button>
 
     <button class="menu-item" onclick="menuAcao('importar')">
-      <div class="menu-icon importar">📥</div>
+      <div class="menu-icon importar"><svg width="18" height="18"><use href="#icon-download"/></svg></div>
       <div class="menu-text">
         <div class="menu-title">Importar Requisição</div>
         <div class="menu-sub">Foto ou texto via IA</div>
       </div>
-      <div class="menu-chevron">›</div>
+      <div class="menu-chevron"><svg width="14" height="14"><use href="#icon-chevron-right"/></svg></div>
     </button>
 
     <button class="menu-item" onclick="menuAcao('catalogo')">
-      <div class="menu-icon catalogo">📦</div>
+      <div class="menu-icon catalogo"><svg width="18" height="18"><use href="#icon-package"/></svg></div>
       <div class="menu-text">
         <div class="menu-title">Catálogo de Preços</div>
         <div class="menu-sub">Editar preços manualmente</div>
       </div>
-      <div class="menu-chevron">›</div>
+      <div class="menu-chevron"><svg width="14" height="14"><use href="#icon-chevron-right"/></svg></div>
     </button>
 
     <div class="menu-divider"></div>
 
     <button class="menu-item menu-logout" onclick="menuAcao('logout')">
-      <div class="menu-icon sair">🚪</div>
+      <div class="menu-icon sair"><svg width="18" height="18"><use href="#icon-logout"/></svg></div>
       <div class="menu-text">
         <div class="menu-title">Sair da Conta</div>
         <div class="menu-sub">Encerrar sessão</div>
@@ -157,15 +187,15 @@
   </nav>
 
   <div class="menu-footer">
-    <div class="menu-version">v7.0 · CRV/LAS</div>
+    <div class="menu-version">v8.1 · CRV/LAS</div>
   </div>
 </aside>
 
 <!-- ══════════════ MODAL: DETALHE CIDADE ══════════════ -->
 <div class="modal-full" id="cidadeModal">
   <div class="modal-bar">
-    <h2 id="cidadeModalTitle">🏙️ Cidade</h2>
-    <button class="modal-close" onclick="fecharCidade()">✕</button>
+    <h2 id="cidadeModalTitle"><svg width="18" height="18"><use href="#icon-building"/></svg> Cidade</h2>
+    <button class="modal-close" onclick="fecharCidade()"><svg width="12" height="12" style="vertical-align:middle;"><use href="#icon-x"/></svg> Fechar</button>
   </div>
   <div class="modal-body" id="cidadeBody"></div>
 </div>
@@ -173,11 +203,11 @@
 <!-- ══════════════ MODAL: CATÁLOGO ══════════════ -->
 <div class="modal-full" id="catalogoModal">
   <div class="modal-bar">
-    <h2>📦 Catálogo de Preços</h2>
-    <button class="modal-close" onclick="fecharCatalogo()">✕</button>
+    <h2><svg width="18" height="18"><use href="#icon-package"/></svg> Catálogo de Preços</h2>
+    <button class="modal-close" onclick="fecharCatalogo()"><svg width="12" height="12" style="vertical-align:middle;"><use href="#icon-x"/></svg> Fechar</button>
   </div>
   <div class="modal-body">
-    <input type="text" id="catalogoSearch" class="cat-search" placeholder="🔍 Buscar item..." oninput="filtrarCatalogo()">
+    <input type="text" id="catalogoSearch" class="cat-search" placeholder="Buscar item..." oninput="filtrarCatalogo()">
     <div id="catalogoBody"></div>
   </div>
 </div>
@@ -185,39 +215,39 @@
 <!-- ══════════════ MODAL: IMPORTAR REQUISIÇÃO ══════════════ -->
 <div class="modal-full" id="importarModal">
   <div class="modal-bar">
-    <h2>📥 Importar Requisição (IA)</h2>
-    <button class="modal-close" onclick="fecharImportar()">✕</button>
+    <h2><svg width="18" height="18"><use href="#icon-download"/></svg> Importar Requisição (IA)</h2>
+    <button class="modal-close" onclick="fecharImportar()"><svg width="12" height="12" style="vertical-align:middle;"><use href="#icon-x"/></svg> Fechar</button>
   </div>
   <div class="modal-body">
 
     <div id="impStep1">
-      <label class="imp-label">🏙️ Cidade</label>
+      <label class="imp-label">Cidade</label>
       <div class="imp-select-row">
         <select id="impCidade" class="login-field" style="flex:1;margin-bottom:0;"></select>
         <button class="imp-add-btn" onclick="adicionarCidade()" title="Adicionar cidade">＋</button>
         <button class="imp-del-btn" onclick="removerCidade()" title="Remover cidade selecionada">－</button>
       </div>
-      <label class="imp-label">📂 Setor</label>
+      <label class="imp-label">Setor</label>
       <div class="imp-select-row">
         <select id="impSetor" class="login-field" style="flex:1;margin-bottom:0;"></select>
         <button class="imp-add-btn" onclick="adicionarSetor()" title="Adicionar setor">＋</button>
         <button class="imp-del-btn" onclick="removerSetor()" title="Remover setor selecionado">－</button>
       </div>
-      <label class="imp-label">🆔 ID da Requisição</label>
+      <label class="imp-label">ID da Requisição</label>
       <input type="text" id="impReqId" class="login-field" placeholder="Ex: REQ-001">
-      <label class="imp-label">📅 Data da Requisição</label>
+      <label class="imp-label">Data da Requisição</label>
       <input type="date" id="impData" class="login-field">
-      <label class="imp-label">📸 Foto ou Arquivo da Requisição</label>
+      <label class="imp-label">Foto ou Arquivo da Requisição</label>
       <input type="file" id="impArquivo" accept="image/*,.pdf,.doc,.docx" class="login-field">
-      <label class="imp-label">📝 OU Texto Bruto (opcional)</label>
+      <label class="imp-label">OU Texto Bruto (opcional)</label>
       <textarea id="impTexto" class="login-field" rows="4" placeholder="Cole o texto se preferir..."></textarea>
-      <button class="login-btn" onclick="escolherCidadeSetor()" style="margin-top:14px;background:linear-gradient(145deg,#30d158,#0a84ff);">🤖 Processar com IA</button>
+      <button class="login-btn" onclick="escolherCidadeSetor()" style="margin-top:14px;">Processar com IA</button>
     </div>
 
     <div id="impStep2" style="display:none;text-align:center;padding:60px 20px;">
       <div class="ld-spinner" style="margin:0 auto 20px;"></div>
-      <div style="color:var(--text-primary);font-weight:600;margin-bottom:6px;">🤖 IA processando...</div>
-      <div style="color:var(--text-tertiary);font-size:.78rem;">Pode levar até 5 segundos</div>
+      <div style="color:var(--text-primary);font-weight:600;margin-bottom:6px;">IA processando...</div>
+      <div style="color:var(--text-tertiary);font-size:.75rem;">Pode levar até 5 segundos</div>
     </div>
 
     <div id="impStep3" style="display:none;">
@@ -230,8 +260,8 @@
 <!-- ══════════════ MODAL: ASSISTENTE IA ══════════════ -->
 <div class="modal-full" id="iaModal">
   <div class="modal-bar">
-    <h2>🤖 Assistente IA</h2>
-    <button class="modal-close" onclick="fecharAssistenteIA()">✕</button>
+    <h2><svg width="18" height="18"><use href="#icon-sparkles"/></svg> Assistente IA</h2>
+    <button class="modal-close" onclick="fecharAssistenteIA()"><svg width="12" height="12" style="vertical-align:middle;"><use href="#icon-x"/></svg> Fechar</button>
   </div>
   <div class="modal-body" style="overflow-x:hidden;">
 
@@ -244,39 +274,39 @@
       <label class="imp-label" id="iaParamLabel">Parâmetro</label>
       <input type="text" id="iaParamInput" class="login-field" placeholder="Digite aqui...">
       <div class="imp-actions">
-        <button class="imp-btn-cancel" onclick="voltarListaComandos()">↩️ Voltar</button>
-        <button class="imp-btn-confirm" onclick="confirmarParametro()">🤖 Executar</button>
+        <button class="imp-btn-cancel" onclick="voltarListaComandos()">Voltar</button>
+        <button class="imp-btn-confirm" onclick="confirmarParametro()">Executar</button>
       </div>
     </div>
 
     <!-- Povoar catálogo (textarea grande + processar) -->
     <div id="iaPovoarWrap" style="display:none;">
       <div class="ia-pov-intro">
-        🆕 <strong>Povoar Catálogo com IA</strong><br>
+        <strong>Povoar Catálogo com IA</strong><br>
         Cole abaixo a lista de itens (um por linha). A IA estima o preço de mercado de cada um e adiciona ao catálogo. Máximo 50 itens por vez.
       </div>
-      <label class="imp-label">📝 Lista de itens (1 por linha)</label>
+      <label class="imp-label">Lista de itens (1 por linha)</label>
       <textarea id="iaPovoarLista" class="login-field" rows="10" placeholder="Ex:&#10;Creme de leite 200g&#10;Leite condensado&#10;Açúcar refinado&#10;Óleo de soja&#10;..."></textarea>
       <div class="imp-actions">
-        <button class="imp-btn-cancel" onclick="voltarListaComandos()">↩️ Voltar</button>
-        <button class="imp-btn-confirm" onclick="processarPovoamento()">🤖 Estimar Preços</button>
+        <button class="imp-btn-cancel" onclick="voltarListaComandos()">Voltar</button>
+        <button class="imp-btn-confirm" onclick="processarPovoamento()">Estimar Preços</button>
       </div>
     </div>
 
     <!-- Preview do povoamento -->
     <div id="iaPovoarPreview" style="display:none;"></div>
 
-    <!-- ✏️ v6.7 — Tarefa 3 — Atualizar preços lista -->
+    <!-- Atualizar preços lista -->
     <div id="iaAtualizarWrap" style="display:none;">
       <div class="ia-pov-intro">
-        📋 <strong>Atualizar Preços em Lote</strong><br>
+        <strong>Atualizar Preços em Lote</strong><br>
         Cole abaixo a lista com item e preço novo (um por linha). A IA identifica cada item no catálogo e sugere a atualização.
       </div>
-      <label class="imp-label">📝 Lista de preços (1 por linha)</label>
+      <label class="imp-label">Lista de preços (1 por linha)</label>
       <textarea id="iaAtualizarLista" class="login-field" rows="10" placeholder="Ex:&#10;Creme de leite 200g - R$ 4,50&#10;Leite condensado - R$ 6,80&#10;Açúcar 5kg - R$ 18,90"></textarea>
       <div class="imp-actions">
-        <button class="imp-btn-cancel" onclick="voltarListaComandos()">↩️ Voltar</button>
-        <button class="imp-btn-confirm" onclick="processarAtualizacaoPrecos()">🤖 Processar</button>
+        <button class="imp-btn-cancel" onclick="voltarListaComandos()">Voltar</button>
+        <button class="imp-btn-confirm" onclick="processarAtualizacaoPrecos()">Processar</button>
       </div>
     </div>
 
@@ -286,8 +316,8 @@
     <!-- Loading -->
     <div id="iaStep2" style="display:none;text-align:center;padding:60px 20px;">
       <div class="ld-spinner" style="margin:0 auto 20px;"></div>
-      <div style="color:var(--text-primary);font-weight:600;margin-bottom:6px;">🤖 Pensando...</div>
-      <div style="color:var(--text-tertiary);font-size:.78rem;">3 a 8 segundos</div>
+      <div style="color:var(--text-primary);font-weight:600;margin-bottom:6px;">Pensando...</div>
+      <div style="color:var(--text-tertiary);font-size:.75rem;">3 a 8 segundos</div>
     </div>
 
     <!-- Resposta normal -->
@@ -300,13 +330,13 @@
 
 <!-- Overlays -->
 <div class="success-overlay" id="successOverlay">
-  <div class="success-icon" id="successIcon">✅</div>
+  <div class="success-icon" id="successIcon"></div>
   <div class="success-msg" id="successMsg">Ok!</div>
   <div class="success-detail" id="successDetail"></div>
 </div>
 <div class="toast" id="toast"></div>
 
 <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(function(){}); }</script>
-<script src="app.js?v=7.1"></script>
+<script src="app.js?v=8.1"></script>
 </body>
 </html>
