@@ -1055,6 +1055,13 @@ function renderPreviewImportacao() {
     h += '</div>';
   });
 
+  // 🆕 v8.3: Botão Adicionar Item Manual (premium)
+  h += '<button class="imp-add-item-btn" onclick="adicionarItemImpManual()">';
+  h += '<span class="iaim-icon">+</span>';
+  h += '<span class="iaim-text"><span class="iaim-title">Adicionar item manualmente</span>';
+  h += '<span class="iaim-sub">Inclua um item que a IA não detectou</span></span>';
+  h += '</button>';
+
   h += '<div class="imp-total-box">Total da Requisição: <strong id="impTotalGeral">R$ ' + totalGeral.toFixed(2).replace('.', ',') + '</strong></div>';
   h += '<div class="imp-actions">';
   h += '<button class="imp-btn-cancel" onclick="voltarStep1()">Refazer</button>';
@@ -1113,6 +1120,46 @@ function removerItemImp(idx) {
   toast('Item removido');
   renderPreviewImportacao();
 }
+
+// 🆕 v8.3: Adicionar item manualmente no preview da importação
+function adicionarItemImpManual() {
+  if (!importacaoTemp) { toast('Sem importação ativa'); return; }
+
+  var novoItem = {
+    ordem: importacaoTemp.itens.length + 1,
+    descricao: '',
+    descricao_normalizada: '',
+    quantidade: 1,
+    unidade_compra: 'UN',
+    qtd_por_embalagem: 1,
+    valor_total: 0,
+    valor_unitario_calc: 0,
+    confianca: 'ALTA',
+    observacao: 'Adicionado manualmente',
+    destinatario: '',
+    status_catalogo: 'NOVO',
+    preco_no_catalogo: null,
+    origem_atual: null,
+    _manual: true
+  };
+
+  importacaoTemp.itens.push(novoItem);
+  renderPreviewImportacao();
+
+  // Foca no campo de descrição do item recém-adicionado
+  setTimeout(function() {
+    var ultimoIdx = importacaoTemp.itens.length - 1;
+    var inputs = document.querySelectorAll('#impPreview .imp-desc');
+    var ultimoInput = inputs[inputs.length - 1];
+    if (ultimoInput) {
+      ultimoInput.focus();
+      ultimoInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 80);
+
+  showSuccess('', 'Item adicionado', 'Preencha a descrição e os valores');
+}
+
 
 function confirmarImportacao() {
   if (!importacaoTemp || !importacaoTemp.itens.length) { toast('Sem itens'); return; }
