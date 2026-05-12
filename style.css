@@ -1178,19 +1178,37 @@ button:focus-visible, .menu-item:focus-visible, .ia-cmd-card:focus-visible, .cid
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-/* ══════════════ REQUISIÇÃO GROUP HEADER ══════════════ */
+/* ══════════════ REQUISIÇÃO GROUP BLOCK ══════════════ */
+.req-group-block {
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--surface-1);
+}
+.req-group-block + .req-group-block {
+  margin-top: 16px;
+}
+.req-group-block .item-row {
+  border-left: 3px solid var(--accent-mid);
+  margin: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--border);
+}
+.req-group-block .item-row:last-child {
+  border-bottom: none;
+}
 .req-group-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 10px 12px;
-  margin: 4px 0;
+  margin: 0;
   background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
+  border-bottom: 2px solid var(--accent-mid);
+  border-radius: 0;
   cursor: pointer;
   transition: all .2s var(--ease);
 }
 .req-group-header:hover {
-  border-color: var(--accent-mid);
   background: var(--surface-3);
 }
 .req-group-header:active { transform: scale(0.99); }
@@ -1211,7 +1229,8 @@ button:focus-visible, .menu-item:focus-visible, .ia-cmd-card:focus-visible, .cid
 .req-group-edit {
   font-size: .62rem; font-weight: 700; color: var(--accent);
   text-transform: uppercase; letter-spacing: .06em;
-  opacity: 0; transition: opacity .2s;
+  opacity: .7; transition: opacity .2s;
+  background: var(--accent-soft); padding: 2px 6px; border-radius: var(--r-sm);
 }
 .req-group-header:hover .req-group-edit { opacity: 1; }
 

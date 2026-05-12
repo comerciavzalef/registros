@@ -316,6 +316,8 @@ function abrirCidade(nome) {
 
       Object.keys(reqMap).forEach(function (rid) {
         var grp = reqMap[rid];
+        // Bloco visual da requisição com separador
+        h += '<div class="req-group-block">';
         // Cabeçalho da requisição — clicável para editar
         h += '<div class="req-group-header" onclick="editarRequisicao(\'' + escapeHtml(cid.nome) + '\',\'' +
              escapeHtml(setor.nome) + '\',\'' + escapeHtml(rid) + '\')" title="Clique para editar">' +
@@ -328,11 +330,11 @@ function abrirCidade(nome) {
           var descDisplay = escapeHtml(it.descricao);
           // Destacar [ESCOLA/LOCAL] se existir na descrição
           descDisplay = descDisplay.replace(/\[([^\]]+)\]/g, '<span style="color:var(--accent);font-size:0.65rem;font-weight:600;display:block;">$1</span>');
-          h += '<div class="item-row"><div class="item-id">' + escapeHtml(it.requisicao || '-') +
-               '</div><div class="item-desc">' + descDisplay +
+          h += '<div class="item-row"><div class="item-desc">' + descDisplay +
                ' <span style="color:var(--text-tertiary);font-size:0.7rem;">(x' + it.quantidade + ')</span></div>' +
                '<div class="item-valor">' + formatCurrency(it.total) + '</div></div>';
         });
+        h += '</div>'; // fecha req-group-block
       });
 
       h += '</div></div>';
