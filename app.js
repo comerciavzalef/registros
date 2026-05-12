@@ -722,7 +722,7 @@ function comprimirImagem(file, maxSize, callback) {
       canvas.width = width; canvas.height = height;
       var ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
-      callback(canvas.toDataURL('image/jpeg', 0.65));
+      callback(canvas.toDataURL('image/jpeg', 0.75));
     };
     img.src = e.target.result;
   };
@@ -753,7 +753,7 @@ function escolherCidadeSetor() {
   if (texto) payload.textoBruto = texto;
 
   if (arquivo) {
-    comprimirImagem(arquivo, 800, function(base64Otimizado) {
+    comprimirImagem(arquivo, 1400, function(base64Otimizado) {
       payload.imagemBase64 = base64Otimizado.split(',')[1];
       payload.mimeType = 'image/jpeg';
       enviarParaIA(payload, cidade, setor, reqId, dataReq, obsReq);
