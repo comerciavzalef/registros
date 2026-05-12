@@ -1,7 +1,7 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v8.1 PREMIUM
+//  REQUISIÇÕES DIGITAL — app.js v8.2 PREMIUM
 //  Grupo Carlos Vaz — CRV/LAS
-//  v8.1: paleta neutra, SVG icons, zero emojis estruturais
+//  v8.2: obs na req, separar KG/UN, fix remover, calc bidirecional unit↔total
 // ============================================================
 
 var API_URL = 'https://script.google.com/macros/s/AKfycbzXuhmVkTDsMGotRuG3-i-YYnx0_nLFWDWjb7hNsTZ2HUg5SzWKDK6jbad_HqOEsnxt/exec';
@@ -325,8 +325,11 @@ function abrirCidade(nome) {
              '<span class="req-group-edit">Editar</span></div></div>';
         // Itens da requisição
         grp.itens.forEach(function (it) {
+          var descDisplay = escapeHtml(it.descricao);
+          // Destacar [ESCOLA/LOCAL] se existir na descrição
+          descDisplay = descDisplay.replace(/\[([^\]]+)\]/g, '<span style="color:var(--accent);font-size:0.65rem;font-weight:600;display:block;">$1</span>');
           h += '<div class="item-row"><div class="item-id">' + escapeHtml(it.requisicao || '-') +
-               '</div><div class="item-desc">' + escapeHtml(it.descricao) +
+               '</div><div class="item-desc">' + descDisplay +
                ' <span style="color:var(--text-tertiary);font-size:0.7rem;">(x' + it.quantidade + ')</span></div>' +
                '<div class="item-valor">' + formatCurrency(it.total) + '</div></div>';
         });
@@ -695,6 +698,7 @@ function abrirImportar() {
     String(hoje.getMonth() + 1).padStart(2, '0') + '-' +
     String(hoje.getDate()).padStart(2, '0');
   document.getElementById('impReqId').value = '';
+  document.getElementById('impObs').value = '';
   importacaoTemp = null;
   popularSelectsCidadeSetor();
 }
@@ -730,6 +734,7 @@ function escolherCidadeSetor() {
   var setor = document.getElementById('impSetor').value;
   var reqId = document.getElementById('impReqId').value.trim();
   var dataReq = document.getElementById('impData').value;
+  var obsReq = document.getElementById('impObs').value.trim();
   var arquivo = document.getElementById('impArquivo').files[0];
   var texto = document.getElementById('impTexto').value.trim();
 
@@ -751,14 +756,14 @@ function escolherCidadeSetor() {
     comprimirImagem(arquivo, 800, function(base64Otimizado) {
       payload.imagemBase64 = base64Otimizado.split(',')[1];
       payload.mimeType = 'image/jpeg';
-      enviarParaIA(payload, cidade, setor, reqId, dataReq);
+      enviarParaIA(payload, cidade, setor, reqId, dataReq, obsReq);
     });
   } else {
-    enviarParaIA(payload, cidade, setor, reqId, dataReq);
+    enviarParaIA(payload, cidade, setor, reqId, dataReq, obsReq);
   }
 }
 
-function enviarParaIA(payload, cidade, setor, reqId, dataReq) {
+function enviarParaIA(payload, cidade, setor, reqId, dataReq, obsReq) {
   fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -768,7 +773,7 @@ function enviarParaIA(payload, cidade, setor, reqId, dataReq) {
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (d.status !== 'ok') { toast(d.msg || 'Erro na IA'); voltarStep1(); return; }
-      importacaoTemp = { cidade: cidade, setor: setor, reqId: reqId, data: dataReq, itens: d.resultado.itens, meta: d.resultado };
+      importacaoTemp = { cidade: cidade, setor: setor, reqId: reqId, data: dataReq, observacao: obsReq || '', itens: d.resultado.itens, meta: d.resultado };
       renderPreviewImportacao();
     })
     .catch(function(e) { toast('Erro de conexão'); voltarStep1(); });
@@ -791,6 +796,9 @@ function renderPreviewImportacao() {
   var h = '<div class="imp-meta-box">';
   h += '<div><strong>Cidade:</strong> ' + escapeHtml(importacaoTemp.cidade) + ' / ' + escapeHtml(importacaoTemp.setor) + '</div>';
   h += '<div><strong>Req ID:</strong> ' + escapeHtml(importacaoTemp.reqId) + '</div>';
+  if (importacaoTemp.observacao) {
+    h += '<div style="color:var(--accent);font-weight:600;font-size:.85rem;margin:4px 0;"><strong>Obs:</strong> ' + escapeHtml(importacaoTemp.observacao) + '</div>';
+  }
   if (importacaoTemp.data) {
     var partes = importacaoTemp.data.split('-');
     h += '<div><strong>Data:</strong> ' + partes[2] + '/' + partes[1] + '/' + partes[0] + '</div>';
@@ -811,12 +819,15 @@ function renderPreviewImportacao() {
 
     h += '<div class="' + classe + '">';
     h += '<div class="imp-row-head"><span class="imp-num">' + (idx + 1) + '</span><input class="imp-desc" value="' + escapeHtml(it.descricao_normalizada || it.descricao) + '" data-idx="' + idx + '" data-campo="descricao_normalizada"></div>';
+    if (it.destinatario) {
+      h += '<div class="imp-dest-row"><label>Escola/Local<input class="imp-input imp-dest" value="' + escapeHtml(it.destinatario) + '" data-idx="' + idx + '" data-campo="destinatario" placeholder="Nome da escola/local"></label></div>';
+    }
     h += '<div class="imp-row-grid">';
     h += '<label>Qtd<input type="number" step="0.01" class="imp-input" value="' + it.quantidade + '" data-idx="' + idx + '" data-campo="quantidade"></label>';
     h += '<label>Un<input class="imp-input" value="' + escapeHtml(it.unidade_compra) + '" data-idx="' + idx + '" data-campo="unidade_compra"></label>';
     h += '<label>Por emb<input type="number" step="1" class="imp-input" value="' + (it.qtd_por_embalagem || 1) + '" data-idx="' + idx + '" data-campo="qtd_por_embalagem"></label>';
-    h += '<label>Total R$<input type="number" step="0.01" class="imp-input" value="' + it.valor_total + '" data-idx="' + idx + '" data-campo="valor_total" onchange="recalcUnit(' + idx + ')"></label>';
-    h += '<label>Unit R$<input type="number" step="0.01" class="imp-input imp-unit" value="' + (it.valor_unitario_calc || 0).toFixed(4) + '" data-idx="' + idx + '" data-campo="valor_unitario_calc" id="impUnit' + idx + '"></label>';
+    h += '<label>Unit R$<input type="number" step="0.01" class="imp-input imp-unit" value="' + (it.valor_unitario_calc || 0).toFixed(4) + '" data-idx="' + idx + '" data-campo="valor_unitario_calc" id="impUnit' + idx + '" onchange="recalcTotal(' + idx + ')"></label>';
+    h += '<label>Total R$<input type="number" step="0.01" class="imp-input" value="' + it.valor_total + '" data-idx="' + idx + '" data-campo="valor_total" id="impTotal' + idx + '" onchange="recalcUnit(' + idx + ')"></label>';
     h += '</div>';
 
     var statusTxt = '';
@@ -851,17 +862,41 @@ function renderPreviewImportacao() {
 function recalcUnit(idx) {
   var it = importacaoTemp.itens[idx];
   var qtdEmb = it.qtd_por_embalagem || 1;
-  var unit = it.valor_total / (it.quantidade * qtdEmb);
+  var qtd = it.quantidade || 1;
+  var unit = it.valor_total / (qtd * qtdEmb);
   it.valor_unitario_calc = unit;
-  document.getElementById('impUnit' + idx).value = unit.toFixed(4);
+  var unitEl = document.getElementById('impUnit' + idx);
+  if (unitEl) unitEl.value = unit.toFixed(4);
+  _recalcTotalGeral();
+}
+
+function recalcTotal(idx) {
+  var it = importacaoTemp.itens[idx];
+  var qtdEmb = it.qtd_por_embalagem || 1;
+  var qtd = it.quantidade || 1;
+  var total = (it.valor_unitario_calc || 0) * qtd * qtdEmb;
+  it.valor_total = total;
+  var totalEl = document.getElementById('impTotal' + idx);
+  if (totalEl) totalEl.value = total.toFixed(2);
+  _recalcTotalGeral();
+}
+
+function _recalcTotalGeral() {
   var t = 0;
   importacaoTemp.itens.forEach(function(i) { t += parseFloat(i.valor_total) || 0; });
-  document.getElementById('impTotalGeral').textContent = 'R$ ' + t.toFixed(2).replace('.', ',');
+  var el = document.getElementById('impTotalGeral');
+  if (el) el.textContent = 'R$ ' + t.toFixed(2).replace('.', ',');
 }
 
 function removerItemImp(idx) {
-  if (!confirm('Remover este item?')) return;
+  if (!importacaoTemp || !importacaoTemp.itens || !importacaoTemp.itens[idx]) return;
   importacaoTemp.itens.splice(idx, 1);
+  if (importacaoTemp.itens.length === 0) {
+    toast('Todos os itens removidos');
+    voltarStep1();
+    return;
+  }
+  toast('Item removido');
   renderPreviewImportacao();
 }
 
@@ -880,6 +915,7 @@ function confirmarImportacao() {
       setor: importacaoTemp.setor,
       reqId: importacaoTemp.reqId,
       data: importacaoTemp.data,
+      observacao: importacaoTemp.observacao || '',
       itens: importacaoTemp.itens
     }),
     redirect: 'follow'
@@ -1515,10 +1551,10 @@ function renderEdicaoRequisicao() {
     h += '<div class="imp-row-head"><span class="imp-num">' + (idx + 1) + '</span>';
     h += '<input class="imp-desc" value="' + escapeHtml(it.descricao) + '" data-idx="' + idx + '" data-campo="descricao"></div>';
     h += '<div class="imp-row-grid">';
-    h += '<label>V. Unit R$<input type="number" step="0.01" class="imp-input" value="' + (it.valorUnit || 0).toFixed(2) + '" data-idx="' + idx + '" data-campo="valorUnit" onchange="recalcEditTotal(' + idx + ')"></label>';
+    h += '<label>V. Unit R$<input type="number" step="0.01" class="imp-input" value="' + (it.valorUnit || 0).toFixed(2) + '" data-idx="' + idx + '" data-campo="valorUnit" id="editUnit' + idx + '" onchange="recalcEditTotal(' + idx + ')"></label>';
     h += '<label>Qtd<input type="number" step="0.01" class="imp-input" value="' + (it.quantidade || 0) + '" data-idx="' + idx + '" data-campo="quantidade" onchange="recalcEditTotal(' + idx + ')"></label>';
     h += '<label>Un<input class="imp-input" value="' + escapeHtml(it.um || '') + '" data-idx="' + idx + '" data-campo="um"></label>';
-    h += '<label>Total R$<input type="number" step="0.01" class="imp-input imp-unit" value="' + (it.total || 0).toFixed(2) + '" data-idx="' + idx + '" data-campo="total" id="editTotal' + idx + '" readonly></label>';
+    h += '<label>Total R$<input type="number" step="0.01" class="imp-input imp-unit" value="' + (it.total || 0).toFixed(2) + '" data-idx="' + idx + '" data-campo="total" id="editTotal' + idx + '" onchange="recalcEditUnit(' + idx + ')"></label>';
     h += '<label>Status<select class="imp-input" data-idx="' + idx + '" data-campo="status" style="font-family:var(--font);font-size:.75rem;">';
     ['PENDENTE', 'APROVADO', 'NEGADO', 'ENTREGUE'].forEach(function(st) {
       h += '<option value="' + st + '"' + (it.status === st ? ' selected' : '') + '>' + st + '</option>';
@@ -1559,8 +1595,20 @@ function recalcEditTotal(idx) {
   it.total = novoTotal;
   var el = document.getElementById('editTotal' + idx);
   if (el) el.value = novoTotal.toFixed(2);
+  _recalcEditTotalGeral();
+}
 
-  // Recalcular total geral
+function recalcEditUnit(idx) {
+  var it = edicaoReqTemp.itens[idx];
+  var qtd = it.quantidade || 1;
+  var novoUnit = (it.total || 0) / qtd;
+  it.valorUnit = novoUnit;
+  var el = document.getElementById('editUnit' + idx);
+  if (el) el.value = novoUnit.toFixed(2);
+  _recalcEditTotalGeral();
+}
+
+function _recalcEditTotalGeral() {
   var t = 0;
   edicaoReqTemp.itens.forEach(function(i) { t += i.total || 0; });
   var tEl = document.getElementById('editTotalGeral');

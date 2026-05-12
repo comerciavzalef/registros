@@ -943,6 +943,9 @@ textarea.login-field { resize: vertical; min-height: 80px; line-height: 1.5; }
 }
 .imp-input:focus { border-color: var(--accent); }
 .imp-unit { color: var(--success) !important; }
+.imp-dest-row { padding: 0 0 4px 0; }
+.imp-dest-row label { display: flex; align-items: center; gap: 6px; font-size: .65rem; color: var(--accent); font-weight: 600; }
+.imp-dest { flex: 1; background: rgba(107,138,173,0.10); border: 1px dashed var(--accent) !important; color: var(--accent) !important; font-weight: 600 !important; font-size: .72rem !important; }
 .imp-status-msg { font-size: .65rem; color: var(--text-secondary); padding: 3px 0; font-weight: 500; line-height: 1.4; }
 .imp-remove {
   background: var(--danger-soft); color: var(--danger);
