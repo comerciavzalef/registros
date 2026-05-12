@@ -328,35 +328,40 @@ function abrirCidade(nome) {
 
       Object.keys(reqMap).forEach(function (rid) {
         var grp = reqMap[rid];
-        // 🆕 v8.3: subtítulo com observação e data
-        var subInfo = '';
+
+        // 🆕 v8.3: Cabeçalho reorganizado em 2 linhas — limpo e profissional
+        h += '<div class="req-group-block">';
+        h += '<div class="req-group-header-pro">';
+
+        // ─── LINHA 1: ID + Contagem + Ações (sem total duplicado) ───
+        h += '<div class="rgh-top">';
+        h += '<div class="rgh-top-left" onclick="editarRequisicao(\'' + escapeHtml(cid.nome) + '\',\'' +
+             escapeHtml(setor.nome) + '\',\'' + escapeHtml(rid) + '\')" title="Clique para editar">';
+        h += '<span class="rgh-id">' + escapeHtml(rid) + '</span>';
+        h += '<span class="rgh-count">' + grp.itens.length + ' itens</span>';
+        h += '</div>';
+        h += '<div class="rgh-top-right">';
+        h += '<button class="rgh-btn rgh-btn-edit" onclick="editarRequisicao(\'' + escapeHtml(cid.nome) + '\',\'' +
+             escapeHtml(setor.nome) + '\',\'' + escapeHtml(rid) + '\')" title="Editar">Editar</button>';
+        h += '<button class="rgh-btn rgh-btn-print" onclick="event.stopPropagation();imprimirRequisicaoIndividual(\'' + escapeHtml(cid.nome) +
+             '\',\'' + escapeHtml(setor.nome) + '\',\'' + escapeHtml(rid) + '\')" title="Imprimir">🖨️</button>';
+        h += '</div>';
+        h += '</div>';
+
+        // ─── LINHA 2: Chips de Observação e Data ───
         if (grp.observacao || grp.data) {
-          var parts = [];
-          if (grp.observacao) parts.push('<span style="color:var(--accent);">📝 ' + escapeHtml(grp.observacao) + '</span>');
-          if (grp.data) parts.push('<span style="color:var(--text-tertiary);">📅 ' + escapeHtml(formatarDataBR(grp.data)) + '</span>');
-          subInfo = '<div style="font-size:.68rem;margin-top:3px;display:flex;gap:10px;flex-wrap:wrap;">' + parts.join('') + '</div>';
+          h += '<div class="rgh-meta">';
+          if (grp.observacao) {
+            h += '<span class="rgh-chip rgh-chip-obs"><span class="rgh-chip-ico">📝</span>' + escapeHtml(grp.observacao) + '</span>';
+          }
+          if (grp.data) {
+            h += '<span class="rgh-chip rgh-chip-data"><span class="rgh-chip-ico">📅</span>' + escapeHtml(formatarDataBR(grp.data)) + '</span>';
+          }
+          h += '</div>';
         }
 
-        h += '<div class="req-group-block">';
-        // Cabeçalho da requisição — clicável para editar
-        h += '<div class="req-group-header" style="position:relative;">';
-        h += '<div onclick="editarRequisicao(\'' + escapeHtml(cid.nome) + '\',\'' +
-             escapeHtml(setor.nome) + '\',\'' + escapeHtml(rid) + '\')" title="Clique para editar" ' +
-             'style="flex:1;cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">' +
-             '<div class="req-group-left" style="flex:1;">' +
-             '<span class="req-group-id">' + escapeHtml(rid) + '</span>' +
-             '<span class="req-group-count">' + grp.itens.length + ' itens</span>' +
-             subInfo +
-             '</div>' +
-             '<div class="req-group-right"><span class="req-group-total">' + formatCurrency(grp.total) + '</span>' +
-             '<span class="req-group-edit">Editar</span></div></div>';
-        // 🆕 v8.3: botão de impressão individual
-        h += '<button onclick="event.stopPropagation();imprimirRequisicaoIndividual(\'' + escapeHtml(cid.nome) +
-             '\',\'' + escapeHtml(setor.nome) + '\',\'' + escapeHtml(rid) + '\')" ' +
-             'style="margin-left:8px;background:rgba(30,58,95,0.15);border:1px solid rgba(30,58,95,0.3);' +
-             'color:var(--accent);border-radius:8px;padding:6px 10px;font-size:.7rem;cursor:pointer;align-self:center;" ' +
-             'title="Imprimir esta requisição">🖨️</button>';
-        h += '</div>';
+        h += '</div>'; // .req-group-header-pro
+
         // Itens da requisição
         grp.itens.forEach(function (it) {
           var descDisplay = escapeHtml(it.descricao);
@@ -365,7 +370,7 @@ function abrirCidade(nome) {
                ' <span style="color:var(--text-tertiary);font-size:0.7rem;">(x' + it.quantidade + ')</span></div>' +
                '<div class="item-valor">' + formatCurrency(it.total) + '</div></div>';
         });
-        h += '</div>';
+        h += '</div>'; // .req-group-block
       });
 
       h += '</div></div>';
@@ -376,6 +381,7 @@ function abrirCidade(nome) {
   document.getElementById('cidadeModal').classList.add('show');
   history.pushState({ modal: 'cidade' }, '', '');
 }
+
 function fecharCidade() {
   var wasOpen = document.getElementById('cidadeModal').classList.contains('show');
   document.getElementById('cidadeModal').classList.remove('show');
