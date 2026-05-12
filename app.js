@@ -1,7 +1,7 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v8.2 PREMIUM
+//  REQUISIÇÕES DIGITAL — app.js v8.3 PREMIUM
 //  Grupo Carlos Vaz — CRV/LAS
-//  v8.2: obs na req, separar KG/UN, fix remover, calc bidirecional unit↔total
+//  v8.3: observação+data no card, botões de impressão (PDF)
 // ============================================================
 
 var API_URL = 'https://script.google.com/macros/s/AKfycbzXuhmVkTDsMGotRuG3-i-YYnx0_nLFWDWjb7hNsTZ2HUg5SzWKDK6jbad_HqOEsnxt/exec';
@@ -12,8 +12,8 @@ var dadosCompletos = null;
 var catalogo = [];
 var comandosIA = [];
 var autoRefreshTimer = null;
-var _insidePopstate = false;                                  // ✏️ v6.7 — Tarefa 6
-var iaAtualizacaoTemp = null;                                 // ✏️ v6.7 — Tarefa 3
+var _insidePopstate = false;
+var iaAtualizacaoTemp = null;
 
 // ══════════════════════════════════════════════════════════════
 //  INIT & LOGIN
@@ -116,7 +116,6 @@ document.addEventListener('DOMContentLoaded', function () {
 // ══════════════════════════════════════════════════════════════
 //  MENU LATERAL (drawer)
 // ══════════════════════════════════════════════════════════════
-// ✏️ v6.7 — Tarefa 6 — History API (botão voltar Android)
 window.addEventListener('popstate', function () {
   _insidePopstate = true;
   if (document.getElementById('editReqModal').classList.contains('show')) fecharEditReq();
@@ -132,7 +131,7 @@ function abrirMenuLateral() {
   document.getElementById('menuLateral').classList.add('show');
   document.getElementById('menuOverlay').classList.add('show');
   document.body.style.overflow = 'hidden';
-  history.pushState({ modal: 'menu' }, '', '');               // ✏️ v6.7 — Tarefa 6
+  history.pushState({ modal: 'menu' }, '', '');
 }
 
 function fecharMenuLateral() {
@@ -142,7 +141,7 @@ function fecharMenuLateral() {
   if (el) el.classList.remove('show');
   if (ov) ov.classList.remove('show');
   document.body.style.overflow = '';
-  if (wasOpen && !_insidePopstate) history.back();             // ✏️ v6.7 — Tarefa 6
+  if (wasOpen && !_insidePopstate) history.back();
 }
 
 function menuAcao(acao) {
@@ -295,6 +294,17 @@ function abrirCidade(nome) {
           '</div><div style="color:var(--text-tertiary);font-size:0.8rem;margin-top:5px;">' +
           cid.itens + ' itens faturados</div></div>';
 
+  // 🆕 v8.3: Botão Imprimir Todas
+  if (cid.setores.length) {
+    h += '<div style="display:flex;justify-content:center;margin:10px 0 18px;">';
+    h += '<button onclick="imprimirTodasRequisicoes(\'' + escapeHtml(cid.nome) + '\')" ' +
+         'style="background:linear-gradient(135deg,#1e3a5f,#2c5282);color:#fff;border:none;border-radius:10px;' +
+         'padding:11px 20px;font-size:.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;' +
+         'box-shadow:0 4px 14px rgba(30,58,95,0.35);font-family:var(--font);">' +
+         '🖨️ Imprimir Todas as Requisições</button>';
+    h += '</div>';
+  }
+
   if (!cid.setores.length) {
     h += '<div class="empty-state"><div class="empty-text">Nenhuma requisição.</div></div>';
   } else {
@@ -303,9 +313,11 @@ function abrirCidade(nome) {
       var reqMap = {};
       setor.itens.forEach(function (it) {
         var rid = it.requisicao || '-';
-        if (!reqMap[rid]) reqMap[rid] = { itens: [], total: 0 };
+        if (!reqMap[rid]) reqMap[rid] = { itens: [], total: 0, observacao: '', data: '' };
         reqMap[rid].itens.push(it);
         reqMap[rid].total += it.total;
+        if (it.observacao && !reqMap[rid].observacao) reqMap[rid].observacao = it.observacao;
+        if (it.data && !reqMap[rid].data) reqMap[rid].data = it.data;
       });
 
       h += '<div class="setor-block"><div class="setor-header"><div class="sh-left">' +
@@ -316,25 +328,44 @@ function abrirCidade(nome) {
 
       Object.keys(reqMap).forEach(function (rid) {
         var grp = reqMap[rid];
-        // Bloco visual da requisição com separador
+        // 🆕 v8.3: subtítulo com observação e data
+        var subInfo = '';
+        if (grp.observacao || grp.data) {
+          var parts = [];
+          if (grp.observacao) parts.push('<span style="color:var(--accent);">📝 ' + escapeHtml(grp.observacao) + '</span>');
+          if (grp.data) parts.push('<span style="color:var(--text-tertiary);">📅 ' + escapeHtml(formatarDataBR(grp.data)) + '</span>');
+          subInfo = '<div style="font-size:.68rem;margin-top:3px;display:flex;gap:10px;flex-wrap:wrap;">' + parts.join('') + '</div>';
+        }
+
         h += '<div class="req-group-block">';
         // Cabeçalho da requisição — clicável para editar
-        h += '<div class="req-group-header" onclick="editarRequisicao(\'' + escapeHtml(cid.nome) + '\',\'' +
-             escapeHtml(setor.nome) + '\',\'' + escapeHtml(rid) + '\')" title="Clique para editar">' +
-             '<div class="req-group-left"><span class="req-group-id">' + escapeHtml(rid) + '</span>' +
-             '<span class="req-group-count">' + grp.itens.length + ' itens</span></div>' +
+        h += '<div class="req-group-header" style="position:relative;">';
+        h += '<div onclick="editarRequisicao(\'' + escapeHtml(cid.nome) + '\',\'' +
+             escapeHtml(setor.nome) + '\',\'' + escapeHtml(rid) + '\')" title="Clique para editar" ' +
+             'style="flex:1;cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">' +
+             '<div class="req-group-left" style="flex:1;">' +
+             '<span class="req-group-id">' + escapeHtml(rid) + '</span>' +
+             '<span class="req-group-count">' + grp.itens.length + ' itens</span>' +
+             subInfo +
+             '</div>' +
              '<div class="req-group-right"><span class="req-group-total">' + formatCurrency(grp.total) + '</span>' +
              '<span class="req-group-edit">Editar</span></div></div>';
+        // 🆕 v8.3: botão de impressão individual
+        h += '<button onclick="event.stopPropagation();imprimirRequisicaoIndividual(\'' + escapeHtml(cid.nome) +
+             '\',\'' + escapeHtml(setor.nome) + '\',\'' + escapeHtml(rid) + '\')" ' +
+             'style="margin-left:8px;background:rgba(30,58,95,0.15);border:1px solid rgba(30,58,95,0.3);' +
+             'color:var(--accent);border-radius:8px;padding:6px 10px;font-size:.7rem;cursor:pointer;align-self:center;" ' +
+             'title="Imprimir esta requisição">🖨️</button>';
+        h += '</div>';
         // Itens da requisição
         grp.itens.forEach(function (it) {
           var descDisplay = escapeHtml(it.descricao);
-          // Destacar [ESCOLA/LOCAL] se existir na descrição
           descDisplay = descDisplay.replace(/\[([^\]]+)\]/g, '<span style="color:var(--accent);font-size:0.65rem;font-weight:600;display:block;">$1</span>');
           h += '<div class="item-row"><div class="item-desc">' + descDisplay +
                ' <span style="color:var(--text-tertiary);font-size:0.7rem;">(x' + it.quantidade + ')</span></div>' +
                '<div class="item-valor">' + formatCurrency(it.total) + '</div></div>';
         });
-        h += '</div>'; // fecha req-group-block
+        h += '</div>';
       });
 
       h += '</div></div>';
@@ -348,7 +379,182 @@ function abrirCidade(nome) {
 function fecharCidade() {
   var wasOpen = document.getElementById('cidadeModal').classList.contains('show');
   document.getElementById('cidadeModal').classList.remove('show');
-  if (wasOpen && !_insidePopstate) history.back();             // ✏️ v6.7 — Tarefa 6
+  if (wasOpen && !_insidePopstate) history.back();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  🆕 v8.3: IMPRESSÃO DE REQUISIÇÕES — PDF PROFISSIONAL
+// ══════════════════════════════════════════════════════════════
+function formatarDataBR(dt) {
+  if (!dt) return '';
+  var s = String(dt).trim();
+  // Já está dd/mm/aaaa
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  // ISO yyyy-mm-dd
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    var p = s.substring(0, 10).split('-');
+    return p[2] + '/' + p[1] + '/' + p[0];
+  }
+  try {
+    var d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return String(d.getDate()).padStart(2,'0') + '/' +
+             String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+    }
+  } catch(e) {}
+  return s;
+}
+
+function _gerarCabecalhoPDF(cidade) {
+  var hoje = new Date();
+  var dataHoje = String(hoje.getDate()).padStart(2,'0') + '/' +
+                 String(hoje.getMonth()+1).padStart(2,'0') + '/' + hoje.getFullYear();
+  var hora = String(hoje.getHours()).padStart(2,'0') + ':' + String(hoje.getMinutes()).padStart(2,'0');
+
+  return '<div class="pdf-header">' +
+           '<div class="pdf-brand">GRUPO CARLOS VAZ</div>' +
+           '<div class="pdf-divider"></div>' +
+           '<div class="pdf-title">Requisições ' + escapeHtml(cidade) + '</div>' +
+           '<div class="pdf-meta">Emitido em ' + dataHoje + ' às ' + hora + '</div>' +
+         '</div>';
+}
+
+function _gerarBlocoRequisicaoPDF(setorNome, reqId, grp) {
+  var h = '<div class="pdf-req-block">';
+  h += '<div class="pdf-req-head">';
+  h += '<div class="pdf-req-title">';
+  h += '<div class="pdf-req-setor">' + escapeHtml(setorNome) + '</div>';
+  h += '<div class="pdf-req-id">Requisição: ' + escapeHtml(reqId) + '</div>';
+  h += '</div>';
+  h += '<div class="pdf-req-info">';
+  if (grp.data) h += '<div><strong>Data:</strong> ' + escapeHtml(formatarDataBR(grp.data)) + '</div>';
+  if (grp.observacao) h += '<div><strong>Obs:</strong> ' + escapeHtml(grp.observacao) + '</div>';
+  h += '</div>';
+  h += '</div>';
+
+  h += '<table class="pdf-table">';
+  h += '<thead><tr>' +
+       '<th style="width:6%;">#</th>' +
+       '<th style="width:46%;">Descrição</th>' +
+       '<th style="width:10%;">Qtd</th>' +
+       '<th style="width:8%;">Un</th>' +
+       '<th style="width:15%;">V. Unit</th>' +
+       '<th style="width:15%;">Total</th>' +
+       '</tr></thead><tbody>';
+  grp.itens.forEach(function(it, idx) {
+    var desc = escapeHtml(it.descricao);
+    h += '<tr>' +
+         '<td style="text-align:center;">' + (idx+1) + '</td>' +
+         '<td>' + desc + '</td>' +
+         '<td style="text-align:center;">' + (it.quantidade || 0) + '</td>' +
+         '<td style="text-align:center;">' + escapeHtml(it.um || '') + '</td>' +
+         '<td style="text-align:right;">' + formatCurrency(it.valorUnit || 0) + '</td>' +
+         '<td style="text-align:right;">' + formatCurrency(it.total || 0) + '</td>' +
+         '</tr>';
+  });
+  h += '<tr class="pdf-total-row">' +
+       '<td colspan="5" style="text-align:right;font-weight:700;">TOTAL DA REQUISIÇÃO</td>' +
+       '<td style="text-align:right;font-weight:700;">' + formatCurrency(grp.total) + '</td>' +
+       '</tr>';
+  h += '</tbody></table>';
+  h += '</div>';
+  return h;
+}
+
+function _abrirJanelaImpressao(titulo, corpoHtml) {
+  var css = [
+    '<style>',
+    '@page { size: A4; margin: 14mm 12mm; }',
+    '* { box-sizing: border-box; }',
+    'body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1a1a1a; margin: 0; padding: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }',
+    '.pdf-header { border-bottom: 3px solid #1e3a5f; padding-bottom: 14px; margin-bottom: 22px; text-align: center; }',
+    '.pdf-brand { font-size: 22px; font-weight: 800; letter-spacing: 3px; color: #1e3a5f; }',
+    '.pdf-divider { width: 60px; height: 2px; background: #c9a063; margin: 6px auto 8px; }',
+    '.pdf-title { font-size: 18px; font-weight: 600; color: #2c5282; margin: 4px 0; }',
+    '.pdf-meta { font-size: 11px; color: #666; margin-top: 4px; }',
+    '.pdf-req-block { margin-bottom: 26px; page-break-inside: avoid; }',
+    '.pdf-req-block + .pdf-req-block { page-break-before: always; }',
+    '.pdf-req-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 12px; background: #f4f7fb; border-left: 4px solid #1e3a5f; margin-bottom: 8px; }',
+    '.pdf-req-setor { font-size: 11px; font-weight: 700; color: #1e3a5f; text-transform: uppercase; letter-spacing: 1px; }',
+    '.pdf-req-id { font-size: 15px; font-weight: 700; color: #1a1a1a; margin-top: 3px; }',
+    '.pdf-req-info { font-size: 11px; color: #444; text-align: right; line-height: 1.5; }',
+    '.pdf-table { width: 100%; border-collapse: collapse; font-size: 11px; }',
+    '.pdf-table thead th { background: #1e3a5f; color: #fff; padding: 8px 6px; font-weight: 600; text-align: left; }',
+    '.pdf-table tbody td { padding: 6px; border-bottom: 1px solid #e0e0e0; }',
+    '.pdf-table tbody tr:nth-child(even) td { background: #fafbfd; }',
+    '.pdf-total-row td { background: #fff8cc !important; border-top: 2px solid #1e3a5f !important; }',
+    '.pdf-footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 10px; color: #888; text-align: center; }',
+    '@media print { .no-print { display: none !important; } }',
+    '.no-print { position: fixed; top: 12px; right: 12px; z-index: 9999; }',
+    '.no-print button { background: #1e3a5f; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; margin-left: 6px; }',
+    '.no-print button.cancel { background: #999; }',
+    '</style>'
+  ].join('');
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + escapeHtml(titulo) + '</title>' + css + '</head><body>' +
+             '<div class="no-print"><button onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>' +
+             '<button class="cancel" onclick="window.close()">Fechar</button></div>' +
+             corpoHtml +
+             '<div class="pdf-footer">Grupo Carlos Vaz — CRV/LAS · Sistema de Requisições Digital</div>' +
+             '</body></html>';
+
+  var win = window.open('', '_blank');
+  if (!win) { toast('Permita pop-ups para imprimir'); return; }
+  win.document.write(html);
+  win.document.title = titulo;
+  win.document.close();
+  setTimeout(function() { try { win.focus(); } catch(e){} }, 300);
+}
+
+function imprimirTodasRequisicoes(cidadeNome) {
+  if (!dadosCompletos) { toast('Carregue os dados primeiro'); return; }
+  var cid = dadosCompletos.cidades.find(function(c) { return c.nome === cidadeNome; });
+  if (!cid || !cid.setores.length) { toast('Nada para imprimir'); return; }
+
+  var corpo = _gerarCabecalhoPDF(cidadeNome);
+
+  cid.setores.forEach(function(setor) {
+    // Agrupar por reqId
+    var reqMap = {};
+    setor.itens.forEach(function(it) {
+      var rid = it.requisicao || '-';
+      if (!reqMap[rid]) reqMap[rid] = { itens: [], total: 0, observacao: '', data: '' };
+      reqMap[rid].itens.push(it);
+      reqMap[rid].total += it.total;
+      if (it.observacao && !reqMap[rid].observacao) reqMap[rid].observacao = it.observacao;
+      if (it.data && !reqMap[rid].data) reqMap[rid].data = it.data;
+    });
+
+    Object.keys(reqMap).forEach(function(rid) {
+      corpo += _gerarBlocoRequisicaoPDF(setor.nome, rid, reqMap[rid]);
+    });
+  });
+
+  _abrirJanelaImpressao('Requisições ' + cidadeNome, corpo);
+}
+
+function imprimirRequisicaoIndividual(cidadeNome, setorNome, reqId) {
+  if (!dadosCompletos) { toast('Carregue os dados primeiro'); return; }
+  var cid = dadosCompletos.cidades.find(function(c) { return c.nome === cidadeNome; });
+  if (!cid) { toast('Cidade não encontrada'); return; }
+  var setor = cid.setores.find(function(s) { return s.nome === setorNome; });
+  if (!setor) { toast('Setor não encontrado'); return; }
+
+  var grp = { itens: [], total: 0, observacao: '', data: '' };
+  setor.itens.forEach(function(it) {
+    if ((it.requisicao || '-') === reqId) {
+      grp.itens.push(it);
+      grp.total += it.total;
+      if (it.observacao && !grp.observacao) grp.observacao = it.observacao;
+      if (it.data && !grp.data) grp.data = it.data;
+    }
+  });
+  if (!grp.itens.length) { toast('Requisição vazia'); return; }
+
+  var corpo = _gerarCabecalhoPDF(cidadeNome);
+  corpo += _gerarBlocoRequisicaoPDF(setorNome, reqId, grp);
+
+  _abrirJanelaImpressao('Requisição ' + reqId + ' — ' + cidadeNome, corpo);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -357,7 +563,7 @@ function fecharCidade() {
 function abrirCatalogo() {
   document.body.style.overflow = 'hidden';
   document.getElementById('catalogoModal').classList.add('show');
-  history.pushState({ modal: 'catalogo' }, '', '');            // ✏️ v6.7 — Tarefa 6
+  history.pushState({ modal: 'catalogo' }, '', '');
   document.getElementById('catalogoBody').innerHTML =
     '<div style="text-align:center;padding:40px 20px;"><div class="ld-spinner" style="margin:0 auto 16px;"></div>' +
     '<div class="empty-text">Carregando catálogo...</div></div>';
@@ -377,7 +583,7 @@ function fecharCatalogo() {
   var wasOpen = document.getElementById('catalogoModal').classList.contains('show');
   document.body.style.overflow = '';
   document.getElementById('catalogoModal').classList.remove('show');
-  if (wasOpen && !_insidePopstate) history.back();             // ✏️ v6.7 — Tarefa 6
+  if (wasOpen && !_insidePopstate) history.back();
 }
 
 function filtrarCatalogo() {
@@ -688,7 +894,7 @@ function removerSetor() {
 function abrirImportar() {
   document.body.style.overflow = 'hidden';
   document.getElementById('importarModal').classList.add('show');
-  history.pushState({ modal: 'importar' }, '', '');            // ✏️ v6.7 — Tarefa 6
+  history.pushState({ modal: 'importar' }, '', '');
   document.getElementById('impStep1').style.display = 'block';
   document.getElementById('impStep2').style.display = 'none';
   document.getElementById('impStep3').style.display = 'none';
@@ -709,7 +915,7 @@ function fecharImportar() {
   var wasOpen = document.getElementById('importarModal').classList.contains('show');
   document.body.style.overflow = '';
   document.getElementById('importarModal').classList.remove('show');
-  if (wasOpen && !_insidePopstate) history.back();             // ✏️ v6.7 — Tarefa 6
+  if (wasOpen && !_insidePopstate) history.back();
 }
 
 function comprimirImagem(file, maxSize, callback) {
@@ -948,15 +1154,15 @@ var iaPovoamentoTemp = null;
 function abrirAssistenteIA() {
   document.body.style.overflow = 'hidden';
   document.getElementById('iaModal').classList.add('show');
-  history.pushState({ modal: 'ia' }, '', '');                  // ✏️ v6.7 — Tarefa 6
+  history.pushState({ modal: 'ia' }, '', '');
   document.getElementById('iaStep1').style.display = 'block';
   document.getElementById('iaStep2').style.display = 'none';
   document.getElementById('iaStep3').style.display = 'none';
   document.getElementById('iaParamWrap').style.display = 'none';
   document.getElementById('iaPovoarWrap').style.display = 'none';
   document.getElementById('iaPovoarPreview').style.display = 'none';
-  document.getElementById('iaAtualizarWrap').style.display = 'none';    // ✏️ v6.7 — Tarefa 3
-  document.getElementById('iaAtualizarPreview').style.display = 'none'; // ✏️ v6.7 — Tarefa 3
+  document.getElementById('iaAtualizarWrap').style.display = 'none';
+  document.getElementById('iaAtualizarPreview').style.display = 'none';
   document.getElementById('iaResposta').innerHTML = '';
 
   if (!comandosIA.length) {
@@ -985,7 +1191,7 @@ function fecharAssistenteIA() {
   var wasOpen = document.getElementById('iaModal').classList.contains('show');
   document.body.style.overflow = '';
   document.getElementById('iaModal').classList.remove('show');
-  if (wasOpen && !_insidePopstate) history.back();             // ✏️ v6.7 — Tarefa 6
+  if (wasOpen && !_insidePopstate) history.back();
 }
 
 function renderListaComandos() {
@@ -1003,7 +1209,6 @@ function renderListaComandos() {
 function selecionarComando(comando) {
   iaComandoAtual = comando;
 
-  // Comando especial: POVOAR_CATALOGO usa fluxo próprio
   if (comando === 'POVOAR_CATALOGO') {
     document.getElementById('iaStep1').style.display = 'none';
     document.getElementById('iaPovoarWrap').style.display = 'block';
@@ -1014,7 +1219,6 @@ function selecionarComando(comando) {
     return;
   }
 
-  // ✏️ v6.7 — Tarefa 3 — Comando especial: ATUALIZAR_PRECOS_LISTA
   if (comando === 'ATUALIZAR_PRECOS_LISTA') {
     document.getElementById('iaStep1').style.display = 'none';
     document.getElementById('iaAtualizarWrap').style.display = 'block';
@@ -1059,13 +1263,13 @@ function voltarListaComandos() {
   document.getElementById('iaParamWrap').style.display = 'none';
   document.getElementById('iaPovoarWrap').style.display = 'none';
   document.getElementById('iaPovoarPreview').style.display = 'none';
-  document.getElementById('iaAtualizarWrap').style.display = 'none';   // ✏️ v6.7 — Tarefa 3
-  document.getElementById('iaAtualizarPreview').style.display = 'none'; // ✏️ v6.7 — Tarefa 3
+  document.getElementById('iaAtualizarWrap').style.display = 'none';
+  document.getElementById('iaAtualizarPreview').style.display = 'none';
   document.getElementById('iaStep2').style.display = 'none';
   document.getElementById('iaStep3').style.display = 'none';
   document.getElementById('iaStep1').style.display = 'block';
   iaPovoamentoTemp = null;
-  iaAtualizacaoTemp = null;                                            // ✏️ v6.7 — Tarefa 3
+  iaAtualizacaoTemp = null;
 }
 
 function executarIA(comando, parametro) {
@@ -1127,7 +1331,6 @@ function executarIA(comando, parametro) {
     });
 }
 
-// ✏️ v6.7 — Tarefa 4 — formatação com blocos de código
 function formatarRespostaIA(texto) {
   var partes = texto.split(/(```[\s\S]*?```)/g);
   var html = '';
@@ -1145,7 +1348,6 @@ function formatarRespostaIA(texto) {
   return html;
 }
 
-// ✏️ v6.7 — Tarefa 5 — cópia inteligente para WhatsApp
 function copiarRespostaIA() {
   var el = document.getElementById('iaRespTexto');
   if (!el) return;
@@ -1194,7 +1396,7 @@ function _formatarItemTexto(item, num) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  POVOAR CATÁLOGO (fluxo especial — aceita lista OU categoria)
+//  POVOAR CATÁLOGO
 // ══════════════════════════════════════════════════════════════
 function processarPovoamento() {
   var lista = document.getElementById('iaPovoarLista').value.trim();
@@ -1351,7 +1553,6 @@ function confirmarPovoamento() {
     });
 }
 
-// ✏️ v6.7 — Tarefa 7 — remover item individual do povoamento
 function removerItemPovoamento(idx) {
   if (!iaPovoamentoTemp || !iaPovoamentoTemp.itens) return;
   if (!confirm('Remover este item?')) return;
@@ -1363,7 +1564,7 @@ function removerItemPovoamento(idx) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  ✏️ v6.7 — Tarefa 3 — ATUALIZAR PREÇOS LISTA (IA)
+//  ATUALIZAR PREÇOS LISTA (IA)
 // ══════════════════════════════════════════════════════════════
 function processarAtualizacaoPrecos() {
   var lista = document.getElementById('iaAtualizarLista').value.trim();
@@ -1482,7 +1683,7 @@ function confirmarAtualizacaoPrecosFront() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  ✏️ EDITAR REQUISIÇÃO JÁ LANÇADA (v8.0)
+//  EDITAR REQUISIÇÃO JÁ LANÇADA
 // ══════════════════════════════════════════════════════════════
 var edicaoReqTemp = null;
 
@@ -1575,7 +1776,6 @@ function renderEdicaoRequisicao() {
 
   document.getElementById('editReqBody').innerHTML = h;
 
-  // Bind input listeners
   document.querySelectorAll('#editReqBody input[data-campo], #editReqBody select[data-campo]').forEach(function(inp) {
     inp.addEventListener('input', function() {
       var idx = parseInt(this.dataset.idx);
