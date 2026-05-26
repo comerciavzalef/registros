@@ -19,7 +19,7 @@ var iaAtualizacaoTemp = null;
 //  INIT & LOGIN
 // ══════════════════════════════════════════════════════════════
 // 🔧 v8.4: forçar atualização do SW e reload automático para todos os usuários
-var APP_VERSION = '8.4';
+var APP_VERSION = '8.4.1';
 (function () {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
@@ -470,42 +470,51 @@ function _gerarCabecalhoPDF(cidade) {
          '</div>';
 }
 
+// 🔧 v8.4: PDF profissional com ID, observação e layout melhorado
 function _gerarBlocoRequisicaoPDF(setorNome, reqId, grp) {
   var h = '<div class="pdf-req-block">';
+
+  // Cabeçalho com setor + ID + data
   h += '<div class="pdf-req-head">';
-  h += '<div class="pdf-req-title">';
+  h += '<div>';
   h += '<div class="pdf-req-setor">' + escapeHtml(setorNome) + '</div>';
-  h += '<div class="pdf-req-id">Requisição: ' + escapeHtml(reqId) + '</div>';
+  h += '<div class="pdf-req-id">ID: ' + escapeHtml(reqId) + '</div>';
   h += '</div>';
   h += '<div class="pdf-req-info">';
-  if (grp.data) h += '<div><strong>Data:</strong> ' + escapeHtml(formatarDataBR(grp.data)) + '</div>';
-  if (grp.observacao) h += '<div><strong>Obs:</strong> ' + escapeHtml(grp.observacao) + '</div>';
+  if (grp.data) h += '<div>' + escapeHtml(formatarDataBR(grp.data)) + '</div>';
+  h += '<div>' + grp.itens.length + ' ite' + (grp.itens.length === 1 ? 'm' : 'ns') + '</div>';
   h += '</div>';
   h += '</div>';
 
+  // Observação em destaque (se existir)
+  if (grp.observacao) {
+    h += '<div class="pdf-req-obs"><strong>Observação:</strong> ' + escapeHtml(grp.observacao) + '</div>';
+  }
+
+  // Tabela de itens
   h += '<table class="pdf-table">';
   h += '<thead><tr>' +
-       '<th style="width:6%;">#</th>' +
-       '<th style="width:46%;">Descrição</th>' +
-       '<th style="width:10%;">Qtd</th>' +
-       '<th style="width:8%;">Un</th>' +
-       '<th style="width:15%;">V. Unit</th>' +
-       '<th style="width:15%;">Total</th>' +
+       '<th style="width:5%;text-align:center;">#</th>' +
+       '<th style="width:43%;">Descrição</th>' +
+       '<th style="width:10%;text-align:center;">Qtd</th>' +
+       '<th style="width:7%;text-align:center;">Un</th>' +
+       '<th style="width:17%;text-align:right;">V. Unitário</th>' +
+       '<th style="width:18%;text-align:right;">Total</th>' +
        '</tr></thead><tbody>';
   grp.itens.forEach(function(it, idx) {
     var desc = escapeHtml(it.descricao);
     h += '<tr>' +
-         '<td style="text-align:center;">' + (idx+1) + '</td>' +
-         '<td>' + desc + '</td>' +
+         '<td style="text-align:center;color:#64748b;">' + (idx+1) + '</td>' +
+         '<td style="font-weight:500;">' + desc + '</td>' +
          '<td style="text-align:center;">' + (it.quantidade || 0) + '</td>' +
-         '<td style="text-align:center;">' + escapeHtml(it.um || '') + '</td>' +
+         '<td style="text-align:center;color:#64748b;">' + escapeHtml(it.um || '') + '</td>' +
          '<td style="text-align:right;">' + formatCurrency(it.valorUnit || 0) + '</td>' +
-         '<td style="text-align:right;">' + formatCurrency(it.total || 0) + '</td>' +
+         '<td style="text-align:right;font-weight:600;">' + formatCurrency(it.total || 0) + '</td>' +
          '</tr>';
   });
   h += '<tr class="pdf-total-row">' +
-       '<td colspan="5" style="text-align:right;font-weight:700;">TOTAL DA REQUISIÇÃO</td>' +
-       '<td style="text-align:right;font-weight:700;">' + formatCurrency(grp.total) + '</td>' +
+       '<td colspan="5" style="text-align:right;padding-right:12px;">TOTAL — ' + escapeHtml(reqId) + '</td>' +
+       '<td style="text-align:right;">' + formatCurrency(grp.total) + '</td>' +
        '</tr>';
   h += '</tbody></table>';
   h += '</div>';
@@ -513,32 +522,42 @@ function _gerarBlocoRequisicaoPDF(setorNome, reqId, grp) {
 }
 
 function _abrirJanelaImpressao(titulo, corpoHtml) {
+  // 🔧 v8.4: CSS profissional redesenhado
   var css = [
     '<style>',
-    '@page { size: A4; margin: 14mm 12mm; }',
-    '* { box-sizing: border-box; }',
-    'body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1a1a1a; margin: 0; padding: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }',
-    '.pdf-header { border-bottom: 3px solid #1e3a5f; padding-bottom: 14px; margin-bottom: 22px; text-align: center; }',
-    '.pdf-brand { font-size: 22px; font-weight: 800; letter-spacing: 3px; color: #1e3a5f; }',
-    '.pdf-divider { width: 60px; height: 2px; background: #c9a063; margin: 6px auto 8px; }',
-    '.pdf-title { font-size: 18px; font-weight: 600; color: #2c5282; margin: 4px 0; }',
-    '.pdf-meta { font-size: 11px; color: #666; margin-top: 4px; }',
-    '.pdf-req-block { margin-bottom: 26px; page-break-inside: avoid; }',
-    '.pdf-req-block + .pdf-req-block { page-break-before: always; }',
-    '.pdf-req-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 12px; background: #f4f7fb; border-left: 4px solid #1e3a5f; margin-bottom: 8px; }',
-    '.pdf-req-setor { font-size: 11px; font-weight: 700; color: #1e3a5f; text-transform: uppercase; letter-spacing: 1px; }',
-    '.pdf-req-id { font-size: 15px; font-weight: 700; color: #1a1a1a; margin-top: 3px; }',
-    '.pdf-req-info { font-size: 11px; color: #444; text-align: right; line-height: 1.5; }',
-    '.pdf-table { width: 100%; border-collapse: collapse; font-size: 11px; }',
-    '.pdf-table thead th { background: #1e3a5f; color: #fff; padding: 8px 6px; font-weight: 600; text-align: left; }',
-    '.pdf-table tbody td { padding: 6px; border-bottom: 1px solid #e0e0e0; }',
-    '.pdf-table tbody tr:nth-child(even) td { background: #fafbfd; }',
-    '.pdf-total-row td { background: #fff8cc !important; border-top: 2px solid #1e3a5f !important; }',
-    '.pdf-footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 10px; color: #888; text-align: center; }',
+    '@page { size: A4; margin: 16mm 14mm; }',
+    '* { box-sizing: border-box; margin: 0; padding: 0; }',
+    'body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: #1a1a2e; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; line-height: 1.4; }',
+
+    '.pdf-header { padding: 20px 0 16px; margin-bottom: 24px; text-align: center; border-bottom: 3px solid #1e3a5f; position: relative; }',
+    '.pdf-brand { font-size: 24px; font-weight: 800; letter-spacing: 4px; color: #1e3a5f; text-transform: uppercase; }',
+    '.pdf-divider { width: 50px; height: 3px; background: linear-gradient(90deg, #c9a063, #e8c77b); margin: 8px auto 10px; border-radius: 2px; }',
+    '.pdf-title { font-size: 16px; font-weight: 600; color: #2c5282; }',
+    '.pdf-meta { font-size: 10px; color: #777; margin-top: 6px; letter-spacing: 0.5px; }',
+
+    '.pdf-req-block { margin-bottom: 28px; page-break-inside: avoid; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }',
+    '.pdf-req-block + .pdf-req-block { page-break-before: auto; }',
+    '.pdf-req-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 16px; background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%); color: #fff; }',
+    '.pdf-req-setor { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.85; }',
+    '.pdf-req-id { font-size: 16px; font-weight: 800; margin-top: 2px; }',
+    '.pdf-req-info { font-size: 10px; text-align: right; line-height: 1.6; opacity: 0.9; }',
+    '.pdf-req-obs { margin: 0; padding: 8px 16px; background: #fffbeb; border-bottom: 1px solid #f0e6c8; font-size: 11px; color: #92400e; }',
+    '.pdf-req-obs strong { color: #78350f; }',
+
+    '.pdf-table { width: 100%; border-collapse: collapse; font-size: 10.5px; }',
+    '.pdf-table thead th { background: #f1f5f9; color: #334155; padding: 8px 8px; font-weight: 700; text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #cbd5e1; }',
+    '.pdf-table tbody td { padding: 7px 8px; border-bottom: 1px solid #f1f5f9; }',
+    '.pdf-table tbody tr:nth-child(even) td { background: #f8fafc; }',
+    '.pdf-total-row td { background: #1e3a5f !important; color: #fff !important; border-top: 2px solid #1e3a5f !important; font-weight: 700; font-size: 11px; }',
+
+    '.pdf-footer { margin-top: 30px; padding: 12px 0; border-top: 2px solid #e2e8f0; font-size: 9px; color: #94a3b8; text-align: center; letter-spacing: 0.5px; }',
+    '.pdf-resumo { margin-top: 20px; padding: 14px 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 11px; color: #166534; }',
+    '.pdf-resumo strong { font-size: 14px; }',
+
     '@media print { .no-print { display: none !important; } }',
-    '.no-print { position: fixed; top: 12px; right: 12px; z-index: 9999; }',
-    '.no-print button { background: #1e3a5f; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; margin-left: 6px; }',
-    '.no-print button.cancel { background: #999; }',
+    '.no-print { position: fixed; top: 14px; right: 14px; z-index: 9999; display: flex; gap: 8px; }',
+    '.no-print button { background: linear-gradient(135deg, #1e3a5f, #2c5282); color: #fff; border: none; padding: 11px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }',
+    '.no-print button.cancel { background: #64748b; box-shadow: none; }',
     '</style>'
   ].join('');
 
@@ -564,8 +583,10 @@ function imprimirTodasRequisicoes(cidadeNome) {
 
   var corpo = _gerarCabecalhoPDF(cidadeNome);
 
+  // 🔧 v8.4: resumo geral no PDF
+  var totalGeral = 0;
+  var totalReqs = 0;
   cid.setores.forEach(function(setor) {
-    // Agrupar por reqId
     var reqMap = {};
     setor.itens.forEach(function(it) {
       var rid = it.requisicao || '-';
@@ -578,8 +599,13 @@ function imprimirTodasRequisicoes(cidadeNome) {
 
     Object.keys(reqMap).forEach(function(rid) {
       corpo += _gerarBlocoRequisicaoPDF(setor.nome, rid, reqMap[rid]);
+      totalGeral += reqMap[rid].total;
+      totalReqs++;
     });
   });
+
+  corpo += '<div class="pdf-resumo"><strong>TOTAL GERAL: ' + formatCurrency(totalGeral) + '</strong><br>' +
+           totalReqs + ' requisições · ' + cid.itens + ' itens · ' + cid.setores.length + ' setores</div>';
 
   _abrirJanelaImpressao('Requisições ' + cidadeNome, corpo);
 }
