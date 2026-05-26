@@ -2,7 +2,7 @@
    REQUISIÇÕES DIGITAL — SERVICE WORKER v8.4
    ============================================================ */
 
-var CACHE_NAME = 'requisicoes-v8.4.4';
+var CACHE_NAME = 'requisicoes-v8.4.5';
 var ASSETS = [
     './',
     './index.html',

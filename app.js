@@ -19,7 +19,7 @@ var iaAtualizacaoTemp = null;
 //  INIT & LOGIN
 // ══════════════════════════════════════════════════════════════
 // 🔧 v8.4: forçar atualização do SW e reload automático para todos os usuários
-var APP_VERSION = '8.4.4';
+var APP_VERSION = '8.4.5';
 (function () {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
@@ -979,7 +979,8 @@ function abrirImportar() {
   document.getElementById('impData').value = hoje.getFullYear() + '-' +
     String(hoje.getMonth() + 1).padStart(2, '0') + '-' +
     String(hoje.getDate()).padStart(2, '0');
-  document.getElementById('impReqId').value = '';
+  // 🔧 v8.4.4: impReqId removido (auto-ID)
+  var _idEl = document.getElementById('impReqId'); if (_idEl) _idEl.value = '';
   document.getElementById('impObs').value = '';
   importacaoTemp = null;
   popularSelectsCidadeSetor();
