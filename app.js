@@ -19,7 +19,7 @@ var iaAtualizacaoTemp = null;
 //  INIT & LOGIN
 // ══════════════════════════════════════════════════════════════
 // 🔧 v8.4: forçar atualização do SW e reload automático para todos os usuários
-var APP_VERSION = '8.4.1';
+var APP_VERSION = '8.4.2';
 (function () {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
@@ -360,12 +360,14 @@ function abrirCidade(nome) {
         h += '<div class="req-group-block">';
         h += '<div class="req-group-header-pro">';
 
-        // ─── LINHA 1: ID + Contagem + Ações (sem total duplicado) ───
+        // 🔧 v8.4.1: LINHA 1 — ID + Observação + Contagem + Ações
         h += '<div class="rgh-top">';
         h += '<div class="rgh-top-left" onclick="editarRequisicao(\'' + escapeHtml(cid.nome) + '\',\'' +
              escapeHtml(setor.nome) + '\',\'' + escapeHtml(rid) + '\')" title="Clique para editar">';
-        h += '<span class="rgh-id">' + escapeHtml(rid) + '</span>';
-        h += '<span class="rgh-count">' + grp.itens.length + ' itens</span>';
+        h += '<span class="rgh-id">' + escapeHtml(rid);
+        if (grp.observacao) h += ' <span style="font-weight:400;opacity:0.7;">—</span> ' + escapeHtml(grp.observacao);
+        h += '</span>';
+        h += '<span class="rgh-count">' + grp.itens.length + ' itens · ' + formatCurrency(grp.total) + '</span>';
         h += '</div>';
         h += '<div class="rgh-top-right">';
         h += '<button class="rgh-btn rgh-btn-edit" onclick="editarRequisicao(\'' + escapeHtml(cid.nome) + '\',\'' +
@@ -375,15 +377,10 @@ function abrirCidade(nome) {
         h += '</div>';
         h += '</div>';
 
-        // ─── LINHA 2: Chips de Observação e Data ───
-        if (grp.observacao || grp.data) {
+        // ─── LINHA 2: Data ───
+        if (grp.data) {
           h += '<div class="rgh-meta">';
-          if (grp.observacao) {
-            h += '<span class="rgh-chip rgh-chip-obs"><span class="rgh-chip-ico">📝</span>' + escapeHtml(grp.observacao) + '</span>';
-          }
-          if (grp.data) {
-            h += '<span class="rgh-chip rgh-chip-data"><span class="rgh-chip-ico">📅</span>' + escapeHtml(formatarDataBR(grp.data)) + '</span>';
-          }
+          h += '<span class="rgh-chip rgh-chip-data"><span class="rgh-chip-ico">📅</span>' + escapeHtml(formatarDataBR(grp.data)) + '</span>';
           h += '</div>';
         }
 
@@ -1822,10 +1819,15 @@ function editarRequisicao(cidade, setor, reqId) {
   var itens = setorObj.itens.filter(function(it) { return it.requisicao === reqId; });
   if (!itens.length) { toast('Nenhum item encontrado'); return; }
 
+  // 🔧 v8.4.1: incluir observação no temp de edição
+  var obsReq = '';
+  itens.forEach(function(it) { if (it.observacao && !obsReq) obsReq = it.observacao; });
+
   edicaoReqTemp = {
     cidade: cidade,
     setor: setor,
     reqId: reqId,
+    observacao: obsReq,
     itens: itens.map(function(it) {
       return {
         linha: it.linha,
@@ -1854,7 +1856,10 @@ function fecharEditReq() {
 function renderEdicaoRequisicao() {
   if (!edicaoReqTemp) return;
 
-  document.getElementById('editReqTitle').textContent = 'Editar ' + edicaoReqTemp.reqId;
+  // 🔧 v8.4.1: título com ID + observação
+  var tituloEdit = 'Editar ' + edicaoReqTemp.reqId;
+  if (edicaoReqTemp.observacao) tituloEdit += ' — ' + edicaoReqTemp.observacao;
+  document.getElementById('editReqTitle').textContent = tituloEdit;
 
   var itens = edicaoReqTemp.itens;
   var totalGeral = 0;
@@ -1867,6 +1872,7 @@ function renderEdicaoRequisicao() {
   h += '<div><strong>Cidade:</strong> ' + escapeHtml(edicaoReqTemp.cidade) + '</div>';
   h += '<div><strong>Setor:</strong> ' + escapeHtml(edicaoReqTemp.setor) + '</div>';
   h += '<div><strong>Requisição:</strong> ' + escapeHtml(edicaoReqTemp.reqId) + '</div>';
+  if (edicaoReqTemp.observacao) h += '<div style="color:var(--accent);font-weight:600;font-size:.85rem;margin:4px 0;"><strong>📝 Obs:</strong> ' + escapeHtml(edicaoReqTemp.observacao) + '</div>';
   h += '<div class="login-field" style="margin-top:8px;"><label style="font-weight:600;font-size:.8rem;color:var(--text-secondary);">Data da Requisição</label>';
   h += '<input type="date" id="editReqData" class="imp-input" value="' + dataIso + '" style="width:100%;padding:8px 10px;font-size:.85rem;border-radius:8px;border:1px solid var(--border);font-family:var(--font);" onchange="edicaoReqTemp.dataNova=this.value"></div>';
   h += '</div>';
