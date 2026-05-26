@@ -1,7 +1,7 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v8.3 PREMIUM
+//  REQUISIÇÕES DIGITAL — app.js v8.4 PREMIUM
 //  Grupo Carlos Vaz — CRV/LAS
-//  v8.3: observação+data no card, botões de impressão (PDF)
+//  v8.4: bug fixes dashboard+data+edição de data
 // ============================================================
 
 var API_URL = 'https://script.google.com/macros/s/AKfycbzXuhmVkTDsMGotRuG3-i-YYnx0_nLFWDWjb7hNsTZ2HUg5SzWKDK6jbad_HqOEsnxt/exec';
@@ -18,7 +18,34 @@ var iaAtualizacaoTemp = null;
 // ══════════════════════════════════════════════════════════════
 //  INIT & LOGIN
 // ══════════════════════════════════════════════════════════════
+// 🔧 v8.4: forçar atualização do SW e reload automático para todos os usuários
+var APP_VERSION = '8.4';
 (function () {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').then(function(reg) {
+      reg.update();
+      reg.addEventListener('updatefound', function() {
+        var newSW = reg.installing;
+        if (newSW) {
+          newSW.addEventListener('statechange', function() {
+            if (newSW.state === 'activated') {
+              if (localStorage.getItem('cv_app_version') !== APP_VERSION) {
+                localStorage.setItem('cv_app_version', APP_VERSION);
+                window.location.reload();
+              }
+            }
+          });
+        }
+      });
+    });
+    navigator.serviceWorker.addEventListener('controllerchange', function() {
+      if (localStorage.getItem('cv_app_version') !== APP_VERSION) {
+        localStorage.setItem('cv_app_version', APP_VERSION);
+        window.location.reload();
+      }
+    });
+  }
+
   var s = localStorage.getItem(SESSION_KEY);
   if (s) {
     try {
@@ -408,6 +435,24 @@ function formatarDataBR(dt) {
              String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
     }
   } catch(e) {}
+  return s;
+}
+
+// 🔧 v8.4 BUG FIX: conversores de data para input[type=date]
+function _brParaIso(ddmmyyyy) {
+  if (!ddmmyyyy) return '';
+  var s = String(ddmmyyyy).trim();
+  var m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m) return m[3] + '-' + m[2] + '-' + m[1];
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
+  return '';
+}
+
+function _isoParaBr(yyyymmdd) {
+  if (!yyyymmdd) return '';
+  var s = String(yyyymmdd).trim();
+  var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return m[3] + '/' + m[2] + '/' + m[1];
   return s;
 }
 
@@ -1788,11 +1833,16 @@ function renderEdicaoRequisicao() {
   var itens = edicaoReqTemp.itens;
   var totalGeral = 0;
 
+  // 🔧 v8.4 BUG FIX: campo de data editável no modal
+  var dataAtual = (itens[0] && itens[0].data) ? formatarDataBR(itens[0].data) : '';
+  var dataIso = _brParaIso(dataAtual);
+
   var h = '<div class="imp-meta-box">';
   h += '<div><strong>Cidade:</strong> ' + escapeHtml(edicaoReqTemp.cidade) + '</div>';
   h += '<div><strong>Setor:</strong> ' + escapeHtml(edicaoReqTemp.setor) + '</div>';
   h += '<div><strong>Requisição:</strong> ' + escapeHtml(edicaoReqTemp.reqId) + '</div>';
-  if (itens[0] && itens[0].data) h += '<div><strong>Data:</strong> ' + escapeHtml(itens[0].data) + '</div>';
+  h += '<div class="login-field" style="margin-top:8px;"><label style="font-weight:600;font-size:.8rem;color:var(--text-secondary);">Data da Requisição</label>';
+  h += '<input type="date" id="editReqData" class="imp-input" value="' + dataIso + '" style="width:100%;padding:8px 10px;font-size:.85rem;border-radius:8px;border:1px solid var(--border);font-family:var(--font);" onchange="edicaoReqTemp.dataNova=this.value"></div>';
   h += '</div>';
 
   itens.forEach(function(it, idx) {
@@ -1919,16 +1969,22 @@ function salvarEdicaoRequisicao() {
   var btn = document.getElementById('btnSalvarEdit');
   btn.disabled = true; btn.textContent = 'Salvando...';
 
+  // 🔧 v8.4 BUG FIX: enviar dataNova se alterada
+  var payload = {
+    acao: 'salvareditrequisicao',
+    usuario: sessao.nome,
+    senha: sessao.hash,
+    cidade: edicaoReqTemp.cidade,
+    itens: edicaoReqTemp.itens
+  };
+  if (edicaoReqTemp.dataNova) {
+    payload.dataNova = edicaoReqTemp.dataNova;
+  }
+
   fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      acao: 'salvareditrequisicao',
-      usuario: sessao.nome,
-      senha: sessao.hash,
-      cidade: edicaoReqTemp.cidade,
-      itens: edicaoReqTemp.itens
-    }),
+    body: JSON.stringify(payload),
     redirect: 'follow'
   })
   .then(function(r) { return r.json(); })
