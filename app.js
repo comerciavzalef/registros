@@ -1,7 +1,7 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v8.4 PREMIUM
+//  REQUISIÇÕES DIGITAL — app.js v8.4.4 PREMIUM
 //  Grupo Carlos Vaz — CRV/LAS
-//  v8.4: bug fixes dashboard+data+edição de data
+//  v8.4.4: IA refinada + auto-ID + mover setor + add itens + OBS robusta
 // ============================================================
 
 var API_URL = 'https://script.google.com/macros/s/AKfycbzXuhmVkTDsMGotRuG3-i-YYnx0_nLFWDWjb7hNsTZ2HUg5SzWKDK6jbad_HqOEsnxt/exec';
@@ -19,7 +19,7 @@ var iaAtualizacaoTemp = null;
 //  INIT & LOGIN
 // ══════════════════════════════════════════════════════════════
 // 🔧 v8.4: forçar atualização do SW e reload automático para todos os usuários
-var APP_VERSION = '8.4.3';
+var APP_VERSION = '8.4.4';
 (function () {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
@@ -1014,13 +1014,13 @@ function comprimirImagem(file, maxSize, callback) {
 function escolherCidadeSetor() {
   var cidade = document.getElementById('impCidade').value;
   var setor = document.getElementById('impSetor').value;
-  var reqId = document.getElementById('impReqId').value.trim();
   var dataReq = document.getElementById('impData').value;
   var obsReq = document.getElementById('impObs').value.trim();
   var arquivo = document.getElementById('impArquivo').files[0];
   var texto = document.getElementById('impTexto').value.trim();
 
-  if (!cidade || !setor || !reqId) { toast('Preencha cidade, setor e ID'); return; }
+  // 🔧 v8.4.4: ID é AUTOMÁTICO — não pedimos mais do usuário
+  if (!cidade || !setor) { toast('Preencha cidade e setor'); return; }
   if (!dataReq) { toast('Informe a data da requisição'); return; }
   if (!arquivo && !texto) { toast('Anexe foto OU cole texto'); return; }
 
@@ -1038,10 +1038,10 @@ function escolherCidadeSetor() {
     comprimirImagem(arquivo, 1400, function(base64Otimizado) {
       payload.imagemBase64 = base64Otimizado.split(',')[1];
       payload.mimeType = 'image/jpeg';
-      enviarParaIA(payload, cidade, setor, reqId, dataReq, obsReq);
+      enviarParaIA(payload, cidade, setor, '', dataReq, obsReq);
     });
   } else {
-    enviarParaIA(payload, cidade, setor, reqId, dataReq, obsReq);
+    enviarParaIA(payload, cidade, setor, '', dataReq, obsReq);
   }
 }
 
@@ -1055,8 +1055,19 @@ function enviarParaIA(payload, cidade, setor, reqId, dataReq, obsReq) {
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (d.status !== 'ok') { toast(d.msg || 'Erro na IA'); voltarStep1(); return; }
-      importacaoTemp = { cidade: cidade, setor: setor, reqId: reqId, data: dataReq, observacao: obsReq || '', itens: d.resultado.itens, meta: d.resultado };
-      renderPreviewImportacao();
+      importacaoTemp = { cidade: cidade, setor: setor, reqId: '(automático)', data: dataReq, observacao: obsReq || '', itens: d.resultado.itens, meta: d.resultado };
+      // Buscar prévia do próximo ID em paralelo (informativo)
+      fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ acao: 'previewproximoid', usuario: sessao.nome, senha: sessao.hash, cidade: cidade, setor: setor }),
+        redirect: 'follow'
+      }).then(function(r){return r.json();}).then(function(pp) {
+        if (pp.status === 'ok') {
+          importacaoTemp.reqId = pp.proximoId;
+          renderPreviewImportacao();
+        } else { renderPreviewImportacao(); }
+      }).catch(function(){ renderPreviewImportacao(); });
     })
     .catch(function(e) { toast('Erro de conexão'); voltarStep1(); });
 }
@@ -1077,7 +1088,7 @@ function renderPreviewImportacao() {
 
   var h = '<div class="imp-meta-box">';
   h += '<div><strong>Cidade:</strong> ' + escapeHtml(importacaoTemp.cidade) + ' / ' + escapeHtml(importacaoTemp.setor) + '</div>';
-  h += '<div><strong>Req ID:</strong> ' + escapeHtml(importacaoTemp.reqId) + '</div>';
+  h += '<div><strong>Req ID (auto):</strong> <span style="color:var(--accent);font-weight:700;">' + escapeHtml(importacaoTemp.reqId) + '</span></div>';
   if (importacaoTemp.observacao) {
     h += '<div style="color:var(--accent);font-weight:600;font-size:.85rem;margin:4px 0;"><strong>Obs:</strong> ' + escapeHtml(importacaoTemp.observacao) + '</div>';
   }
@@ -1904,6 +1915,17 @@ function renderEdicaoRequisicao() {
   });
 
   h += '<div class="imp-total-box">Total: <strong id="editTotalGeral">R$ ' + totalGeral.toFixed(2).replace('.', ',') + '</strong></div>';
+
+  // 🆕 v8.4.4: Botão ADICIONAR ITEM
+  h += '<div style="margin:12px 0;">';
+  h += '<button onclick="abrirAdicionarItem()" style="width:100%;padding:11px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:.9rem;cursor:pointer;font-family:var(--font);box-shadow:0 2px 8px rgba(22,163,74,0.3);">➕ Adicionar Item</button>';
+  h += '</div>';
+
+  // 🆕 v8.4.4: Botão MOVER PARA OUTRO SETOR
+  h += '<div style="margin:12px 0;">';
+  h += '<button onclick="abrirMoverSetor()" style="width:100%;padding:11px;background:linear-gradient(135deg,#c9a063,#a87f3f);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:.9rem;cursor:pointer;font-family:var(--font);box-shadow:0 2px 8px rgba(168,127,63,0.3);">🔀 Mover para outro Setor</button>';
+  h += '</div>';
+
   h += '<div class="imp-actions">';
   h += '<button class="imp-btn-cancel" onclick="fecharEditReq()">Cancelar</button>';
   h += '<button class="imp-btn-confirm" id="btnSalvarEdit" onclick="salvarEdicaoRequisicao()">Salvar Alterações</button>';
@@ -2035,4 +2057,203 @@ function salvarEdicaoRequisicao() {
     toast('Erro de conexão');
     btn.disabled = false; btn.textContent = 'Salvar Alterações';
   });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  🆕 v8.4.4: ADICIONAR ITEM A REQUISIÇÃO EXISTENTE
+// ══════════════════════════════════════════════════════════════
+var novosItensTemp = [];
+
+function abrirAdicionarItem() {
+  if (!edicaoReqTemp) return;
+  novosItensTemp = [{ descricao: '', valorUnit: 0, quantidade: 1, um: 'UN' }];
+  _renderAdicionarItem();
+  document.getElementById('addItemModal').classList.add('show');
+  history.pushState({ modal: 'addItem' }, '', '');
+}
+
+function fecharAdicionarItem() {
+  var modal = document.getElementById('addItemModal');
+  var wasOpen = modal && modal.classList.contains('show');
+  if (modal) modal.classList.remove('show');
+  novosItensTemp = [];
+  if (wasOpen && !_insidePopstate) history.back();
+}
+
+function _renderAdicionarItem() {
+  var h = '<div class="imp-meta-box">';
+  h += '<div><strong>Cidade:</strong> ' + escapeHtml(edicaoReqTemp.cidade) + '</div>';
+  h += '<div><strong>Setor:</strong> ' + escapeHtml(edicaoReqTemp.setor) + '</div>';
+  h += '<div><strong>Requisição:</strong> ' + escapeHtml(edicaoReqTemp.reqId) + '</div>';
+  h += '</div>';
+
+  novosItensTemp.forEach(function(it, idx) {
+    h += '<div class="imp-row novo">';
+    h += '<div class="imp-row-head"><span class="imp-num">' + (idx+1) + '</span>';
+    h += '<input class="imp-desc" placeholder="Descrição do item" value="' + escapeHtml(it.descricao) + '" data-nidx="' + idx + '" data-ncampo="descricao"></div>';
+    h += '<div class="imp-row-grid">';
+    h += '<label>V. Unit R$<input type="number" step="0.01" class="imp-input" value="' + (it.valorUnit||0).toFixed(2) + '" data-nidx="' + idx + '" data-ncampo="valorUnit"></label>';
+    h += '<label>Qtd<input type="number" step="0.01" class="imp-input" value="' + (it.quantidade||1) + '" data-nidx="' + idx + '" data-ncampo="quantidade"></label>';
+    h += '<label>Un<input class="imp-input" value="' + escapeHtml(it.um||'UN') + '" data-nidx="' + idx + '" data-ncampo="um"></label>';
+    h += '</div>';
+    if (novosItensTemp.length > 1) {
+      h += '<button class="imp-remove" onclick="novosItensTemp.splice(' + idx + ',1);_renderAdicionarItem()">Remover</button>';
+    }
+    h += '</div>';
+  });
+
+  h += '<div style="margin:12px 0;"><button onclick="novosItensTemp.push({descricao:\'\',valorUnit:0,quantidade:1,um:\'UN\'});_renderAdicionarItem()" style="width:100%;padding:10px;background:#f1f5f9;color:#334155;border:1px dashed #94a3b8;border-radius:8px;font-weight:600;cursor:pointer;font-family:var(--font);">+ Mais um item</button></div>';
+
+  h += '<div class="imp-actions">';
+  h += '<button class="imp-btn-cancel" onclick="fecharAdicionarItem()">Cancelar</button>';
+  h += '<button class="imp-btn-confirm" id="btnAddItem" onclick="confirmarAdicionarItem()">Adicionar à Requisição</button>';
+  h += '</div>';
+
+  document.getElementById('addItemBody').innerHTML = h;
+
+  document.querySelectorAll('#addItemBody input[data-ncampo]').forEach(function(inp) {
+    inp.addEventListener('input', function() {
+      var idx = parseInt(this.dataset.nidx);
+      var campo = this.dataset.ncampo;
+      if (this.type === 'number') novosItensTemp[idx][campo] = parseFloat(this.value) || 0;
+      else novosItensTemp[idx][campo] = this.value;
+    });
+  });
+}
+
+function confirmarAdicionarItem() {
+  var validos = novosItensTemp.filter(function(it){ return (it.descricao||'').trim() && (it.quantidade||0) > 0; });
+  if (!validos.length) { toast('Preencha pelo menos 1 item válido'); return; }
+
+  var btn = document.getElementById('btnAddItem');
+  btn.disabled = true; btn.textContent = 'Adicionando...';
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'adicionaritensreq',
+      usuario: sessao.nome,
+      senha: sessao.hash,
+      cidade: edicaoReqTemp.cidade,
+      setor: edicaoReqTemp.setor,
+      reqId: edicaoReqTemp.reqId,
+      itens: validos
+    }),
+    redirect: 'follow'
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    if (d.status === 'ok') {
+      showSuccess('', 'Itens adicionados!', d.adicionados + ' novos itens');
+      fecharAdicionarItem();
+      fecharEditReq();
+      fecharCidade();
+      carregarDados();
+    } else {
+      toast(d.msg || 'Erro ao adicionar');
+      btn.disabled = false; btn.textContent = 'Adicionar à Requisição';
+    }
+  })
+  .catch(function() {
+    toast('Erro de conexão');
+    btn.disabled = false; btn.textContent = 'Adicionar à Requisição';
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  🆕 v8.4.4: MOVER REQUISIÇÃO PARA OUTRO SETOR
+// ══════════════════════════════════════════════════════════════
+function abrirMoverSetor() {
+  if (!edicaoReqTemp) return;
+  document.getElementById('moverSetorModal').classList.add('show');
+  history.pushState({ modal: 'moverSetor' }, '', '');
+
+  document.getElementById('moverSetorBody').innerHTML =
+    '<div style="text-align:center;padding:30px 20px;"><div class="ld-spinner" style="margin:0 auto 16px;"></div>' +
+    '<div class="empty-text">Carregando setores...</div></div>';
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'listarsetorescidade',
+      usuario: sessao.nome,
+      senha: sessao.hash,
+      cidade: edicaoReqTemp.cidade
+    }),
+    redirect: 'follow'
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    if (d.status !== 'ok') { toast(d.msg || 'Erro'); fecharMoverSetor(); return; }
+    var outros = d.setores.filter(function(s){ return s !== edicaoReqTemp.setor; });
+    _renderMoverSetor(outros);
+  })
+  .catch(function() { toast('Erro de conexão'); fecharMoverSetor(); });
+}
+
+function fecharMoverSetor() {
+  var modal = document.getElementById('moverSetorModal');
+  var wasOpen = modal && modal.classList.contains('show');
+  if (modal) modal.classList.remove('show');
+  if (wasOpen && !_insidePopstate) history.back();
+}
+
+function _renderMoverSetor(setores) {
+  var h = '<div class="imp-meta-box">';
+  h += '<div><strong>Cidade:</strong> ' + escapeHtml(edicaoReqTemp.cidade) + '</div>';
+  h += '<div><strong>Requisição:</strong> ' + escapeHtml(edicaoReqTemp.reqId) + '</div>';
+  h += '<div><strong>Setor atual:</strong> ' + escapeHtml(edicaoReqTemp.setor) + '</div>';
+  h += '</div>';
+
+  h += '<div style="margin:14px 0 6px;font-weight:600;color:var(--text-secondary);font-size:.85rem;">Selecione o novo setor:</div>';
+
+  if (!setores.length) {
+    h += '<div class="empty-text" style="padding:20px;">Nenhum outro setor disponível.<br>Crie um novo setor lançando uma requisição nele primeiro.</div>';
+  } else {
+    h += '<div style="display:flex;flex-direction:column;gap:8px;margin:12px 0;">';
+    setores.forEach(function(s) {
+      h += '<button class="setor-pick-btn" onclick="confirmarMoverSetor(\'' + escapeHtml(s).replace(/'/g,"\\'") + '\')" ' +
+           'style="text-align:left;padding:14px 16px;background:#f8fafc;border:2px solid #e2e8f0;border-radius:10px;cursor:pointer;font-family:var(--font);font-size:.9rem;font-weight:600;color:#1e3a5f;transition:all .15s;">' +
+           '📁 ' + escapeHtml(s) + '</button>';
+    });
+    h += '</div>';
+  }
+
+  h += '<div class="imp-actions"><button class="imp-btn-cancel" onclick="fecharMoverSetor()">Cancelar</button></div>';
+
+  document.getElementById('moverSetorBody').innerHTML = h;
+}
+
+function confirmarMoverSetor(setorDestino) {
+  if (!confirm('Mover requisição ' + edicaoReqTemp.reqId + ' para o setor "' + setorDestino + '"?\n\nO ID será regerado para o novo setor.')) return;
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'moverrequisicao',
+      usuario: sessao.nome,
+      senha: sessao.hash,
+      cidade: edicaoReqTemp.cidade,
+      setorOrigem: edicaoReqTemp.setor,
+      setorDestino: setorDestino,
+      reqId: edicaoReqTemp.reqId
+    }),
+    redirect: 'follow'
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    if (d.status === 'ok') {
+      showSuccess('', 'Movido com sucesso!', 'Novo ID: ' + d.novoReqId);
+      fecharMoverSetor();
+      fecharEditReq();
+      fecharCidade();
+      carregarDados();
+    } else {
+      toast(d.msg || 'Erro ao mover');
+    }
+  })
+  .catch(function() { toast('Erro de conexão'); });
 }

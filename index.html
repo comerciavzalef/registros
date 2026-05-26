@@ -235,8 +235,7 @@
       </div>
       <label class="imp-label">Observação (ex: Semana 1, Semana 2...)</label>
       <input type="text" id="impObs" class="login-field" placeholder="Ex: Requisição da Semana 1">
-      <label class="imp-label">ID da Requisição</label>
-      <input type="text" id="impReqId" class="login-field" placeholder="Ex: REQ-001">
+      <div style="background:#e0f2fe;border-left:3px solid #0284c7;padding:8px 12px;margin:8px 0;border-radius:6px;font-size:.8rem;color:#075985;"><strong>ℹ️ ID automático:</strong> será gerado por setor (ex: EDU001, SAU042).</div>
       <label class="imp-label">Data da Requisição</label>
       <input type="date" id="impData" class="login-field">
       <label class="imp-label">Foto ou Arquivo da Requisição</label>
@@ -339,6 +338,24 @@
   <div class="modal-body" id="editReqBody"></div>
 </div>
 
+<!-- ══════════════ MODAL: ADICIONAR ITEM (v8.4.4) ══════════════ -->
+<div class="modal-full" id="addItemModal">
+  <div class="modal-bar">
+    <h2>➕ Adicionar Itens</h2>
+    <button class="modal-close" onclick="fecharAdicionarItem()">✕</button>
+  </div>
+  <div class="modal-body" id="addItemBody"></div>
+</div>
+
+<!-- ══════════════ MODAL: MOVER SETOR (v8.4.4) ══════════════ -->
+<div class="modal-full" id="moverSetorModal">
+  <div class="modal-bar">
+    <h2>🔀 Mover para outro Setor</h2>
+    <button class="modal-close" onclick="fecharMoverSetor()">✕</button>
+  </div>
+  <div class="modal-body" id="moverSetorBody"></div>
+</div>
+
 <!-- Overlays -->
 <div class="success-overlay" id="successOverlay">
   <div class="success-icon" id="successIcon"></div>
@@ -348,6 +365,6 @@
 <div class="toast" id="toast"></div>
 
 <!-- SW registrado pelo app.js com auto-update v8.4 -->
-<script src="app.js?v=8.4.3"></script>
+<script src="app.js?v=8.4.4"></script>
 </body>
 </html>
