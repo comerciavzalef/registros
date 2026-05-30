@@ -1,5 +1,5 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v8.6.1 PREMIUM
+//  REQUISIÇÕES DIGITAL — app.js v8.6.2 PREMIUM
 //  Grupo Carlos Vaz — CRV/LAS
 //  v8.6: Preço de Custo setor a setor + dedup + thinking OFF
 // ============================================================
@@ -26,7 +26,7 @@ var precoCustoTotalCusto    = 0;
 // ══════════════════════════════════════════════════════════════
 //  INIT & LOGIN
 // ══════════════════════════════════════════════════════════════
-var APP_VERSION = '8.6.1';
+var APP_VERSION = '8.6.2';
 (function () {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
@@ -2559,9 +2559,37 @@ function _seqLoopCusto(start) {
 
 function _executarPesquisaSetor(idx, callback) {
   var s = precoCustoSetores[idx];
+
+  // ── DEDUP 100% NO FRONTEND: filtrar itens deste setor que já foram processados ──
+  var cid = (dadosCompletos.cidades || []).find(function(c) { return c.nome === s.cidade; });
+  var setorObj = cid ? (cid.setores || []).find(function(st) { return st.nome === s.setor; }) : null;
+  var itensDoSetor = (setorObj && setorObj.itens) ? setorObj.itens : [];
+
+  var itensNovos = [];
+  var ignorados = 0;
+  itensDoSetor.forEach(function(it) {
+    var desc = (it.descricao || '').trim();
+    if (!desc) return;
+    var norm = _normFront(desc);
+    if (!norm) return;
+    if (precoCustoJaProcessados[norm]) { ignorados++; return; }
+    // Marcar AGORA para não enviar duplicado mesmo dentro deste setor
+    precoCustoJaProcessados[norm] = true;
+    itensNovos.push({ descricao: desc, um: it.um || '' });
+  });
+
+  // Se todos os itens deste setor já foram processados, pular sem chamar a IA
+  if (!itensNovos.length) {
+    precoCustoSetores[idx].processado = true;
+    toast('⏭️ ' + s.cidade + '/' + s.setor + ' — ' + ignorados + ' itens já estimados, pulou');
+    renderizarPainelPrecoCusto();
+    if (callback) callback();
+    return;
+  }
+
   precoCustoPesquisando = true;
   renderizarPainelPrecoCusto();
-  toast('🤖 Estimando: ' + s.cidade + ' → ' + s.setor + '...');
+  toast('🤖 Estimando: ' + s.cidade + ' → ' + s.setor + ' (' + itensNovos.length + ' novos, ' + ignorados + ' já feitos)...');
 
   fetch(API_URL, {
     method: 'POST',
@@ -2569,7 +2597,7 @@ function _executarPesquisaSetor(idx, callback) {
     body: JSON.stringify({
       acao: 'pesquisarprecoscusto', usuario: sessao.nome, senha: sessao.hash,
       cidade: s.cidade, setor: s.setor,
-      jaProcessados: JSON.stringify(precoCustoJaProcessados),
+      itensFiltrados: itensNovos,
       regiao: 'interior da Bahia, Brasil'
     }),
     redirect: 'follow'
@@ -2586,15 +2614,6 @@ function _executarPesquisaSetor(idx, callback) {
       return;
     }
 
-    if (resp.todosJaProcessados) {
-      toast('⏭️ ' + s.cidade + '/' + s.setor + ' — todos itens já estimados');
-      renderizarPainelPrecoCusto();
-      if (callback) callback();
-      return;
-    }
-
-    (resp.nomesProcessados || []).forEach(function(n) { precoCustoJaProcessados[n] = true; });
-
     (resp.precos || []).forEach(function(p) {
       var norm = _normFront(p.descricao || '');
       var existe = precoCustoResultados.some(function(r) { return _normFront(r.descricao || '') === norm; });
@@ -2610,14 +2629,9 @@ function _executarPesquisaSetor(idx, callback) {
 
     var tIn = resp.tokensIn || 0;
     var tOut = resp.tokensOut || 0;
-    precoCustoTotalCusto += ((tIn * 0.30 / 1000000) + (tOut * 2.50 / 1000000)) * 5.30;
+    precoCustoTotalCusto += ((tIn * 0.15 / 1000000) + (tOut * 0.60 / 1000000)) * 5.50;
 
-    var ignorados = resp.itensIgnoradosDuplicados || 0;
-    var enviados = resp.itensEnviados || 0;
-    var msg = '✅ ' + s.cidade + '/' + s.setor + ': ' + enviados + ' estimados';
-    if (ignorados > 0) msg += ', ' + ignorados + ' duplicados';
-    toast(msg);
-
+    toast('✅ ' + s.cidade + '/' + s.setor + ': ' + itensNovos.length + ' estimados, ' + ignorados + ' pulados');
     renderizarPainelPrecoCusto();
     if (callback) callback();
   })
