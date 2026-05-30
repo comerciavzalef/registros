@@ -11,7 +11,7 @@
 <title>Requisições — CRV/LAS</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230c0e14'/%3E%3Ctext x='50' y='62' text-anchor='middle' fill='%236b8aad' font-family='Inter,Arial' font-weight='800' font-size='34'%3ECRV%3C/text%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=8.5.1">
+<link rel="stylesheet" href="style.css?v=8.5.2">
 </head>
 <body style="background-color: #0c0e14; margin: 0; padding: 0;">
 
@@ -196,7 +196,7 @@
   </nav>
 
   <div class="menu-footer">
-    <div class="menu-version">v8.5.1 · CRV/LAS</div>
+    <div class="menu-version">v8.5.2 · CRV/LAS</div>
   </div>
 </aside>
 
@@ -346,11 +346,8 @@
   </div>
   <div class="modal-body">
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-      <button id="btnGerarPrecosCusto" onclick="gerarPrecosCustoIA(false)" style="flex:1;min-width:130px;padding:11px 14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.82rem;cursor:pointer;font-family:var(--font);box-shadow:0 3px 12px rgba(22,163,74,0.3);display:flex;align-items:center;justify-content:center;gap:6px;">
-        <svg width="16" height="16"><use href="#icon-sparkles"/></svg> Gerar Novos (IA)
-      </button>
-      <button id="btnAtualizarPrecosCusto" onclick="gerarPrecosCustoIA(true)" style="flex:1;min-width:130px;padding:11px 14px;background:linear-gradient(135deg,#c9a063,#a87f3f);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.82rem;cursor:pointer;font-family:var(--font);box-shadow:0 3px 10px rgba(168,127,63,0.3);display:flex;align-items:center;justify-content:center;gap:6px;">
-        <svg width="16" height="16"><use href="#icon-sparkles"/></svg> Atualizar (IA)
+      <button id="btnGerarPrecosCusto" onclick="gerarPrecosCustoIA()" style="flex:1;min-width:180px;padding:11px 14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.82rem;cursor:pointer;font-family:var(--font);box-shadow:0 3px 12px rgba(22,163,74,0.3);display:flex;align-items:center;justify-content:center;gap:6px;">
+        <svg width="16" height="16"><use href="#icon-sparkles"/></svg> Pesquisar Preço de Custo (IA)
       </button>
       <button onclick="imprimirCatalogoCusto()" style="flex:0 0 auto;padding:11px 14px;background:linear-gradient(135deg,#1e3a5f,#2c5282);color:#fff;border:none;border-radius:10px;font-weight:600;font-size:.82rem;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;">
         🖨️ Imprimir
@@ -397,6 +394,6 @@
 <div class="toast" id="toast"></div>
 
 <!-- SW registrado pelo app.js com auto-update v8.5 -->
-<script src="app.js?v=8.5.1"></script>
+<script src="app.js?v=8.5.2"></script>
 </body>
 </html>
