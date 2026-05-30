@@ -1454,6 +1454,37 @@ button:focus-visible, .menu-item:focus-visible, .ia-cmd-card:focus-visible, .cid
 .custo-conf.conf-media { background: rgba(234,179,8,0.15); color: #ca8a04; }
 .custo-conf.conf-baixa { background: rgba(239,68,68,0.15); color: #dc2626; }
 
+/* Card do catálogo de custo */
+.custo-card {
+  background: var(--surface-1, #161825);
+  border: 1px solid var(--border, #222);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+.custo-card-nome {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary, #e8edf4);
+  margin-bottom: 6px;
+}
+.custo-card-preco-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.custo-card-conf {
+  font-size: 0.7rem;
+  color: var(--text-secondary, #8a96a8);
+  margin-bottom: 2px;
+}
+.custo-card-ref {
+  font-size: 0.65rem;
+  color: var(--text-tertiary, #5a6578);
+  font-style: italic;
+}
+
 /* ══════════════════════════════════════════════════════════
    v8.6 — PREÇO DE CUSTO — Painel setor a setor
    (adaptado ao design system dark do app)

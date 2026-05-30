@@ -1,5 +1,5 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v8.6.0 PREMIUM
+//  REQUISIÇÕES DIGITAL — app.js v8.6.1 PREMIUM
 //  Grupo Carlos Vaz — CRV/LAS
 //  v8.6: Preço de Custo setor a setor + dedup + thinking OFF
 // ============================================================
@@ -26,7 +26,7 @@ var precoCustoTotalCusto    = 0;
 // ══════════════════════════════════════════════════════════════
 //  INIT & LOGIN
 // ══════════════════════════════════════════════════════════════
-var APP_VERSION = '8.6.0';
+var APP_VERSION = '8.6.1';
 (function () {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
@@ -2293,16 +2293,17 @@ function renderCatalogoCusto(filtro) {
     });
   }
 
+  // Botões: pesquisar + imprimir (UM SÓ botão de IA)
   var btnTopo = '<div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">' +
-    '<button onclick="alternarModoCustoPainel()" style="flex:1;min-width:200px;padding:11px 14px;background:linear-gradient(135deg,#6b8aad,#5a7eb8);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:.82rem;cursor:pointer;font-family:var(--font);box-shadow:0 2px 8px rgba(107,138,173,0.3);">' +
-    '🤖 Estimar Preços de Custo (IA) — setor a setor</button>' +
-    (catalogoCusto.length > 0 ? '<button onclick="imprimirCatalogoCusto()" style="padding:11px 14px;background:var(--surface-2);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;font-weight:600;font-size:.78rem;cursor:pointer;font-family:var(--font);">🖨️ Imprimir</button>' : '') +
+    '<button onclick="gerarPrecosCustoIA()" style="flex:1;min-width:200px;padding:11px 14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.82rem;cursor:pointer;font-family:var(--font);box-shadow:0 3px 12px rgba(22,163,74,0.3);display:flex;align-items:center;justify-content:center;gap:6px;">' +
+    '<svg width="16" height="16"><use href="#icon-sparkles"/></svg> Pesquisar Preço de Custo (IA)</button>' +
+    (catalogoCusto.length > 0 ? '<button onclick="imprimirCatalogoCusto()" style="padding:11px 14px;background:linear-gradient(135deg,#1e3a5f,#2c5282);color:#fff;border:none;border-radius:10px;font-weight:600;font-size:.78rem;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;">🖨️ Imprimir</button>' : '') +
     '</div>';
 
   if (!lista.length) {
     document.getElementById('catalogoCustoBody').innerHTML = btnTopo +
       '<div class="empty-state"><div class="empty-text">' +
-      (filtro ? 'Nenhum item para "' + escapeHtml(filtro) + '"' : 'Catálogo de custo vazio. Clique em "Estimar Preços de Custo (IA)" para começar.') +
+      (filtro ? 'Nenhum item para "' + escapeHtml(filtro) + '"' : 'Catálogo de custo vazio. Clique em "Pesquisar Preço de Custo (IA)" para começar.') +
       '</div></div>';
     return;
   }
@@ -2313,12 +2314,12 @@ function renderCatalogoCusto(filtro) {
 
   lista.forEach(function(it) {
     var confClass = (it.confianca === 'ALTA') ? 'conf-alta' : (it.confianca === 'MEDIA') ? 'conf-media' : 'conf-baixa';
-    h += '<div class="cat-item">' +
-         '<div class="cat-info">' +
-         '<span class="cat-desc">' + escapeHtml(it.descricao) + '</span>' +
-         '<span class="custo-conf ' + confClass + '">' + escapeHtml(it.confianca || '') + '</span>' +
-         '</div>' +
-         '<div class="cat-action-wrap">' +
+    var confEmoji = (it.confianca === 'ALTA') ? '🟢' : (it.confianca === 'MEDIA') ? '🟡' : '🔴';
+    var baseRef = (it.base_estimativa || it.fonte || '').toString().trim();
+
+    h += '<div class="custo-card">' +
+         '<div class="custo-card-nome">' + escapeHtml(it.descricao) + '</div>' +
+         '<div class="custo-card-preco-row">' +
          '<div class="cat-valor-wrap">' +
          '<span class="cat-prefix">R$</span>' +
          '<input type="text" inputmode="decimal" class="cat-input" ' +
@@ -2331,7 +2332,10 @@ function renderCatalogoCusto(filtro) {
          'onkeydown="if(event.key===\'Enter\') salvarPrecoCustoIndividual(' + it.linha + ')">' +
          '</div>' +
          '<button class="cat-save-btn" onclick="salvarPrecoCustoIndividual(' + it.linha + ')" title="Salvar">✓</button>' +
-         '</div></div>';
+         '</div>' +
+         '<div class="custo-card-conf">' + confEmoji + ' <span class="custo-conf ' + confClass + '">' + escapeHtml(it.confianca || '') + '</span></div>' +
+         (baseRef ? '<div class="custo-card-ref">📍 ' + escapeHtml(baseRef) + '</div>' : '') +
+         '</div>';
   });
 
   document.getElementById('catalogoCustoBody').innerHTML = h;
@@ -2684,6 +2688,9 @@ function _normFront(desc) {
   n = n.replace(/\s+\d+(\.\d+)?\s*(KG|G|GR|L|LT|ML|UN|UND|UNID|CX|PCT|FD|FARDO|SC|DZ)\s*$/i, '').trim();
   var pts = n.split(/\s+/);
   if (pts.length > 1 && _PC_UMS.indexOf(pts[pts.length - 1]) > -1) { pts.pop(); n = pts.join(' '); }
+  pts = n.split(/\s+/);
+  if (pts.length > 1 && /^\d+(\.\d+)?$/.test(pts[pts.length - 1])) { pts.pop(); n = pts.join(' '); }
+  n = n.replace(/\s+(DUZIA|CARTELA|BANDEJA|SACO|CAIXA|PACOTE|GARRAFA|LATA|POTE|BALDE|GALÃO|ROLO|LITRO|UNIDADE)\s*$/i, '').trim();
   return n.replace(/\s+/g, ' ').trim();
 }
 
