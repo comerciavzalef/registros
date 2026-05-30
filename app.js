@@ -1,5 +1,5 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v8.6.2 PREMIUM
+//  REQUISIÇÕES DIGITAL — app.js v8.6.3 PREMIUM
 //  Grupo Carlos Vaz — CRV/LAS
 //  v8.6: Preço de Custo setor a setor + dedup + thinking OFF
 // ============================================================
@@ -26,7 +26,7 @@ var precoCustoTotalCusto    = 0;
 // ══════════════════════════════════════════════════════════════
 //  INIT & LOGIN
 // ══════════════════════════════════════════════════════════════
-var APP_VERSION = '8.6.2';
+var APP_VERSION = '8.6.3';
 (function () {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
@@ -2532,12 +2532,27 @@ function pesquisarTodosSetoresCusto() {
   var pendentes = precoCustoSetores.filter(function(s) { return !s.processado; });
   if (!pendentes.length) { toast('Todos já processados!'); return; }
 
+  // Calcular quantos itens únicos realmente vão ser enviados
+  var simNovos = 0;
+  var simJa = Object.assign({}, precoCustoJaProcessados);
+  pendentes.forEach(function(s) {
+    var cid = (dadosCompletos.cidades || []).find(function(c) { return c.nome === s.cidade; });
+    var setObj = cid ? (cid.setores || []).find(function(st) { return st.nome === s.setor; }) : null;
+    (setObj && setObj.itens || []).forEach(function(it) {
+      var norm = _normFront((it.descricao || '').trim());
+      if (norm && !simJa[norm]) { simJa[norm] = true; simNovos++; }
+    });
+  });
+
+  // Gemini Flash: ~R$ 0,004 por item (input + output, sem thinking)
+  var custoMin = (simNovos * 0.003).toFixed(2);
+  var custoMax = (simNovos * 0.006).toFixed(2);
+
   if (!confirm(
-    'Estimar preços de ' + pendentes.length + ' setores sequencialmente?\n\n' +
-    'Produtos duplicados serão ignorados automaticamente.\n' +
-    'Os valores são ESTIMATIVAS geradas por IA.\n\n' +
-    'Custo estimado: R$ ' + (pendentes.length * 0.02).toFixed(2) +
-    ' a R$ ' + (pendentes.length * 0.08).toFixed(2)
+    'Estimar preços de ' + pendentes.length + ' setores?\n\n' +
+    '• ' + simNovos + ' produtos únicos novos (duplicados pulam grátis)\n' +
+    '• Custo estimado: R$ ' + custoMin + ' a R$ ' + custoMax + '\n\n' +
+    'Os valores são ESTIMATIVAS geradas por IA.'
   )) return;
 
   _seqLoopCusto(0);
