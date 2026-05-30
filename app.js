@@ -1,5 +1,5 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v8.5.0 PREMIUM
+//  REQUISIÇÕES DIGITAL — app.js v8.5.1 PREMIUM
 //  Grupo Carlos Vaz — CRV/LAS
 //  v8.5.0: Catálogo Preço de Custo (IA) + referência custo nas requisições + impressão por setor
 // ============================================================
@@ -19,7 +19,7 @@ var iaAtualizacaoTemp = null;
 //  INIT & LOGIN
 // ══════════════════════════════════════════════════════════════
 // 🔧 v8.4: forçar atualização do SW e reload automático para todos os usuários
-var APP_VERSION = '8.5.0';
+var APP_VERSION = '8.5.1';
 (function () {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
@@ -2413,9 +2413,10 @@ function salvarPrecoCustoIndividual(linha) {
   .catch(function() { toast('Erro de conexão'); input.value = formatNum(original); input.dataset.original = original; });
 }
 
-function gerarPrecosCustoIA() {
+function gerarPrecosCustoIA(forcarAtualizar) {
   if (!dadosCompletos || !dadosCompletos.cidades) { toast('Carregue os dados primeiro'); return; }
 
+  // 1. Coletar todos os itens únicos das requisições
   var todosItens = [];
   var descJaAdicionada = {};
   (dadosCompletos.cidades || []).forEach(function(cid) {
@@ -2433,16 +2434,53 @@ function gerarPrecosCustoIA() {
   });
 
   if (!todosItens.length) { toast('Nenhum item nas requisições'); return; }
-  if (todosItens.length > 80) todosItens = todosItens.slice(0, 80);
+
+  // 2. Filtrar: só enviar itens que NÃO existem no catálogo de custo (ou forçar atualização dos não-manuais)
+  var jaExistem = {};
+  var manuais = {};
+  catalogoCusto.forEach(function(it) {
+    var key = (it.descricao || '').toUpperCase().trim();
+    jaExistem[key] = true;
+    if (it.confianca === 'MANUAL') manuais[key] = true;
+  });
+
+  var itensParaPesquisar;
+  if (forcarAtualizar) {
+    // Atualizar: envia tudo EXCETO os que foram editados manualmente
+    itensParaPesquisar = todosItens.filter(function(it) {
+      return !manuais[it.descricao.toUpperCase().trim()];
+    });
+  } else {
+    // Gerar: só itens NOVOS que ainda não estão no catálogo
+    itensParaPesquisar = todosItens.filter(function(it) {
+      return !jaExistem[it.descricao.toUpperCase().trim()];
+    });
+  }
+
+  if (!itensParaPesquisar.length) {
+    if (forcarAtualizar) {
+      toast('Todos os itens têm preço manual — nada para atualizar');
+    } else {
+      toast('Todos os itens já têm preço de custo. Use "Atualizar" para re-pesquisar.');
+    }
+    return;
+  }
+
+  if (itensParaPesquisar.length > 80) itensParaPesquisar = itensParaPesquisar.slice(0, 80);
 
   var btn = document.getElementById('btnGerarPrecosCusto');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<div class="ld-spinner" style="width:16px;height:16px;border-width:2px;margin:0;display:inline-block;vertical-align:middle;"></div> Pesquisando...'; }
+  var btnAtualizar = document.getElementById('btnAtualizarPrecosCusto');
+  var labelAcao = forcarAtualizar ? 'Atualizando' : 'Pesquisando';
+  if (btn) { btn.disabled = true; }
+  if (btnAtualizar) { btnAtualizar.disabled = true; }
 
   document.getElementById('catalogoCustoBody').innerHTML =
     '<div style="text-align:center;padding:60px 20px;">' +
     '<div class="ld-spinner" style="margin:0 auto 20px;"></div>' +
-    '<div style="color:var(--text-primary);font-weight:600;margin-bottom:6px;">IA pesquisando preços de custo...</div>' +
-    '<div style="color:var(--text-tertiary);font-size:.75rem;">' + todosItens.length + ' itens · pode levar 5 a 15 segundos</div></div>';
+    '<div style="color:var(--text-primary);font-weight:600;margin-bottom:6px;">IA ' + labelAcao.toLowerCase() + ' preços de custo...</div>' +
+    '<div style="color:var(--text-tertiary);font-size:.75rem;">' + itensParaPesquisar.length + ' itens ' +
+    (forcarAtualizar ? '(ignorando ' + Object.keys(manuais).length + ' manuais)' : 'novos') +
+    ' · pode levar 5 a 15 segundos</div></div>';
 
   fetch(API_URL, {
     method: 'POST',
@@ -2451,14 +2489,14 @@ function gerarPrecosCustoIA() {
       acao: 'pesquisarprecoscusto',
       usuario: sessao.nome,
       senha: sessao.hash,
-      itens: todosItens,
+      itens: itensParaPesquisar,
       regiao: 'interior da Bahia, Brasil'
     }),
     redirect: 'follow'
   })
   .then(function(r) { return r.json(); })
   .then(function(d) {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="16" height="16"><use href="#icon-sparkles"/></svg> Gerar Preços de Custo (IA)'; }
+    _resetBtnsGerarCusto(btn, btnAtualizar);
     if (d.status !== 'ok') { toast(d.msg || 'Erro na IA'); renderCatalogoCusto(''); return; }
 
     var precos = d.precos || [];
@@ -2487,7 +2525,7 @@ function gerarPrecosCustoIA() {
     .then(function(r) { return r.json(); })
     .then(function(d2) {
       if (d2.status === 'ok') {
-        showSuccess('', 'Preços de custo gerados!', d2.inseridos + ' novos · ' + d2.atualizados + ' atualizados');
+        showSuccess('', labelAcao + ' concluída!', d2.inseridos + ' novos · ' + d2.atualizados + ' atualizados');
         _precoCustoCache = null;
         fetch(API_URL + '?userHash=' + sessao.hash + '&acao=catalogocusto')
           .then(function(r) { return r.json(); })
@@ -2501,9 +2539,14 @@ function gerarPrecosCustoIA() {
     .catch(function() { toast('Erro de conexão'); renderCatalogoCusto(''); });
   })
   .catch(function() {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="16" height="16"><use href="#icon-sparkles"/></svg> Gerar Preços de Custo (IA)'; }
+    _resetBtnsGerarCusto(btn, btnAtualizar);
     toast('Erro de conexão'); renderCatalogoCusto('');
   });
+}
+
+function _resetBtnsGerarCusto(btn, btnAtualizar) {
+  if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="16" height="16"><use href="#icon-sparkles"/></svg> Gerar Novos (IA)'; }
+  if (btnAtualizar) { btnAtualizar.disabled = false; }
 }
 
 function imprimirCatalogoCusto() {
