@@ -400,7 +400,7 @@ function abrirCidade(nome) {
                ' <span style="color:var(--text-tertiary);font-size:0.7rem;">(x' + it.quantidade + ')</span></div>' +
                '<div style="text-align:right;">' +
                '<div class="item-valor">' + formatCurrency(it.total) + '</div>' +
-               '<div class="item-custo-ref" data-desc-custo="' + escapeHtml(it.descricao).toUpperCase().trim() + '"></div>' +
+               '<div class="item-custo-ref" data-desc-custo="' + escapeHtml((it.descricao || '').toUpperCase().trim()) + '"></div>' +
                '</div></div>';
         });
         h += '</div>'; // .req-group-block
@@ -415,8 +415,13 @@ function abrirCidade(nome) {
   history.pushState({ modal: 'cidade' }, '', '');
 
   _carregarPrecosCustoParaRef(function(mapa) {
+    if (!mapa || !Object.keys(mapa).length) return;
     document.querySelectorAll('.item-custo-ref[data-desc-custo]').forEach(function(el) {
-      var key = el.getAttribute('data-desc-custo');
+      var rawKey = el.getAttribute('data-desc-custo') || '';
+      // Decodificar entidades HTML que o escapeHtml possa ter inserido
+      var tmp = document.createElement('span');
+      tmp.innerHTML = rawKey;
+      var key = (tmp.textContent || tmp.innerText || '').toUpperCase().trim();
       if (mapa[key] !== undefined && mapa[key] > 0) {
         el.textContent = 'Custo: ' + formatCurrency(mapa[key]);
         el.style.display = 'block';
@@ -2295,11 +2300,15 @@ function abrirCatalogoCusto() {
   fetch(API_URL + '?userHash=' + sessao.hash + '&acao=catalogocusto')
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      if (d.status !== 'ok') { toast(d.msg || 'Erro ao carregar'); return; }
+      if (d.erro) { toast(d.erro || 'Erro ao carregar'); return; }
       catalogoCusto = d.itens || [];
       renderCatalogoCusto('');
     })
-    .catch(function() { toast('Erro de conexão'); });
+    .catch(function() {
+      toast('Erro de conexão');
+      document.getElementById('catalogoCustoBody').innerHTML =
+        '<div class="empty-state"><div class="empty-text">Erro de conexão. Tente novamente.</div></div>';
+    });
 }
 
 function fecharCatalogoCusto() {
@@ -2364,7 +2373,10 @@ function salvarPrecoCustoIndividual(linha) {
   var input = document.getElementById('input_custo_' + linha);
   if (!input) return;
   var original = parseFloat(input.dataset.original);
-  var desc = input.dataset.desc;
+  // Decodificar entidades HTML do data-desc
+  var tmp = document.createElement('span');
+  tmp.innerHTML = input.dataset.desc || '';
+  var desc = tmp.textContent || tmp.innerText || '';
   var novo = parseValorBR(input.value);
 
   if (novo === null || novo < 0) { toast('Valor inválido'); input.value = formatNum(original); return; }
@@ -2406,13 +2418,15 @@ function gerarPrecosCustoIA() {
 
   var todosItens = [];
   var descJaAdicionada = {};
-  dadosCompletos.cidades.forEach(function(cid) {
-    cid.setores.forEach(function(setor) {
-      setor.itens.forEach(function(it) {
-        var key = it.descricao.toUpperCase().trim();
+  (dadosCompletos.cidades || []).forEach(function(cid) {
+    (cid.setores || []).forEach(function(setor) {
+      (setor.itens || []).forEach(function(it) {
+        var desc = (it.descricao || '').trim();
+        if (!desc) return;
+        var key = desc.toUpperCase();
         if (!descJaAdicionada[key]) {
           descJaAdicionada[key] = true;
-          todosItens.push({ descricao: it.descricao, um: it.um || '' });
+          todosItens.push({ descricao: desc, um: it.um || '' });
         }
       });
     });
@@ -2421,7 +2435,7 @@ function gerarPrecosCustoIA() {
   if (!todosItens.length) { toast('Nenhum item nas requisições'); return; }
   if (todosItens.length > 80) todosItens = todosItens.slice(0, 80);
 
-  var btn = document.querySelector('#catalogoCustoModal button[onclick="gerarPrecosCustoIA()"]');
+  var btn = document.getElementById('btnGerarPrecosCusto');
   if (btn) { btn.disabled = true; btn.innerHTML = '<div class="ld-spinner" style="width:16px;height:16px;border-width:2px;margin:0;display:inline-block;vertical-align:middle;"></div> Pesquisando...'; }
 
   document.getElementById('catalogoCustoBody').innerHTML =
@@ -2474,12 +2488,14 @@ function gerarPrecosCustoIA() {
     .then(function(d2) {
       if (d2.status === 'ok') {
         showSuccess('', 'Preços de custo gerados!', d2.inseridos + ' novos · ' + d2.atualizados + ' atualizados');
+        _precoCustoCache = null;
         fetch(API_URL + '?userHash=' + sessao.hash + '&acao=catalogocusto')
           .then(function(r) { return r.json(); })
           .then(function(d3) {
-            catalogoCusto = d3.itens || [];
+            catalogoCusto = (d3.itens || []);
             renderCatalogoCusto('');
-          });
+          })
+          .catch(function() { renderCatalogoCusto(''); });
       } else { toast(d2.msg || 'Erro ao salvar'); renderCatalogoCusto(''); }
     })
     .catch(function() { toast('Erro de conexão'); renderCatalogoCusto(''); });
@@ -2535,12 +2551,15 @@ function _carregarPrecosCustoParaRef(callback) {
   fetch(API_URL + '?userHash=' + sessao.hash + '&acao=catalogocusto')
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      if (d.status === 'ok') {
-        _precoCustoCache = {};
-        (d.itens || []).forEach(function(it) {
-          _precoCustoCache[it.descricao.toUpperCase().trim()] = it.preco_custo;
+      _precoCustoCache = {};
+      if (!d.erro && Array.isArray(d.itens)) {
+        d.itens.forEach(function(it) {
+          var key = (it.descricao || '').toUpperCase().trim();
+          if (key && it.preco_custo > 0) {
+            _precoCustoCache[key] = it.preco_custo;
+          }
         });
-      } else { _precoCustoCache = {}; }
+      }
       callback(_precoCustoCache);
     })
     .catch(function() { _precoCustoCache = {}; callback(_precoCustoCache); });
