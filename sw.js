@@ -1,8 +1,8 @@
 /* ============================================================
-   REQUISIÇÕES DIGITAL — SERVICE WORKER v8.4
+   REQUISIÇÕES DIGITAL — SERVICE WORKER v8.5
    ============================================================ */
 
-var CACHE_NAME = 'requisicoes-v8.4.5';
+var CACHE_NAME = 'requisicoes-v8.5.0';
 var ASSETS = [
     './',
     './index.html',

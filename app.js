@@ -1,7 +1,7 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v8.4.4 PREMIUM
+//  REQUISIÇÕES DIGITAL — app.js v8.5.0 PREMIUM
 //  Grupo Carlos Vaz — CRV/LAS
-//  v8.4.4: IA refinada + auto-ID + mover setor + add itens + OBS robusta
+//  v8.5.0: Catálogo Preço de Custo (IA) + referência custo nas requisições + impressão por setor
 // ============================================================
 
 var API_URL = 'https://script.google.com/macros/s/AKfycbzXuhmVkTDsMGotRuG3-i-YYnx0_nLFWDWjb7hNsTZ2HUg5SzWKDK6jbad_HqOEsnxt/exec';
@@ -19,7 +19,7 @@ var iaAtualizacaoTemp = null;
 //  INIT & LOGIN
 // ══════════════════════════════════════════════════════════════
 // 🔧 v8.4: forçar atualização do SW e reload automático para todos os usuários
-var APP_VERSION = '8.4.5';
+var APP_VERSION = '8.5.0';
 (function () {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
@@ -148,6 +148,7 @@ window.addEventListener('popstate', function () {
   if (document.getElementById('editReqModal').classList.contains('show')) fecharEditReq();
   else if (document.getElementById('iaModal').classList.contains('show')) fecharAssistenteIA();
   else if (document.getElementById('importarModal').classList.contains('show')) fecharImportar();
+  else if (document.getElementById('catalogoCustoModal').classList.contains('show')) fecharCatalogoCusto();
   else if (document.getElementById('catalogoModal').classList.contains('show')) fecharCatalogo();
   else if (document.getElementById('cidadeModal').classList.contains('show')) fecharCidade();
   else if (document.getElementById('menuLateral').classList.contains('show')) fecharMenuLateral();
@@ -177,6 +178,7 @@ function menuAcao(acao) {
     if (acao === 'ia') abrirAssistenteIA();
     else if (acao === 'importar') abrirImportar();
     else if (acao === 'catalogo') abrirCatalogo();
+    else if (acao === 'catalogoCusto') abrirCatalogoCusto();
     else if (acao === 'logout') logout();
   }, 250);
 }
@@ -350,7 +352,11 @@ function abrirCidade(nome) {
       h += '<div class="setor-block"><div class="setor-header"><div class="sh-left">' +
            '<div class="sh-badge ' + getSetorClass(setor.nome) + '">&#128194;</div>' +
            '<div class="sh-nome">' + escapeHtml(setor.nome) + '</div></div>' +
-           '<div class="sh-total">' + formatCurrency(setor.total) + '</div></div>' +
+           '<div style="display:flex;align-items:center;gap:8px;">' +
+           '<button onclick="event.stopPropagation();imprimirPorSetor(\'' + escapeHtml(cid.nome) + '\',\'' + escapeHtml(setor.nome) + '\')" ' +
+           'style="background:linear-gradient(135deg,#1e3a5f,#2c5282);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:.72rem;font-weight:600;cursor:pointer;font-family:var(--font);white-space:nowrap;" title="Imprimir setor">🖨️</button>' +
+           '<div class="sh-total">' + formatCurrency(setor.total) + '</div>' +
+           '</div></div>' +
            '<div class="setor-items">';
 
       Object.keys(reqMap).forEach(function (rid) {
@@ -392,7 +398,10 @@ function abrirCidade(nome) {
           descDisplay = descDisplay.replace(/\[([^\]]+)\]/g, '<span style="color:var(--accent);font-size:0.65rem;font-weight:600;display:block;">$1</span>');
           h += '<div class="item-row"><div class="item-desc">' + descDisplay +
                ' <span style="color:var(--text-tertiary);font-size:0.7rem;">(x' + it.quantidade + ')</span></div>' +
-               '<div class="item-valor">' + formatCurrency(it.total) + '</div></div>';
+               '<div style="text-align:right;">' +
+               '<div class="item-valor">' + formatCurrency(it.total) + '</div>' +
+               '<div class="item-custo-ref" data-desc-custo="' + escapeHtml(it.descricao).toUpperCase().trim() + '"></div>' +
+               '</div></div>';
         });
         h += '</div>'; // .req-group-block
       });
@@ -404,6 +413,16 @@ function abrirCidade(nome) {
   document.getElementById('cidadeBody').innerHTML = h;
   document.getElementById('cidadeModal').classList.add('show');
   history.pushState({ modal: 'cidade' }, '', '');
+
+  _carregarPrecosCustoParaRef(function(mapa) {
+    document.querySelectorAll('.item-custo-ref[data-desc-custo]').forEach(function(el) {
+      var key = el.getAttribute('data-desc-custo');
+      if (mapa[key] !== undefined && mapa[key] > 0) {
+        el.textContent = 'Custo: ' + formatCurrency(mapa[key]);
+        el.style.display = 'block';
+      }
+    });
+  });
 }
 
 function fecharCidade() {
@@ -2257,4 +2276,308 @@ function confirmarMoverSetor(setorDestino) {
     }
   })
   .catch(function() { toast('Erro de conexão'); });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  💰 v8.5: CATÁLOGO DE PREÇO DE CUSTO
+// ══════════════════════════════════════════════════════════════
+var catalogoCusto = [];
+
+function abrirCatalogoCusto() {
+  document.body.style.overflow = 'hidden';
+  document.getElementById('catalogoCustoModal').classList.add('show');
+  history.pushState({ modal: 'catalogoCusto' }, '', '');
+  document.getElementById('catalogoCustoBody').innerHTML =
+    '<div style="text-align:center;padding:40px 20px;"><div class="ld-spinner" style="margin:0 auto 16px;"></div>' +
+    '<div class="empty-text">Carregando catálogo de custo...</div></div>';
+  document.getElementById('catalogoCustoSearch').value = '';
+
+  fetch(API_URL + '?userHash=' + sessao.hash + '&acao=catalogocusto')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.status !== 'ok') { toast(d.msg || 'Erro ao carregar'); return; }
+      catalogoCusto = d.itens || [];
+      renderCatalogoCusto('');
+    })
+    .catch(function() { toast('Erro de conexão'); });
+}
+
+function fecharCatalogoCusto() {
+  var wasOpen = document.getElementById('catalogoCustoModal').classList.contains('show');
+  document.body.style.overflow = '';
+  document.getElementById('catalogoCustoModal').classList.remove('show');
+  if (wasOpen && !_insidePopstate) history.back();
+}
+
+function filtrarCatalogoCusto() {
+  var q = document.getElementById('catalogoCustoSearch').value.toLowerCase().trim();
+  renderCatalogoCusto(q);
+}
+
+function renderCatalogoCusto(filtro) {
+  var lista = catalogoCusto;
+  if (filtro) {
+    lista = catalogoCusto.filter(function(it) {
+      return it.descricao.toLowerCase().indexOf(filtro) > -1;
+    });
+  }
+
+  if (!lista.length) {
+    document.getElementById('catalogoCustoBody').innerHTML =
+      '<div class="empty-state"><div class="empty-text">' +
+      (filtro ? 'Nenhum item para "' + escapeHtml(filtro) + '"' : 'Catálogo de custo vazio. Clique em "Gerar Preços de Custo (IA)" para começar.') +
+      '</div></div>';
+    return;
+  }
+
+  var h = '<div class="cat-meta">' + lista.length + ' ' +
+          (lista.length === 1 ? 'item' : 'itens') +
+          ' · toque no preço para editar</div>';
+
+  lista.forEach(function(it) {
+    var confClass = (it.confianca === 'ALTA') ? 'conf-alta' : (it.confianca === 'MEDIA') ? 'conf-media' : 'conf-baixa';
+    h += '<div class="cat-item">' +
+         '<div class="cat-info">' +
+         '<span class="cat-desc">' + escapeHtml(it.descricao) + '</span>' +
+         '<span class="custo-conf ' + confClass + '">' + escapeHtml(it.confianca || '') + '</span>' +
+         '</div>' +
+         '<div class="cat-action-wrap">' +
+         '<div class="cat-valor-wrap">' +
+         '<span class="cat-prefix">R$</span>' +
+         '<input type="text" inputmode="decimal" class="cat-input" ' +
+         'id="input_custo_' + it.linha + '" ' +
+         'value="' + formatNum(it.preco_custo) + '" ' +
+         'data-linha="' + it.linha + '" ' +
+         'data-original="' + it.preco_custo + '" ' +
+         'data-desc="' + escapeHtml(it.descricao) + '" ' +
+         'onfocus="this.select()" ' +
+         'onkeydown="if(event.key===\'Enter\') salvarPrecoCustoIndividual(' + it.linha + ')">' +
+         '</div>' +
+         '<button class="cat-save-btn" onclick="salvarPrecoCustoIndividual(' + it.linha + ')" title="Salvar">✓</button>' +
+         '</div></div>';
+  });
+
+  document.getElementById('catalogoCustoBody').innerHTML = h;
+}
+
+function salvarPrecoCustoIndividual(linha) {
+  var input = document.getElementById('input_custo_' + linha);
+  if (!input) return;
+  var original = parseFloat(input.dataset.original);
+  var desc = input.dataset.desc;
+  var novo = parseValorBR(input.value);
+
+  if (novo === null || novo < 0) { toast('Valor inválido'); input.value = formatNum(original); return; }
+  if (Math.abs(novo - original) < 0.001) { input.value = formatNum(original); input.blur(); return; }
+
+  input.dataset.original = novo;
+  input.value = formatNum(novo);
+  input.blur();
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'salvarprecoscusto',
+      usuario: sessao.nome,
+      senha: sessao.hash,
+      itens: [{ descricao: desc, preco_custo: novo, confianca: 'MANUAL', fonte: 'Editado manualmente' }]
+    }),
+    redirect: 'follow'
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.status === 'ok') {
+      for (var i = 0; i < catalogoCusto.length; i++) {
+        if (catalogoCusto[i].linha === linha) { catalogoCusto[i].preco_custo = novo; catalogoCusto[i].confianca = 'MANUAL'; break; }
+      }
+      toast('Preço de custo salvo');
+    } else {
+      toast(d.msg || 'Erro ao salvar');
+      input.value = formatNum(original);
+      input.dataset.original = original;
+    }
+  })
+  .catch(function() { toast('Erro de conexão'); input.value = formatNum(original); input.dataset.original = original; });
+}
+
+function gerarPrecosCustoIA() {
+  if (!dadosCompletos || !dadosCompletos.cidades) { toast('Carregue os dados primeiro'); return; }
+
+  var todosItens = [];
+  var descJaAdicionada = {};
+  dadosCompletos.cidades.forEach(function(cid) {
+    cid.setores.forEach(function(setor) {
+      setor.itens.forEach(function(it) {
+        var key = it.descricao.toUpperCase().trim();
+        if (!descJaAdicionada[key]) {
+          descJaAdicionada[key] = true;
+          todosItens.push({ descricao: it.descricao, um: it.um || '' });
+        }
+      });
+    });
+  });
+
+  if (!todosItens.length) { toast('Nenhum item nas requisições'); return; }
+  if (todosItens.length > 80) todosItens = todosItens.slice(0, 80);
+
+  var btn = document.querySelector('#catalogoCustoModal button[onclick="gerarPrecosCustoIA()"]');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<div class="ld-spinner" style="width:16px;height:16px;border-width:2px;margin:0;display:inline-block;vertical-align:middle;"></div> Pesquisando...'; }
+
+  document.getElementById('catalogoCustoBody').innerHTML =
+    '<div style="text-align:center;padding:60px 20px;">' +
+    '<div class="ld-spinner" style="margin:0 auto 20px;"></div>' +
+    '<div style="color:var(--text-primary);font-weight:600;margin-bottom:6px;">IA pesquisando preços de custo...</div>' +
+    '<div style="color:var(--text-tertiary);font-size:.75rem;">' + todosItens.length + ' itens · pode levar 5 a 15 segundos</div></div>';
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'pesquisarprecoscusto',
+      usuario: sessao.nome,
+      senha: sessao.hash,
+      itens: todosItens,
+      regiao: 'interior da Bahia, Brasil'
+    }),
+    redirect: 'follow'
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="16" height="16"><use href="#icon-sparkles"/></svg> Gerar Preços de Custo (IA)'; }
+    if (d.status !== 'ok') { toast(d.msg || 'Erro na IA'); renderCatalogoCusto(''); return; }
+
+    var precos = d.precos || [];
+    var itensSalvar = precos.map(function(p) {
+      return {
+        descricao: p.descricao || '',
+        preco_custo: parseFloat(p.preco_custo) || 0,
+        confianca: p.confianca || 'MEDIA',
+        fonte: p.fonte || 'IA Gemini'
+      };
+    }).filter(function(p) { return p.descricao && p.preco_custo > 0; });
+
+    if (!itensSalvar.length) { toast('IA não retornou preços válidos'); renderCatalogoCusto(''); return; }
+
+    fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        acao: 'salvarprecoscusto',
+        usuario: sessao.nome,
+        senha: sessao.hash,
+        itens: itensSalvar
+      }),
+      redirect: 'follow'
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d2) {
+      if (d2.status === 'ok') {
+        showSuccess('', 'Preços de custo gerados!', d2.inseridos + ' novos · ' + d2.atualizados + ' atualizados');
+        fetch(API_URL + '?userHash=' + sessao.hash + '&acao=catalogocusto')
+          .then(function(r) { return r.json(); })
+          .then(function(d3) {
+            catalogoCusto = d3.itens || [];
+            renderCatalogoCusto('');
+          });
+      } else { toast(d2.msg || 'Erro ao salvar'); renderCatalogoCusto(''); }
+    })
+    .catch(function() { toast('Erro de conexão'); renderCatalogoCusto(''); });
+  })
+  .catch(function() {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="16" height="16"><use href="#icon-sparkles"/></svg> Gerar Preços de Custo (IA)'; }
+    toast('Erro de conexão'); renderCatalogoCusto('');
+  });
+}
+
+function imprimirCatalogoCusto() {
+  if (!catalogoCusto.length) { toast('Catálogo vazio'); return; }
+
+  var hoje = new Date();
+  var dataHoje = String(hoje.getDate()).padStart(2,'0') + '/' + String(hoje.getMonth()+1).padStart(2,'0') + '/' + hoje.getFullYear();
+  var hora = String(hoje.getHours()).padStart(2,'0') + ':' + String(hoje.getMinutes()).padStart(2,'0');
+
+  var corpo = '<div class="pdf-header">' +
+    '<div class="pdf-brand">GRUPO CARLOS VAZ</div>' +
+    '<div class="pdf-divider"></div>' +
+    '<div class="pdf-title">Catálogo de Preço de Custo</div>' +
+    '<div class="pdf-meta">Emitido em ' + dataHoje + ' às ' + hora + '</div></div>';
+
+  corpo += '<div class="pdf-req-block"><table class="pdf-table"><thead><tr>' +
+    '<th style="width:5%;text-align:center;">#</th>' +
+    '<th style="width:50%;">Descrição</th>' +
+    '<th style="width:20%;text-align:right;">Preço de Custo</th>' +
+    '<th style="width:12%;text-align:center;">Confiança</th>' +
+    '<th style="width:13%;text-align:center;">Atualizado</th>' +
+    '</tr></thead><tbody>';
+
+  catalogoCusto.forEach(function(it, idx) {
+    var bg = idx % 2 === 0 ? '#fff' : '#f4f6f9';
+    corpo += '<tr style="background:' + bg + ';">' +
+      '<td style="text-align:center;color:#64748b;">' + (idx + 1) + '</td>' +
+      '<td style="font-weight:500;">' + escapeHtml(it.descricao) + '</td>' +
+      '<td style="text-align:right;font-weight:600;">' + formatCurrency(it.preco_custo) + '</td>' +
+      '<td style="text-align:center;font-size:9px;">' + escapeHtml(it.confianca || '') + '</td>' +
+      '<td style="text-align:center;font-size:9px;">' + escapeHtml(it.atualizadoEm || '') + '</td></tr>';
+  });
+
+  corpo += '</tbody></table></div>';
+  _abrirJanelaImpressao('Catálogo Preço de Custo', corpo);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  💰 v8.5: PREÇO DE CUSTO REFERÊNCIA NAS REQUISIÇÕES
+// ══════════════════════════════════════════════════════════════
+var _precoCustoCache = null;
+
+function _carregarPrecosCustoParaRef(callback) {
+  if (_precoCustoCache) { callback(_precoCustoCache); return; }
+  fetch(API_URL + '?userHash=' + sessao.hash + '&acao=catalogocusto')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.status === 'ok') {
+        _precoCustoCache = {};
+        (d.itens || []).forEach(function(it) {
+          _precoCustoCache[it.descricao.toUpperCase().trim()] = it.preco_custo;
+        });
+      } else { _precoCustoCache = {}; }
+      callback(_precoCustoCache);
+    })
+    .catch(function() { _precoCustoCache = {}; callback(_precoCustoCache); });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  🖨️ v8.5: IMPRESSÃO POR SETOR
+// ══════════════════════════════════════════════════════════════
+function imprimirPorSetor(cidadeNome, setorNome) {
+  if (!dadosCompletos) { toast('Carregue os dados primeiro'); return; }
+  var cid = dadosCompletos.cidades.find(function(c) { return c.nome === cidadeNome; });
+  if (!cid) { toast('Cidade não encontrada'); return; }
+  var setor = cid.setores.find(function(s) { return s.nome === setorNome; });
+  if (!setor || !setor.itens.length) { toast('Setor vazio'); return; }
+
+  var reqMap = {};
+  setor.itens.forEach(function(it) {
+    var rid = it.requisicao || '-';
+    if (!reqMap[rid]) reqMap[rid] = { itens: [], total: 0, observacao: '', data: '' };
+    reqMap[rid].itens.push(it);
+    reqMap[rid].total += it.total;
+    if (it.observacao && !reqMap[rid].observacao) reqMap[rid].observacao = it.observacao;
+    if (it.data && !reqMap[rid].data) reqMap[rid].data = it.data;
+  });
+
+  var corpo = _gerarCabecalhoPDF(cidadeNome);
+  var totalSetor = 0;
+  var totalReqs = 0;
+
+  Object.keys(reqMap).forEach(function(rid) {
+    corpo += _gerarBlocoRequisicaoPDF(setorNome, rid, reqMap[rid]);
+    totalSetor += reqMap[rid].total;
+    totalReqs++;
+  });
+
+  corpo += '<div class="pdf-resumo"><strong>TOTAL SETOR ' + escapeHtml(setorNome) + ': ' + formatCurrency(totalSetor) + '</strong><br>' +
+           totalReqs + ' requisições · ' + setor.itens.length + ' itens</div>';
+
+  _abrirJanelaImpressao('Requisições ' + setorNome + ' — ' + cidadeNome, corpo);
 }

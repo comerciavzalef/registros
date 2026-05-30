@@ -1432,3 +1432,24 @@ button:focus-visible, .menu-item:focus-visible, .ia-cmd-card:focus-visible, .cid
   color: var(--text-tertiary, #8a96a8);
   font-weight: 400;
 }
+
+/* ═══ v8.5: Preço de Custo ═══ */
+.item-custo-ref {
+  display: none;
+  font-size: 0.65rem;
+  color: #16a34a;
+  font-weight: 600;
+  margin-top: 2px;
+  opacity: 0.85;
+}
+.custo-conf {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.custo-conf.conf-alta { background: rgba(22,163,74,0.15); color: #16a34a; }
+.custo-conf.conf-media { background: rgba(234,179,8,0.15); color: #ca8a04; }
+.custo-conf.conf-baixa { background: rgba(239,68,68,0.15); color: #dc2626; }
