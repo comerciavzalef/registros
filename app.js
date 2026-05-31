@@ -1,5 +1,5 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v8.6.6 PREMIUM
+//  REQUISIÇÕES DIGITAL — app.js v8.6.9 PREMIUM
 //  Grupo Carlos Vaz — CRV/LAS
 //  v8.6: Preço de Custo setor a setor + dedup + thinking OFF
 // ============================================================
@@ -26,7 +26,7 @@ var precoCustoTotalCusto    = 0;
 // ══════════════════════════════════════════════════════════════
 //  INIT & LOGIN
 // ══════════════════════════════════════════════════════════════
-var APP_VERSION = '8.6.6';
+var APP_VERSION = '8.6.9';
 (function () {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
@@ -2739,7 +2739,7 @@ function _normFront(desc) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  🔍 v8.6.6: REANALISAR DUPLICADOS NO CATÁLOGO DE CUSTO
+//  🔍 v8.6.9: REANALISAR DUPLICADOS NO CATÁLOGO DE CUSTO
 // ══════════════════════════════════════════════════════════════
 function reanalisarDuplicados() {
   if (catalogoCusto.length < 2) { toast('Catálogo precisa de pelo menos 2 itens'); return; }
