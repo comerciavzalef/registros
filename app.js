@@ -1,5 +1,5 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v8.6.3 PREMIUM
+//  REQUISIÇÕES DIGITAL — app.js v8.6.6 PREMIUM
 //  Grupo Carlos Vaz — CRV/LAS
 //  v8.6: Preço de Custo setor a setor + dedup + thinking OFF
 // ============================================================
@@ -26,7 +26,7 @@ var precoCustoTotalCusto    = 0;
 // ══════════════════════════════════════════════════════════════
 //  INIT & LOGIN
 // ══════════════════════════════════════════════════════════════
-var APP_VERSION = '8.6.3';
+var APP_VERSION = '8.6.6';
 (function () {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
@@ -417,13 +417,24 @@ function abrirCidade(nome) {
 
   _carregarPrecosCustoParaRef(function(mapa) {
     if (!mapa || !Object.keys(mapa).length) return;
+    // Criar mapa normalizado para match inteligente
+    var mapaNorm = {};
+    Object.keys(mapa).forEach(function(k) { mapaNorm[_normFront(k)] = mapa[k]; });
+
     document.querySelectorAll('.item-custo-ref[data-desc-custo]').forEach(function(el) {
       var rawKey = el.getAttribute('data-desc-custo') || '';
       var tmp = document.createElement('span');
       tmp.innerHTML = rawKey;
-      var key = (tmp.textContent || tmp.innerText || '').toUpperCase().trim();
-      if (mapa[key] !== undefined && mapa[key] > 0) {
-        el.textContent = 'Custo: ' + formatCurrency(mapa[key]);
+      var descOriginal = (tmp.textContent || tmp.innerText || '').toUpperCase().trim();
+
+      // Tentar match exato primeiro, depois normalizado
+      var preco = mapa[descOriginal];
+      if (preco === undefined || preco <= 0) {
+        preco = mapaNorm[_normFront(descOriginal)];
+      }
+
+      if (preco !== undefined && preco > 0) {
+        el.textContent = 'Custo: ' + formatCurrency(preco);
         el.style.display = 'block';
       }
     });
@@ -2293,11 +2304,12 @@ function renderCatalogoCusto(filtro) {
     });
   }
 
-  // Botões: pesquisar + imprimir (UM SÓ botão de IA)
+  // Botões: pesquisar + reanalisar + imprimir
   var btnTopo = '<div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">' +
-    '<button onclick="gerarPrecosCustoIA()" style="flex:1;min-width:200px;padding:11px 14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.82rem;cursor:pointer;font-family:var(--font);box-shadow:0 3px 12px rgba(22,163,74,0.3);display:flex;align-items:center;justify-content:center;gap:6px;">' +
-    '<svg width="16" height="16"><use href="#icon-sparkles"/></svg> Pesquisar Preço de Custo (IA)</button>' +
-    (catalogoCusto.length > 0 ? '<button onclick="imprimirCatalogoCusto()" style="padding:11px 14px;background:linear-gradient(135deg,#1e3a5f,#2c5282);color:#fff;border:none;border-radius:10px;font-weight:600;font-size:.78rem;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;">🖨️ Imprimir</button>' : '') +
+    '<button onclick="gerarPrecosCustoIA()" style="flex:1;min-width:160px;padding:11px 14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.82rem;cursor:pointer;font-family:var(--font);box-shadow:0 3px 12px rgba(22,163,74,0.3);display:flex;align-items:center;justify-content:center;gap:6px;">' +
+    '<svg width="16" height="16"><use href="#icon-sparkles"/></svg> Pesquisar Preços (IA)</button>' +
+    (catalogoCusto.length >= 2 ? '<button onclick="reanalisarDuplicados()" style="flex:0 0 auto;padding:11px 14px;background:linear-gradient(135deg,#c9a063,#a87f3f);color:#fff;border:none;border-radius:10px;font-weight:600;font-size:.78rem;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;">🔍 Reanalisar Duplicados</button>' : '') +
+    (catalogoCusto.length > 0 ? '<button onclick="imprimirCatalogoCusto()" style="flex:0 0 auto;padding:11px 14px;background:linear-gradient(135deg,#1e3a5f,#2c5282);color:#fff;border:none;border-radius:10px;font-weight:600;font-size:.78rem;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;">🖨️ Imprimir</button>' : '') +
     '</div>';
 
   if (!lista.length) {
@@ -2544,15 +2556,11 @@ function pesquisarTodosSetoresCusto() {
     });
   });
 
-  // Gemini Flash: ~R$ 0,004 por item (input + output, sem thinking)
-  var custoMin = (simNovos * 0.003).toFixed(2);
-  var custoMax = (simNovos * 0.006).toFixed(2);
-
   if (!confirm(
     'Estimar preços de ' + pendentes.length + ' setores?\n\n' +
-    '• ' + simNovos + ' produtos únicos novos (duplicados pulam grátis)\n' +
-    '• Custo estimado: R$ ' + custoMin + ' a R$ ' + custoMax + '\n\n' +
-    'Os valores são ESTIMATIVAS geradas por IA.'
+    '• ' + simNovos + ' produtos únicos novos\n' +
+    '• Duplicados são pulados automaticamente (custo zero)\n' +
+    '• O custo real aparece no painel após a pesquisa'
   )) return;
 
   _seqLoopCusto(0);
@@ -2713,14 +2721,176 @@ var _PC_UMS = ['UN','CX','FD','FARDO','KG','L','PCT','G','SC','DZ','UNID','UND',
 
 function _normFront(desc) {
   var n = desc.toString().toUpperCase().trim();
+  // Remove texto entre colchetes [escola X]
   n = n.replace(/\s*\[.*?\]\s*/g, ' ').trim();
+  // Remove contexto descritivo: "PARA FESTA", "PARA MERENDA", "P/ EVENTO", "PARA LANCHE"
+  n = n.replace(/\s+(PARA|P\/|P\.)\s+(FESTA|MERENDA|EVENTO|LANCHE|ESCOLA|CRECHE|HOSPITAL|DISTRIBUIÇÃO|DOAÇÃO|CONSUMO|PREPARO|COZINHA|REFEITÓRIO|USO)\b.*$/i, '').trim();
+  // Remove peso/volume no final: "ARROZ 5KG" → "ARROZ"
   n = n.replace(/\s+\d+(\.\d+)?\s*(KG|G|GR|L|LT|ML|UN|UND|UNID|CX|PCT|FD|FARDO|SC|DZ)\s*$/i, '').trim();
+  // Remove unidade solta no final: "ARROZ KG" → "ARROZ"
   var pts = n.split(/\s+/);
   if (pts.length > 1 && _PC_UMS.indexOf(pts[pts.length - 1]) > -1) { pts.pop(); n = pts.join(' '); }
+  // Remove quantidade solta no final: "ARROZ 10" → "ARROZ"
   pts = n.split(/\s+/);
   if (pts.length > 1 && /^\d+(\.\d+)?$/.test(pts[pts.length - 1])) { pts.pop(); n = pts.join(' '); }
+  // Remove variações de embalagem
   n = n.replace(/\s+(DUZIA|CARTELA|BANDEJA|SACO|CAIXA|PACOTE|GARRAFA|LATA|POTE|BALDE|GALÃO|ROLO|LITRO|UNIDADE)\s*$/i, '').trim();
   return n.replace(/\s+/g, ' ').trim();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  🔍 v8.6.6: REANALISAR DUPLICADOS NO CATÁLOGO DE CUSTO
+// ══════════════════════════════════════════════════════════════
+function reanalisarDuplicados() {
+  if (catalogoCusto.length < 2) { toast('Catálogo precisa de pelo menos 2 itens'); return; }
+
+  var container = document.getElementById('catalogoCustoBody');
+  container.innerHTML =
+    '<div style="text-align:center;padding:60px 20px;">' +
+    '<div class="ld-spinner" style="margin:0 auto 20px;"></div>' +
+    '<div style="color:var(--text-primary);font-weight:600;margin-bottom:6px;">IA analisando duplicados...</div>' +
+    '<div style="color:var(--text-tertiary);font-size:.75rem;">' + catalogoCusto.length + ' itens · erros de digitação, variações</div></div>';
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'reanalisarduplicados',
+      usuario: sessao.nome,
+      senha: sessao.hash
+    }),
+    redirect: 'follow'
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.status !== 'ok') { toast(d.msg || 'Erro'); renderCatalogoCusto(''); return; }
+    var grupos = d.grupos || [];
+    if (!grupos.length) {
+      toast('Nenhum duplicado encontrado!');
+      renderCatalogoCusto('');
+      return;
+    }
+    _renderPreviewDuplicados(grupos);
+  })
+  .catch(function() { toast('Erro de conexão'); renderCatalogoCusto(''); });
+}
+
+function _renderPreviewDuplicados(grupos) {
+  var container = document.getElementById('catalogoCustoBody');
+  var h = '';
+
+  h += '<div style="margin-bottom:12px;">' +
+    '<button onclick="renderCatalogoCusto(\'\')" style="padding:8px 14px;background:var(--surface-2);color:var(--text-secondary);border:1px solid var(--border);border-radius:8px;font-weight:600;font-size:.75rem;cursor:pointer;font-family:var(--font);">← Voltar ao Catálogo</button>' +
+    '</div>';
+
+  h += '<div style="margin-bottom:16px;">' +
+    '<h3 style="margin:0 0 6px;color:var(--accent);font-size:.95rem;">🔍 Duplicados Encontrados</h3>' +
+    '<p style="margin:0;color:var(--text-tertiary);font-size:.72rem;">A IA encontrou ' + grupos.length + ' grupo(s) de possíveis duplicados. Marque os que deseja remover.</p>' +
+    '</div>';
+
+  grupos.forEach(function(g, gIdx) {
+    h += '<div class="dup-grupo" style="border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden;">';
+    h += '<div style="background:rgba(201,160,99,0.1);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;">';
+    h += '<div><strong style="color:var(--text-primary);font-size:.85rem;">✏️ Manter como:</strong> <span style="color:var(--accent);font-weight:700;">' + escapeHtml(g.manter) + '</span></div>';
+    h += '<span style="font-size:.7rem;color:var(--text-tertiary);">' + escapeHtml(g.motivo || '') + '</span>';
+    h += '</div>';
+
+    (g.itens_detalhes || []).forEach(function(it) {
+      var isCorreto = (it.descricao || '').toUpperCase().trim() === (g.manter || '').toUpperCase().trim();
+      h += '<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid var(--border,#222);font-size:.8rem;">';
+      if (isCorreto) {
+        h += '<span style="color:#16a34a;font-weight:700;font-size:.7rem;width:60px;">✅ MANTER</span>';
+      } else {
+        h += '<input type="checkbox" checked class="dup-check" data-gidx="' + gIdx + '" data-linha="' + it.linha + '" style="width:18px;height:18px;accent-color:#dc2626;">';
+      }
+      h += '<span style="flex:1;color:var(--text-primary);">' + escapeHtml(it.descricao || '') + '</span>';
+      h += '<span style="color:var(--text-tertiary);font-size:.75rem;">L' + it.linha + '</span>';
+      h += '<span style="color:var(--accent);font-weight:600;white-space:nowrap;">' + formatCurrency(it.preco_custo || 0) + '</span>';
+      h += '</div>';
+    });
+    h += '</div>';
+  });
+
+  h += '<div style="display:flex;gap:8px;margin-top:16px;">';
+  h += '<button onclick="renderCatalogoCusto(\'\')" style="flex:1;padding:12px;background:var(--surface-2);color:var(--text-primary);border:1px solid var(--border);border-radius:10px;font-weight:600;font-size:.85rem;cursor:pointer;font-family:var(--font);">Cancelar</button>';
+  h += '<button id="btnConfirmarDup" onclick="_confirmarRemocaoDuplicados()" style="flex:1;padding:12px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.85rem;cursor:pointer;font-family:var(--font);box-shadow:0 3px 12px rgba(220,38,38,0.3);">🗑️ Remover Selecionados</button>';
+  h += '</div>';
+
+  // Guardar grupos para referência
+  window._dupGrupos = grupos;
+  container.innerHTML = h;
+}
+
+function _confirmarRemocaoDuplicados() {
+  var checkboxes = document.querySelectorAll('.dup-check:checked');
+  if (!checkboxes.length) { toast('Nenhum item marcado para remover'); return; }
+
+  var linhasRemover = [];
+  var renomear = [];
+
+  // Para cada grupo, ver se tem item mantido que precisa renomear
+  var gruposUsados = {};
+  checkboxes.forEach(function(chk) {
+    var gIdx = parseInt(chk.dataset.gidx);
+    var linha = parseInt(chk.dataset.linha);
+    linhasRemover.push(linha);
+    gruposUsados[gIdx] = true;
+  });
+
+  // Para cada grupo que teve remoção, renomear o item mantido para o nome correto
+  Object.keys(gruposUsados).forEach(function(gIdx) {
+    var g = window._dupGrupos[parseInt(gIdx)];
+    if (!g) return;
+    var nomeCorreto = g.manter;
+    (g.itens_detalhes || []).forEach(function(it) {
+      if (linhasRemover.indexOf(it.linha) === -1) {
+        // Este é o que fica — renomear se necessário
+        if ((it.descricao || '').toUpperCase().trim() !== nomeCorreto.toUpperCase().trim()) {
+          renomear.push({ linha: it.linha, novoNome: nomeCorreto });
+        }
+      }
+    });
+  });
+
+  if (!confirm('Remover ' + linhasRemover.length + ' item(ns) duplicado(s)?\n\nEssa ação é permanente.')) return;
+
+  var btn = document.getElementById('btnConfirmarDup');
+  if (btn) { btn.disabled = true; btn.textContent = 'Removendo...'; }
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'removerduplicadoscusto',
+      usuario: sessao.nome,
+      senha: sessao.hash,
+      linhas: linhasRemover,
+      renomear: renomear
+    }),
+    redirect: 'follow'
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.status === 'ok') {
+      showSuccess('', 'Duplicados removidos!', d.removidos + ' removidos · ' + d.renomeados + ' corrigidos');
+      _precoCustoCache = null;
+      // Recarregar catálogo
+      fetch(API_URL + '?userHash=' + sessao.hash + '&acao=catalogocusto')
+        .then(function(r) { return r.json(); })
+        .then(function(d2) {
+          catalogoCusto = (d2.itens || []);
+          renderCatalogoCusto('');
+        })
+        .catch(function() { renderCatalogoCusto(''); });
+    } else {
+      toast(d.msg || 'Erro ao remover');
+      if (btn) { btn.disabled = false; btn.textContent = '🗑️ Remover Selecionados'; }
+    }
+  })
+  .catch(function() {
+    toast('Erro de conexão');
+    if (btn) { btn.disabled = false; btn.textContent = '🗑️ Remover Selecionados'; }
+  });
 }
 
 // Cache de referência de custo (usado no modal cidade)
