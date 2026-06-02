@@ -2411,14 +2411,48 @@ function _formatarDataUniversal(val) {
 }
 
 // v9.0: Formata nome do mês para exibição bonita
+var _MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+var _MESES_EN = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+
 function _formatarNomeMes(nome) {
   if (!nome) return '';
   var s = String(nome).trim();
-  var m = s.match(/^(\w+)\/(\d{4})$/);
-  if (m) {
-    var mes = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
-    return mes + ' ' + m[2];
+
+  // Já no formato "Maio/2026" ou "Maio 2026"
+  var m1 = s.match(/^([A-Za-zÀ-ú]+)\s*[\/\-]\s*(\d{4})$/);
+  if (m1) {
+    var mes = m1[1].charAt(0).toUpperCase() + m1[1].slice(1).toLowerCase();
+    return mes + ' ' + m1[2];
   }
+
+  // ISO: "2026-06-01" ou "2026-06"
+  var m2 = s.match(/^(\d{4})-(\d{2})/);
+  if (m2) {
+    var idx = parseInt(m2[2]) - 1;
+    if (idx >= 0 && idx < 12) return _MESES_PT[idx] + ' ' + m2[1];
+  }
+
+  // Formato longo inglês: "Mon Jun 01 2026..." ou "Jun 01, 2026" etc
+  var m3 = s.match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\b.*?(\d{4})/i);
+  if (m3) {
+    var mesKey = m3[1].toLowerCase().substring(0, 3);
+    var idxEn = _MESES_EN[mesKey];
+    if (idxEn !== undefined) return _MESES_PT[idxEn] + ' ' + m3[2];
+  }
+
+  // Formato "DD/MM/AAAA"
+  var m4 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m4) {
+    var idx4 = parseInt(m4[2]) - 1;
+    if (idx4 >= 0 && idx4 < 12) return _MESES_PT[idx4] + ' ' + m4[3];
+  }
+
+  // Timestamp ou Date parseable
+  try {
+    var d = new Date(s);
+    if (!isNaN(d.getTime())) return _MESES_PT[d.getMonth()] + ' ' + d.getFullYear();
+  } catch(e) {}
+
   return s;
 }
 
