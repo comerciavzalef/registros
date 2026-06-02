@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   REQUISIÇÕES DIGITAL — DESIGN SYSTEM v8.8.0 PREMIUM
+   REQUISIÇÕES DIGITAL — DESIGN SYSTEM v9.0.0 PREMIUM
    Grupo Carlos Vaz — CRV/LAS
    Redesign completo: tipografia, espaçamento, cards, modais
    ══════════════════════════════════════════════════════════════ */
@@ -1715,6 +1715,44 @@ button:focus-visible, .menu-item:focus-visible, .ia-cmd-btn:focus-visible, .cida
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+/* ══════════════ v9.0: HISTÓRICO MELHORADO ══════════════ */
+
+/* Cidade header no detalhe do mês histórico */
+.md-cidade-header-v9 {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 12px;
+  padding: 12px 16px;
+  background: var(--surface-1);
+  border: 1px solid var(--accent-mid);
+  border-radius: var(--r-lg);
+  border-left: 3px solid var(--accent);
+}
+.md-cidade-header-left { flex: 1; min-width: 0; }
+
+/* Cidade cards clicáveis no histórico */
+.hist-cidade-nav {
+  border-left: 3px solid var(--accent);
+}
+.hist-cidade-nav:hover {
+  border-left-color: var(--success);
+}
+
+/* Histórico mês nome — formatação bonita */
+.hist-mes-nome {
+  font-size: .9rem; font-weight: 700; color: var(--text-primary);
+  letter-spacing: -.01em;
+}
+
+/* Full-width print button in history */
+.md-actions .hist-acao-btn {
+  transition: all .15s ease;
+}
+.md-actions .hist-acao-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-mid);
+  color: var(--accent);
 }
 
 /* ══════════════ SAFE AREA (NOTCH) ══════════════ */

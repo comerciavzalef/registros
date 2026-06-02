@@ -1,7 +1,7 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v8.8.0 PREMIUM
+//  REQUISIÇÕES DIGITAL — app.js v9.0.0 PREMIUM
 //  Grupo Carlos Vaz — CRV/LAS
-//  v8.8: Redesign UI + Catálogo Custo por Setor + Filtros + Fix IA
+//  v9.0: Performance + Histórico completo + Catálogo custo auto
 // ============================================================
 
 var API_URL = 'https://script.google.com/macros/s/AKfycbzXuhmVkTDsMGotRuG3-i-YYnx0_nLFWDWjb7hNsTZ2HUg5SzWKDK6jbad_HqOEsnxt/exec';
@@ -29,6 +29,16 @@ var historicoMeses = null;
 // ── v8.8: Catálogo Custo - estado de filtro/sort ──
 var _custoCatSort = 'setor';
 var _custoCatSetorFiltro = 'TODOS';
+
+// ── v9.0: Debounce helper ──
+function _debounce(fn, ms) {
+  var timer;
+  return function() {
+    var ctx = this, args = arguments;
+    clearTimeout(timer);
+    timer = setTimeout(function() { fn.apply(ctx, args); }, ms);
+  };
+}
 
 // ── v8.8: Mapa de setores para categorização inteligente ──
 var SETOR_CATEGORIAS = {
@@ -58,7 +68,7 @@ var SETOR_COLOR_MAP = {
 // ══════════════════════════════════════════════════════════════
 //  INIT & LOGIN
 // ══════════════════════════════════════════════════════════════
-var APP_VERSION = '8.8.0';
+var APP_VERSION = '9.0.0';
 (function () {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
@@ -808,10 +818,10 @@ function fecharCatalogo() {
   if (wasOpen && !_insidePopstate) history.back();
 }
 
-function filtrarCatalogo() {
+var filtrarCatalogo = _debounce(function() {
   var q = document.getElementById('catalogoSearch').value.toLowerCase().trim();
   renderCatalogo(q);
-}
+}, 200);
 
 function renderCatalogo(filtro) {
   var lista = catalogo;
@@ -945,10 +955,10 @@ function sortCatalogoCusto(tipo) {
   renderCatalogoCusto(q);
 }
 
-function filtrarCatalogoCusto() {
+var filtrarCatalogoCusto = _debounce(function() {
   var q = document.getElementById('catalogoCustoSearch').value.toLowerCase().trim();
   renderCatalogoCusto(q);
-}
+}, 200);
 
 function renderCatalogoCusto(filtro) {
   var lista = (window._catalogoCustoItens || []).slice();
@@ -2346,8 +2356,7 @@ window.diagnostico = diagnostico;
 
 
 // ══════════════════════════════════════════════════════════════
-//  PATCH v8.8.1 — Performance + Data formatada + Design elite
-//  Cola no FINAL do app.js (sobrescreve funções anteriores)
+//  PATCH v9.0.0 — Performance + Histórico completo + Custo auto
 // ══════════════════════════════════════════════════════════════
 
 // ── 1. CACHE LOCAL INTELIGENTE ──────────────────────────────
@@ -2373,56 +2382,52 @@ var _cacheLocal = {
   }
 };
 
-// ── 2. FORMATADOR DE DATA UNIVERSAL (corrige "Mon Jun 01...") ──
+// ── 2. FORMATADOR DE DATA UNIVERSAL ─────────────────────────
 function _formatarDataUniversal(val) {
   if (!val) return '';
   var s = String(val).trim();
-
-  // Já está DD/MM/AAAA
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
-
-  // ISO: AAAA-MM-DD
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
     var p = s.substring(0, 10).split('-');
     return p[2] + '/' + p[1] + '/' + p[0];
   }
-
-  // Formato longo: "Mon Jun 01 2026 04:00:00 GMT..." ou similar
   try {
     var d = new Date(s);
     if (!isNaN(d.getTime())) {
       return String(d.getDate()).padStart(2, '0') + '/' +
-             String(d.getMonth() + 1).padStart(2, '0') + '/' +
-             d.getFullYear();
+             String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
     }
   } catch(e) {}
-
-  // Timestamp numérico
   if (/^\d{10,13}$/.test(s)) {
     var ts = parseInt(s);
     if (ts < 10000000000) ts *= 1000;
     var d2 = new Date(ts);
     if (!isNaN(d2.getTime())) {
       return String(d2.getDate()).padStart(2, '0') + '/' +
-             String(d2.getMonth() + 1).padStart(2, '0') + '/' +
-             d2.getFullYear();
+             String(d2.getMonth() + 1).padStart(2, '0') + '/' + d2.getFullYear();
     }
   }
-
   return s;
 }
 
-// Sobrescrever formatarDataBR com a versão universal
+// v9.0: Formata nome do mês para exibição bonita
+function _formatarNomeMes(nome) {
+  if (!nome) return '';
+  var s = String(nome).trim();
+  var m = s.match(/^(\w+)\/(\d{4})$/);
+  if (m) {
+    var mes = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
+    return mes + ' ' + m[2];
+  }
+  return s;
+}
+
 formatarDataBR = _formatarDataUniversal;
 
 // ── 3. CARREGAR DADOS — COM CACHE + LOADING RÁPIDO ──────────
 carregarDados = function() {
-  // Tenta cache primeiro (mostra instantâneo)
   var cached = _cacheLocal.get('dadosCompletos');
-  if (cached && !dadosCompletos) {
-    dadosCompletos = cached;
-    renderPainel();
-  }
+  if (cached && !dadosCompletos) { dadosCompletos = cached; renderPainel(); }
 
   var bar = document.getElementById('ldBarTop');
   bar.style.transition = 'width 1.5s ease';
@@ -2442,19 +2447,16 @@ carregarDados = function() {
       var g = document.getElementById('cidadesGrid');
       if (g) delete g.dataset.skeleton;
 
-      // Formatar todas as datas antes de usar
       if (d && d.cidades) {
         d.cidades.forEach(function(cid) {
           cid.setores.forEach(function(setor) {
-            setor.itens.forEach(function(it) {
-              it.data = _formatarDataUniversal(it.data);
-            });
+            setor.itens.forEach(function(it) { it.data = _formatarDataUniversal(it.data); });
           });
         });
       }
 
       dadosCompletos = d;
-      _cacheLocal.set('dadosCompletos', d, 120000); // 2 min cache
+      _cacheLocal.set('dadosCompletos', d, 120000);
       renderPainel();
 
       var hoje = new Date();
@@ -2466,7 +2468,6 @@ carregarDados = function() {
     .catch(function() {
       bar.style.width = '0';
       document.getElementById('ldScreen').classList.add('hidden');
-      // Se falhou mas tem cache, usa cache
       if (!dadosCompletos) {
         var fallback = _cacheLocal.get('dadosCompletos');
         if (fallback) { dadosCompletos = fallback; renderPainel(); }
@@ -2478,56 +2479,48 @@ carregarDados = function() {
 
 // ── 4. CARREGAR HISTÓRICO — COM CACHE ──────────────────────
 carregarHistorico = function() {
-  // Cache instantâneo
   var cached = _cacheLocal.get('historico');
-  if (cached && !historicoMeses) {
-    historicoMeses = cached;
-    renderHistoricoDashboard();
-  }
+  if (cached && !historicoMeses) { historicoMeses = cached; renderHistoricoDashboard(); }
 
   fetch(API_URL + '?userHash=' + sessao.hash + '&acao=historico')
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (d.status === 'ok') {
         historicoMeses = d.meses || [];
-        _cacheLocal.set('historico', historicoMeses, 180000); // 3 min
+        _cacheLocal.set('historico', historicoMeses, 180000);
         renderHistoricoDashboard();
       }
     })
     .catch(function() {});
 };
 
-// ── 5. MÊS DETALHE — COM CACHE + LOADING ELEGANTE ──────────
+// ── 5. MÊS DETALHE — COM CACHE + CIDADES NAVEGÁVEIS ────────
+// v9.0: Armazena dados do mês detalhe para impressão
+var _mesDetalheAtual = null;
+
 abrirMesDetalhe = function(mesNome) {
   document.getElementById('mesDetalheModal').classList.add('show');
   document.body.style.overflow = 'hidden';
   history.pushState({ modal: 'mesDetalhe' }, '', '');
-  document.getElementById('mesDetalheTitle').textContent = mesNome;
+  document.getElementById('mesDetalheTitle').textContent = _formatarNomeMes(mesNome);
 
-  // Loading elegante
   document.getElementById('mesDetalheBody').innerHTML =
     '<div style="text-align:center;padding:60px 20px;">' +
     '<div class="ld-spinner" style="margin:0 auto 18px;width:24px;height:24px;"></div>' +
-    '<div style="color:var(--text-secondary);font-size:.82rem;font-weight:600;">' + escapeHtml(mesNome) + '</div>' +
+    '<div style="color:var(--text-secondary);font-size:.82rem;font-weight:600;">' + escapeHtml(_formatarNomeMes(mesNome)) + '</div>' +
     '<div style="color:var(--text-tertiary);font-size:.68rem;margin-top:4px;">Carregando detalhes...</div></div>';
 
-  // Tenta cache
   var cacheKey = 'mes_' + mesNome.replace(/[^a-zA-Z0-9]/g, '_');
   var cached = _cacheLocal.get(cacheKey);
-  if (cached) {
-    renderMesDetalhe(mesNome, cached);
-    return;
-  }
+  if (cached) { _mesDetalheAtual = { nome: mesNome, dados: cached }; renderMesDetalhe(mesNome, cached); return; }
 
   fetch(API_URL + '?userHash=' + sessao.hash + '&acao=historicomes&mes=' + encodeURIComponent(mesNome))
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (d.status === 'ok') {
-        // Formatar datas
-        if (d.detalhes) {
-          d.detalhes.forEach(function(it) { it.data = _formatarDataUniversal(it.data); });
-        }
-        _cacheLocal.set(cacheKey, d, 300000); // 5 min
+        if (d.detalhes) d.detalhes.forEach(function(it) { it.data = _formatarDataUniversal(it.data); });
+        _cacheLocal.set(cacheKey, d, 300000);
+        _mesDetalheAtual = { nome: mesNome, dados: d };
         renderMesDetalhe(mesNome, d);
       } else {
         document.getElementById('mesDetalheBody').innerHTML =
@@ -2540,37 +2533,51 @@ abrirMesDetalhe = function(mesNome) {
     });
 };
 
-// ── 6. RENDER MES DETALHE — DATAS FORMATADAS + DESIGN ELITE ──
+// ── 6. RENDER MÊS DETALHE — v9.0: CIDADES CLICÁVEIS + PRINT ──
 renderMesDetalhe = function(mesNome, dados) {
   var CIDADES_ORDEM = ['Ibicuí', 'Nova Canaã', 'Boa Nova', 'Dário Meira', 'Floresta Azul'];
   var resumo = dados.resumo || {}, detalhes = dados.detalhes || [];
+  var nomeFormatado = _formatarNomeMes(mesNome);
 
   var h = '';
 
-  // Header elite
+  // Header
   h += '<div class="md-resumo">';
   h += '<div style="font-size:.58rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.12em;font-weight:700;margin-bottom:6px;">Total do Período</div>';
   h += '<div class="md-total-geral">' + formatCurrency(resumo.total || 0) + '</div>';
-  h += '<div class="md-total-meta">' + (resumo.totalItens || 0) + ' itens registrados</div>';
+  h += '<div class="md-total-meta">' + (resumo.totalItens || 0) + ' itens · ' + escapeHtml(nomeFormatado) + '</div>';
   h += '</div>';
 
-  // Ranking cidades
+  // Ações globais
+  h += '<div class="md-actions" style="margin-bottom:20px;">';
+  h += '<button class="hist-acao-btn" onclick="imprimirMesEspecifico(\'' + escapeHtml(mesNome) + '\')">Imprimir Tudo</button>';
+  h += '<button class="hist-acao-btn" onclick="whatsappMesEspecifico(\'' + escapeHtml(mesNome) + '\')">WhatsApp</button>';
+  h += '</div>';
+
+  // Ranking cidades — v9.0: clicáveis para navegar
   var cidadeArr = [];
-  CIDADES_ORDEM.forEach(function(cid) {
-    cidadeArr.push({ nome: cid, total: (resumo.cidades && resumo.cidades[cid]) || 0 });
-  });
+  CIDADES_ORDEM.forEach(function(cid) { cidadeArr.push({ nome: cid, total: (resumo.cidades && resumo.cidades[cid]) || 0 }); });
   cidadeArr.sort(function(a, b) { return b.total - a.total; });
   var maxCid = cidadeArr[0] && cidadeArr[0].total > 0 ? cidadeArr[0].total : 1;
 
-  h += '<div class="md-section"><div class="md-section-title">Ranking por Cidade</div>';
-  h += '<div class="ranking-card" style="margin-bottom:0;">';
-  cidadeArr.forEach(function(c, idx) {
+  h += '<div class="md-section"><div class="md-section-title">Cidades — clique para ver requisições</div>';
+  h += '<div class="cidades-list" style="margin-bottom:0;">';
+  cidadeArr.forEach(function(c) {
     if (c.total <= 0) return;
-    var pct = (c.total / maxCid) * 100;
-    h += '<div class="ranking-item"><div class="r-left"><span class="r-pos">' + (idx + 1) +
-         '</span><div class="r-info"><span class="r-nome">' + escapeHtml(c.nome) +
-         '</span></div></div><div class="r-right"><span class="r-valor">' + formatCurrency(c.total) +
-         '</span><div class="r-bar-bg"><div class="r-bar-fill blue" style="width:' + pct + '%"></div></div></div></div>';
+    h += '<div class="cidade-card hist-cidade-nav" onclick="scrollToHistCidade(\'' + escapeHtml(c.nome) + '\')">';
+    h += '<div class="cidade-icon"><svg width="18" height="18"><use href="#icon-building"/></svg></div>';
+    h += '<div class="cidade-info"><div class="cidade-nome">' + escapeHtml(c.nome) + '</div>';
+
+    // Contar requisições por cidade
+    var nReqs = 0;
+    if (detalhes.length) {
+      var ridSet = {};
+      detalhes.forEach(function(it) { if (it.cidade === c.nome) ridSet[(it.reqId || '-')] = 1; });
+      nReqs = Object.keys(ridSet).length;
+    }
+    h += '<div class="cidade-meta">' + nReqs + ' requisições</div></div>';
+    h += '<div class="cidade-valor">' + formatCurrency(c.total) + '</div>';
+    h += '</div>';
   });
   h += '</div></div>';
 
@@ -2581,7 +2588,7 @@ renderMesDetalhe = function(mesNome, dados) {
     setorArr.sort(function(a, b) { return b.total - a.total; });
     var maxSet = setorArr[0] && setorArr[0].total > 0 ? setorArr[0].total : 1;
 
-    h += '<div class="md-section"><div class="md-section-title">Ranking por Setor</div>';
+    h += '<div class="md-section"><div class="md-section-title">Por Setor</div>';
     h += '<div class="ranking-card" style="margin-bottom:0;">';
     setorArr.forEach(function(s, idx) {
       if (s.total <= 0) return;
@@ -2593,10 +2600,8 @@ renderMesDetalhe = function(mesNome, dados) {
     h += '</div></div>';
   }
 
-  // Detalhes das requisições
+  // v9.0: Detalhes por cidade — com botões imprimir por cidade e por requisição
   if (detalhes.length) {
-    h += '<div class="md-section"><div class="md-section-title">Requisições do Período</div>';
-
     var agrupado = {};
     detalhes.forEach(function(it) {
       var cid = it.cidade || 'N/A', set = it.setor || 'N/A', rid = it.reqId || '-';
@@ -2611,69 +2616,150 @@ renderMesDetalhe = function(mesNome, dados) {
 
     CIDADES_ORDEM.forEach(function(cid) {
       if (!agrupado[cid]) return;
-      h += '<div class="md-cidade-block">';
-      h += '<div class="md-cidade-nome">' + escapeHtml(cid) + '</div>';
 
+      // Calcular total da cidade
+      var totalCidade = 0, totalReqsCidade = 0;
       Object.keys(agrupado[cid]).forEach(function(set) {
         Object.keys(agrupado[cid][set]).forEach(function(rid) {
+          totalCidade += agrupado[cid][set][rid].total;
+          totalReqsCidade++;
+        });
+      });
+
+      h += '<div class="md-section" id="hist-cidade-' + cid.replace(/\s/g, '-') + '">';
+      h += '<div class="md-cidade-header-v9">';
+      h += '<div class="md-cidade-header-left">';
+      h += '<div class="md-section-title" style="margin:0;">' + escapeHtml(cid) + '</div>';
+      h += '<div style="font-size:.62rem;color:var(--text-tertiary);margin-top:2px;">' + totalReqsCidade + ' requisições · ' + formatCurrency(totalCidade) + '</div>';
+      h += '</div>';
+      h += '<button class="rgh-btn" onclick="imprimirHistCidade(\'' + escapeHtml(mesNome) + '\',\'' + escapeHtml(cid) + '\')">Imprimir Cidade</button>';
+      h += '</div>';
+
+      Object.keys(agrupado[cid]).forEach(function(set) {
+        h += '<div class="setor-block" style="margin-bottom:8px;">';
+        h += '<div class="setor-header"><div class="sh-left"><div class="sh-badge ' + getSetorClass(set) + '">&#128194;</div>';
+        h += '<div class="sh-nome">' + escapeHtml(set) + '</div></div>';
+
+        var totalSetor = 0;
+        Object.keys(agrupado[cid][set]).forEach(function(rid) { totalSetor += agrupado[cid][set][rid].total; });
+        h += '<div class="sh-total">' + formatCurrency(totalSetor) + '</div></div>';
+
+        h += '<div class="setor-items">';
+        Object.keys(agrupado[cid][set]).forEach(function(rid) {
           var grp = agrupado[cid][set][rid];
-          h += '<div class="md-req-block">';
-          h += '<div class="md-req-head">';
-          h += '<div class="md-req-id">' + escapeHtml(rid) + '</div>';
-          h += '<div class="md-req-setor">' + escapeHtml(set) + '</div>';
-          h += '<div class="md-req-val">' + formatCurrency(grp.total) + '</div>';
+
+          h += '<div class="req-group-block">';
+          h += '<div class="req-group-header-pro">';
+          h += '<div class="rgh-top">';
+          h += '<div class="rgh-top-left">';
+          h += '<span class="rgh-id">' + escapeHtml(rid);
+          if (grp.obs) h += ' — ' + escapeHtml(grp.obs);
+          h += '</span>';
+          h += '<span class="rgh-count">' + grp.itens.length + ' itens · ' + formatCurrency(grp.total) + '</span>';
+          h += '</div>';
+          h += '<div class="rgh-top-right">';
+          h += '<button class="rgh-btn" onclick="imprimirHistReq(\'' + escapeHtml(mesNome) + '\',\'' + escapeHtml(cid) + '\',\'' + escapeHtml(set) + '\',\'' + escapeHtml(rid) + '\')" title="Imprimir">Imprimir</button>';
+          h += '</div></div>';
+
+          if (grp.data) {
+            h += '<div class="rgh-meta">';
+            h += '<span class="rgh-chip"><span class="rgh-chip-ico">📅</span>' + escapeHtml(_formatarDataUniversal(grp.data)) + '</span>';
+            h += '</div>';
+          }
           h += '</div>';
 
-          if (grp.obs) h += '<div class="md-req-obs">' + escapeHtml(grp.obs) + '</div>';
-
-          // Data formatada
-          if (grp.data) {
-            h += '<div style="padding:4px 14px;font-size:.62rem;color:var(--text-tertiary);border-bottom:1px solid var(--border-subtle);">' +
-                 _formatarDataUniversal(grp.data) + '</div>';
-          }
-
           grp.itens.forEach(function(it) {
-            h += '<div class="md-item">';
-            h += '<span class="md-item-desc">' + escapeHtml(it.descricao || '') +
-                 ' <span style="opacity:.4;">(x' + (it.quantidade || 0) + ')</span></span>';
-            h += '<span class="md-item-val">' + formatCurrency(it.total || 0) + '</span>';
-            h += '</div>';
+            var descDisplay = escapeHtml(it.descricao || '');
+            descDisplay = descDisplay.replace(/\[([^\]]+)\]/g, '<span style="color:var(--accent);font-size:0.63rem;font-weight:600;display:block;">$1</span>');
+            h += '<div class="item-row"><div class="item-desc">' + descDisplay +
+                 ' <span style="color:var(--text-tertiary);font-size:0.68rem;">(x' + (it.quantidade || 0) + ')</span></div>' +
+                 '<div class="item-valor">' + formatCurrency(it.total || 0) + '</div></div>';
           });
           h += '</div>';
         });
+        h += '</div></div>';
       });
       h += '</div>';
     });
-    h += '</div>';
   }
-
-  // Ações elite
-  h += '<div class="md-actions">';
-  h += '<button class="hist-acao-btn" onclick="imprimirMesEspecifico(\'' + escapeHtml(mesNome) + '\')">Imprimir este mês</button>';
-  h += '<button class="hist-acao-btn" onclick="whatsappMesEspecifico(\'' + escapeHtml(mesNome) + '\')">Copiar para WhatsApp</button>';
-  h += '</div>';
 
   document.getElementById('mesDetalheBody').innerHTML = h;
 };
 
+// v9.0: Scroll até cidade no histórico
+function scrollToHistCidade(cidadeNome) {
+  var id = 'hist-cidade-' + cidadeNome.replace(/\s/g, '-');
+  var el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// v9.0: Imprimir requisição individual do histórico
+function imprimirHistReq(mesNome, cidadeNome, setorNome, reqId) {
+  if (!_mesDetalheAtual || !_mesDetalheAtual.dados) { toast('Dados não carregados'); return; }
+  var detalhes = _mesDetalheAtual.dados.detalhes || [];
+  var grp = { itens: [], total: 0, observacao: '', data: '' };
+  detalhes.forEach(function(it) {
+    if (it.cidade === cidadeNome && it.setor === setorNome && (it.reqId || '-') === reqId) {
+      grp.itens.push(it);
+      grp.total += (it.total || 0);
+      if (it.observacao && !grp.observacao) grp.observacao = it.observacao;
+      if (it.data && !grp.data) grp.data = it.data;
+    }
+  });
+  if (!grp.itens.length) { toast('Requisição vazia'); return; }
+  var corpo = _gerarCabecalhoPDF(cidadeNome);
+  corpo += '<div style="text-align:center;font-size:10px;color:#64748b;margin:-6px 0 10px;">Histórico — ' + escapeHtml(_formatarNomeMes(mesNome)) + '</div>';
+  corpo += _gerarBlocoRequisicaoPDF(setorNome, reqId, grp);
+  _abrirJanelaImpressao('Requisição ' + reqId + ' — ' + cidadeNome + ' (' + _formatarNomeMes(mesNome) + ')', corpo);
+}
+
+// v9.0: Imprimir todas as requisições de uma cidade do histórico
+function imprimirHistCidade(mesNome, cidadeNome) {
+  if (!_mesDetalheAtual || !_mesDetalheAtual.dados) { toast('Dados não carregados'); return; }
+  var detalhes = _mesDetalheAtual.dados.detalhes || [];
+  var reqMap = {};
+  detalhes.forEach(function(it) {
+    if (it.cidade !== cidadeNome) return;
+    var set = it.setor || 'N/A', rid = it.reqId || '-';
+    var key = set + '|||' + rid;
+    if (!reqMap[key]) reqMap[key] = { setor: set, reqId: rid, itens: [], total: 0, observacao: '', data: '' };
+    reqMap[key].itens.push(it);
+    reqMap[key].total += (it.total || 0);
+    if (it.observacao && !reqMap[key].observacao) reqMap[key].observacao = it.observacao;
+    if (it.data && !reqMap[key].data) reqMap[key].data = it.data;
+  });
+
+  var keys = Object.keys(reqMap);
+  if (!keys.length) { toast('Sem requisições para esta cidade'); return; }
+
+  var corpo = _gerarCabecalhoPDF(cidadeNome);
+  corpo += '<div style="text-align:center;font-size:10px;color:#64748b;margin:-6px 0 10px;">Histórico — ' + escapeHtml(_formatarNomeMes(mesNome)) + '</div>';
+  var totalGeral = 0;
+  keys.forEach(function(key) {
+    var grp = reqMap[key];
+    corpo += _gerarBlocoRequisicaoPDF(grp.setor, grp.reqId, grp);
+    totalGeral += grp.total;
+  });
+  corpo += '<div class="pdf-resumo"><strong>TOTAL ' + escapeHtml(cidadeNome.toUpperCase()) + ': ' + formatCurrency(totalGeral) + '</strong><br>' +
+           keys.length + ' requisições</div>';
+  _abrirJanelaImpressao('Histórico ' + cidadeNome + ' — ' + _formatarNomeMes(mesNome), corpo);
+}
+
 // ── 7. ABRIR CIDADE — DATAS FORMATADAS ──────────────────────
 var _abrirCidadeOriginal = abrirCidade;
 abrirCidade = function(nome) {
-  // Formatar datas antes de renderizar
   if (dadosCompletos && dadosCompletos.cidades) {
     var cid = dadosCompletos.cidades.find(function(c) { return c.nome === nome; });
     if (cid) {
       cid.setores.forEach(function(setor) {
-        setor.itens.forEach(function(it) {
-          it.data = _formatarDataUniversal(it.data);
-        });
+        setor.itens.forEach(function(it) { it.data = _formatarDataUniversal(it.data); });
       });
     }
   }
   _abrirCidadeOriginal(nome);
 };
 
-// ── 8. HISTÓRICO DASHBOARD — DESIGN ELITE ──────────────────
+// ── 8. HISTÓRICO DASHBOARD — DESIGN v9.0 ───────────────────
 renderHistoricoDashboard = function() {
   var container = document.getElementById('historicoCards');
   if (!container) return;
@@ -2691,11 +2777,10 @@ renderHistoricoDashboard = function() {
     h += '<div class="hist-mes-card" onclick="abrirMesDetalhe(\'' + escapeHtml(mes.nome) + '\')" style="animation-delay:' + (mIdx * 0.05) + 's;">';
 
     h += '<div class="hist-mes-top">';
-    h += '<div class="hist-mes-nome">' + escapeHtml(mes.nome) + '</div>';
+    h += '<div class="hist-mes-nome">' + escapeHtml(_formatarNomeMes(mes.nome)) + '</div>';
     h += '<div class="hist-mes-total">' + formatCurrency(mes.total) + '</div>';
     h += '</div>';
 
-    // Chips de cidades
     h += '<div class="hist-mes-cidades">';
     CIDADES_ORDEM.forEach(function(cid) {
       var val = (mes.cidades && mes.cidades[cid]) ? mes.cidades[cid] : 0;
@@ -2706,7 +2791,6 @@ renderHistoricoDashboard = function() {
     });
     h += '</div>';
 
-    // Mini barras
     var maxCid = 1;
     CIDADES_ORDEM.forEach(function(cid) {
       var val = (mes.cidades && mes.cidades[cid]) || 0;
@@ -2726,7 +2810,36 @@ renderHistoricoDashboard = function() {
   container.innerHTML = h;
 };
 
-// ── 9. HISTÓRICO COMPLETO — COM CACHE ───────────────────────
+// ── 9. HISTÓRICO COMPLETO — v9.0: design melhor ────────────
+renderHistoricoCompleto = function() {
+  if (!historicoMeses || !historicoMeses.length) {
+    document.getElementById('historicoBody').innerHTML = '<div class="empty-state"><div class="empty-text">Nenhum mês arquivado ainda</div></div>';
+    return;
+  }
+  var CIDADES_ORDEM = ['Ibicuí', 'Nova Canaã', 'Boa Nova', 'Dário Meira', 'Floresta Azul'];
+  var meses = historicoMeses.slice().reverse();
+  var totalAcumulado = 0;
+  meses.forEach(function(m) { totalAcumulado += (m.total || 0); });
+
+  var h = '<div class="hist-full-header"><div class="hfh-total">' + formatCurrency(totalAcumulado) + '</div>';
+  h += '<div class="hfh-count">' + meses.length + ' meses arquivados</div></div>';
+  h += '<div class="hist-acoes"><button class="hist-acao-btn" onclick="imprimirHistorico3Meses()">Imprimir últimos 3 meses</button>';
+  h += '<button class="hist-acao-btn" onclick="whatsappHistorico3Meses()">WhatsApp últimos 3 meses</button></div>';
+
+  meses.forEach(function(mes) {
+    h += '<div class="hist-full-mes" onclick="abrirMesDetalhe(\'' + escapeHtml(mes.nome) + '\')">';
+    h += '<div class="hfm-top"><div class="hfm-nome">' + escapeHtml(_formatarNomeMes(mes.nome)) + '</div><div class="hfm-total">' + formatCurrency(mes.total) + '</div></div>';
+    h += '<div class="hfm-cidades">';
+    CIDADES_ORDEM.forEach(function(cid) {
+      var val = (mes.cidades && mes.cidades[cid]) ? mes.cidades[cid] : 0;
+      if (val > 0) h += '<div class="hfm-cid-row"><span class="hfm-cid-nome">' + escapeHtml(cid) + '</span><span class="hfm-cid-val">' + formatCurrency(val) + '</span></div>';
+    });
+    h += '</div></div>';
+  });
+
+  document.getElementById('historicoBody').innerHTML = h;
+};
+
 abrirHistoricoCompleto = function() {
   document.body.style.overflow = 'hidden';
   document.getElementById('historicoModal').classList.add('show');
@@ -2739,12 +2852,10 @@ abrirHistoricoCompleto = function() {
       '<div style="color:var(--text-secondary);font-size:.82rem;font-weight:600;">Carregando histórico...</div></div>';
     carregarHistorico();
     setTimeout(renderHistoricoCompleto, 2500);
-  } else {
-    renderHistoricoCompleto();
-  }
+  } else { renderHistoricoCompleto(); }
 };
 
-// ── 10. VIRADA DE MÊS — DATAS FORMATADAS + DESIGN ELITE ────
+// ── 10. VIRADA DE MÊS ──────────────────────────────────────
 abrirViradaMes = function() {
   document.body.style.overflow = 'hidden';
   document.getElementById('viradaMesModal').classList.add('show');
@@ -2754,54 +2865,28 @@ abrirViradaMes = function() {
   var hoje = new Date();
   var mesAtual = meses[hoje.getMonth()] + '/' + hoje.getFullYear();
   var dataHoje = String(hoje.getDate()).padStart(2,'0') + '/' + String(hoje.getMonth()+1).padStart(2,'0') + '/' + hoje.getFullYear();
-
   var totalGeral = dadosCompletos ? (dadosCompletos.totalGeral || 0) : 0;
   var totalItens = 0;
   if (dadosCompletos && dadosCompletos.cidades) dadosCompletos.cidades.forEach(function(c) { totalItens += c.itens; });
 
-  var h = '';
-  h += '<div class="vm-header">';
-  h += '<div class="vm-icon">📅</div>';
-  h += '<div class="vm-title">Virada de Mês</div>';
-  h += '<div class="vm-subtitle">Arquivar o período atual e iniciar novo ciclo</div>';
-  h += '</div>';
-
-  h += '<div class="vm-info-box">';
-  h += '<div class="vm-info-label">Período a ser arquivado</div>';
-  h += '<div class="vm-info-value">' + escapeHtml(mesAtual) + '</div>';
-  h += '<div class="vm-info-stats">';
-  h += '<span>' + formatCurrency(totalGeral) + '</span>';
-  h += '<span>' + totalItens + ' itens</span>';
-  h += '<span>' + dataHoje + '</span>';
-  h += '</div>';
-  h += '</div>';
+  var h = '<div class="vm-header"><div class="vm-icon">📅</div><div class="vm-title">Virada de Mês</div><div class="vm-subtitle">Arquivar o período atual e iniciar novo ciclo</div></div>';
+  h += '<div class="vm-info-box"><div class="vm-info-label">Período a ser arquivado</div><div class="vm-info-value">' + escapeHtml(mesAtual) + '</div>';
+  h += '<div class="vm-info-stats"><span>' + formatCurrency(totalGeral) + '</span><span>' + totalItens + ' itens</span><span>' + dataHoje + '</span></div></div>';
 
   if (dadosCompletos && dadosCompletos.cidades) {
     h += '<div class="vm-cidades-resumo">';
     dadosCompletos.cidades.forEach(function(cid) {
-      if (cid.itens > 0) {
-        h += '<div class="vm-cidade-row">';
-        h += '<span class="vm-cid-nome">' + escapeHtml(cid.nome) + '</span>';
-        h += '<span class="vm-cid-val">' + formatCurrency(cid.total) + ' · ' + cid.itens + ' itens</span>';
-        h += '</div>';
-      }
+      if (cid.itens > 0) h += '<div class="vm-cidade-row"><span class="vm-cid-nome">' + escapeHtml(cid.nome) + '</span><span class="vm-cid-val">' + formatCurrency(cid.total) + ' · ' + cid.itens + ' itens</span></div>';
     });
     h += '</div>';
   }
 
-  h += '<div class="vm-warning">';
-  h += '<strong>Atenção:</strong> Esta ação irá salvar todos os dados do mês atual no histórico e limpar as requisições para o novo período. Esta ação é irreversível.';
-  h += '</div>';
-
-  h += '<div class="vm-actions">';
-  h += '<button class="vm-btn-cancel" onclick="fecharViradaMes()">Cancelar</button>';
-  h += '<button class="vm-btn-confirm" id="vmBtnConfirm" onclick="confirmarViradaMes()">Confirmar Virada</button>';
-  h += '</div>';
+  h += '<div class="vm-warning"><strong>Atenção:</strong> Esta ação irá salvar todos os dados do mês atual no histórico e limpar as requisições para o novo período. Esta ação é irreversível.</div>';
+  h += '<div class="vm-actions"><button class="vm-btn-cancel" onclick="fecharViradaMes()">Cancelar</button><button class="vm-btn-confirm" id="vmBtnConfirm" onclick="confirmarViradaMes()">Confirmar Virada</button></div>';
 
   document.getElementById('viradaMesBody').innerHTML = h;
 };
 
-// ── 11. CONFIRMAR VIRADA — LIMPAR CACHE APÓS ────────────────
 confirmarViradaMes = function() {
   if (!confirm('TEM CERTEZA que deseja virar o mês?\n\nTodos os dados serão arquivados e as requisições zeradas.')) return;
   var btn = document.getElementById('vmBtnConfirm');
@@ -2819,57 +2904,41 @@ confirmarViradaMes = function() {
     if (d.status === 'ok') {
       showSuccess('', 'Mês virado com sucesso!', d.mesArquivado || '');
       fecharViradaMes();
-      // Limpar TODOS os caches
-      historicoMeses = null;
-      dadosCompletos = null;
-      window._precoCustoMapaCache = null;
-      _cacheLocal.clear();
-      carregarDados();
-      carregarHistorico();
+      historicoMeses = null; dadosCompletos = null; window._precoCustoMapaCache = null;
+      _cacheLocal.clear(); carregarDados(); carregarHistorico();
     } else { toast(d.msg || 'Erro na virada de mês'); }
   })
   .catch(function() { btn.disabled = false; btn.textContent = 'Confirmar Virada'; toast('Erro de conexão'); });
 };
 
-// ── 12. LIMPAR CACHE — ATUALIZADO ───────────────────────────
+// ── 11. LIMPAR CACHE ────────────────────────────────────────
 limparCacheLocal = function() {
-  window._precoCustoMapaCache = null;
-  window._catalogoCustoItens = null;
-  catalogo = [];
-  comandosIA = [];
-  historicoMeses = null;
-  dadosCompletos = null;
-  _cacheLocal.clear();
-  toast('Cache limpo');
+  window._precoCustoMapaCache = null; window._catalogoCustoItens = null;
+  catalogo = []; comandosIA = []; historicoMeses = null; dadosCompletos = null;
+  _cacheLocal.clear(); toast('Cache limpo');
   if (sessao) { carregarDados(); carregarHistorico(); }
 };
 
-// ── 13. CATÁLOGO CUSTO — LOADING MAIS RÁPIDO ────────────────
-var _abrirCatalogoCustoOriginal = abrirCatalogoCusto;
+// ── 12. CATÁLOGO CUSTO — LOADING RÁPIDO ─────────────────────
 abrirCatalogoCusto = function() {
   document.body.style.overflow = 'hidden';
   document.getElementById('catalogoCustoModal').classList.add('show');
   history.pushState({ modal: 'catalogoCusto' }, '', '');
 
-  _custoCatSort = 'setor';
-  _custoCatSetorFiltro = 'TODOS';
+  _custoCatSort = 'setor'; _custoCatSetorFiltro = 'TODOS';
   document.getElementById('catalogoCustoSearch').value = '';
   document.getElementById('custoSetorTabs').innerHTML = '';
   document.querySelectorAll('.custo-filter-btn').forEach(function(btn) {
     btn.classList.toggle('active', btn.dataset.sort === 'setor');
   });
 
-  // Tenta cache local primeiro
   var cached = _cacheLocal.get('catalogoCusto');
   if (cached && cached.length) {
     window._catalogoCustoItens = cached.map(function(it) {
       if (!it._setor) it._setor = _categorizarItem(it.descricao);
       return it;
     });
-    _renderCustoSetorTabs();
-    renderCatalogoCusto('');
-
-    // Atualiza em background
+    _renderCustoSetorTabs(); renderCatalogoCusto('');
     fetch(API_URL + '?userHash=' + sessao.hash + '&acao=catalogocusto')
       .then(function(r) { return r.json(); })
       .then(function(d) {
@@ -2883,8 +2952,7 @@ abrirCatalogoCusto = function() {
   }
 
   document.getElementById('catalogoCustoBody').innerHTML =
-    '<div style="text-align:center;padding:50px 20px;">' +
-    '<div class="ld-spinner" style="margin:0 auto 16px;"></div>' +
+    '<div style="text-align:center;padding:50px 20px;"><div class="ld-spinner" style="margin:0 auto 16px;"></div>' +
     '<div style="color:var(--text-secondary);font-size:.8rem;font-weight:600;">Carregando catálogo...</div></div>';
 
   fetch(API_URL + '?userHash=' + sessao.hash + '&acao=catalogocusto')
@@ -2894,10 +2962,54 @@ abrirCatalogoCusto = function() {
       var itens = (d.itens || []).map(function(it) { it._setor = _categorizarItem(it.descricao); return it; });
       window._catalogoCustoItens = itens;
       _cacheLocal.set('catalogoCusto', itens, 180000);
-      _renderCustoSetorTabs();
-      renderCatalogoCusto('');
+      _renderCustoSetorTabs(); renderCatalogoCusto('');
     })
     .catch(function() { toast('Erro de conexão'); });
+};
+
+// ── 13. CATÁLOGO CUSTO — PREÇO DE VENDA JUNTO ──────────────
+var _renderCustoItemOriginal = _renderCustoItem;
+_renderCustoItem = function(it) {
+  var setorInfo = _getSetorInfo(it._setor);
+  var confClass = '', confLabel = '';
+  if (it.confianca) {
+    var cf = it.confianca.toUpperCase();
+    if (cf === 'ALTA') { confClass = 'conf-alta'; confLabel = 'Alta'; }
+    else if (cf === 'MEDIA' || cf === 'MÉDIA') { confClass = 'conf-media'; confLabel = 'Média'; }
+    else { confClass = 'conf-baixa'; confLabel = 'Baixa'; }
+  }
+
+  var h = '<div class="custo-item">';
+  h += '<div class="custo-item-info">';
+  h += '<div class="custo-item-nome">' + escapeHtml(it.descricao) + '</div>';
+  h += '<div class="custo-item-meta">';
+  h += '<span style="opacity:.7;">' + setorInfo.icon + ' ' + (it._setor || 'Outros').charAt(0) + (it._setor || 'Outros').slice(1).toLowerCase() + '</span>';
+  if (confLabel) h += '<span class="custo-item-badge ' + confClass + '">' + confLabel + '</span>';
+
+  // v9.0: Mostrar preço de venda para referência se disponível
+  if (it.precoVenda && it.precoVenda > 0) {
+    var margem = it.custo > 0 ? (((it.precoVenda - it.custo) / it.custo) * 100).toFixed(0) : '';
+    h += '<span class="custo-item-badge" style="background:var(--accent-soft);border:1px solid var(--accent-mid);color:var(--accent);">Venda: ' + formatCurrency(it.precoVenda);
+    if (margem) h += ' (' + (margem > 0 ? '+' : '') + margem + '%)';
+    h += '</span>';
+  }
+  h += '</div></div>';
+
+  h += '<div class="custo-item-action">';
+  h += '<div class="custo-valor-wrap">';
+  h += '<span class="custo-prefix">R$</span>';
+  h += '<input type="text" inputmode="decimal" class="custo-input" ' +
+       'id="input_custo_' + it.linha + '" ' +
+       'value="' + formatNum(it.custo || 0) + '" ' +
+       'data-linha="' + it.linha + '" ' +
+       'data-original="' + (it.custo || 0) + '" ' +
+       'data-desc="' + escapeHtml(it.descricao) + '" ' +
+       'onfocus="this.select()" ' +
+       'onkeydown="if(event.key===\'Enter\')salvarPrecoCusto(' + it.linha + ')">';
+  h += '</div>';
+  h += '<button class="custo-save-btn" onclick="salvarPrecoCusto(' + it.linha + ')" title="Salvar">✓</button>';
+  h += '</div></div>';
+  return h;
 };
 
 // ── 14. RE-EXPOR NOVAS FUNÇÕES ──────────────────────────────
@@ -2905,6 +3017,7 @@ window.abrirCidade = abrirCidade;
 window.abrirMesDetalhe = abrirMesDetalhe;
 window.renderMesDetalhe = renderMesDetalhe;
 window.renderHistoricoDashboard = renderHistoricoDashboard;
+window.renderHistoricoCompleto = renderHistoricoCompleto;
 window.abrirHistoricoCompleto = abrirHistoricoCompleto;
 window.abrirViradaMes = abrirViradaMes;
 window.confirmarViradaMes = confirmarViradaMes;
@@ -2912,7 +3025,13 @@ window.limparCacheLocal = limparCacheLocal;
 window.abrirCatalogoCusto = abrirCatalogoCusto;
 window.carregarDados = carregarDados;
 window.carregarHistorico = carregarHistorico;
+window.scrollToHistCidade = scrollToHistCidade;
+window.imprimirHistReq = imprimirHistReq;
+window.imprimirHistCidade = imprimirHistCidade;
+window.filtrarCatalogo = filtrarCatalogo;
+window.filtrarCatalogoCusto = filtrarCatalogoCusto;
+window._renderCustoItem = _renderCustoItem;
 
 // ══════════════════════════════════════════════════════════════
-//  FIM PATCH v8.8.1
+//  FIM PATCH v9.0.0
 // ══════════════════════════════════════════════════════════════
