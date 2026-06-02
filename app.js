@@ -2344,7 +2344,575 @@ window.whatsappMesEspecifico = whatsappMesEspecifico;
 window.limparCacheLocal = limparCacheLocal;
 window.diagnostico = diagnostico;
 
+
 // ══════════════════════════════════════════════════════════════
-//  FIM — app.js v8.8.0 PREMIUM
-//  Grupo Carlos Vaz — CRV/LAS
+//  PATCH v8.8.1 — Performance + Data formatada + Design elite
+//  Cola no FINAL do app.js (sobrescreve funções anteriores)
+// ══════════════════════════════════════════════════════════════
+
+// ── 1. CACHE LOCAL INTELIGENTE ──────────────────────────────
+var _cacheLocal = {
+  get: function(key) {
+    try {
+      var raw = sessionStorage.getItem('cv_' + key);
+      if (!raw) return null;
+      var obj = JSON.parse(raw);
+      if (obj._exp && Date.now() > obj._exp) { sessionStorage.removeItem('cv_' + key); return null; }
+      return obj.data;
+    } catch(e) { return null; }
+  },
+  set: function(key, data, ttlMs) {
+    try {
+      sessionStorage.setItem('cv_' + key, JSON.stringify({ data: data, _exp: Date.now() + (ttlMs || 60000) }));
+    } catch(e) {}
+  },
+  clear: function() {
+    try {
+      Object.keys(sessionStorage).forEach(function(k) { if (k.indexOf('cv_') === 0) sessionStorage.removeItem(k); });
+    } catch(e) {}
+  }
+};
+
+// ── 2. FORMATADOR DE DATA UNIVERSAL (corrige "Mon Jun 01...") ──
+function _formatarDataUniversal(val) {
+  if (!val) return '';
+  var s = String(val).trim();
+
+  // Já está DD/MM/AAAA
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+
+  // ISO: AAAA-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    var p = s.substring(0, 10).split('-');
+    return p[2] + '/' + p[1] + '/' + p[0];
+  }
+
+  // Formato longo: "Mon Jun 01 2026 04:00:00 GMT..." ou similar
+  try {
+    var d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return String(d.getDate()).padStart(2, '0') + '/' +
+             String(d.getMonth() + 1).padStart(2, '0') + '/' +
+             d.getFullYear();
+    }
+  } catch(e) {}
+
+  // Timestamp numérico
+  if (/^\d{10,13}$/.test(s)) {
+    var ts = parseInt(s);
+    if (ts < 10000000000) ts *= 1000;
+    var d2 = new Date(ts);
+    if (!isNaN(d2.getTime())) {
+      return String(d2.getDate()).padStart(2, '0') + '/' +
+             String(d2.getMonth() + 1).padStart(2, '0') + '/' +
+             d2.getFullYear();
+    }
+  }
+
+  return s;
+}
+
+// Sobrescrever formatarDataBR com a versão universal
+formatarDataBR = _formatarDataUniversal;
+
+// ── 3. CARREGAR DADOS — COM CACHE + LOADING RÁPIDO ──────────
+carregarDados = function() {
+  // Tenta cache primeiro (mostra instantâneo)
+  var cached = _cacheLocal.get('dadosCompletos');
+  if (cached && !dadosCompletos) {
+    dadosCompletos = cached;
+    renderPainel();
+  }
+
+  var bar = document.getElementById('ldBarTop');
+  bar.style.transition = 'width 1.5s ease';
+  bar.style.width = '60%';
+
+  fetch(API_URL + '?userHash=' + sessao.hash + '&dados=todos')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      bar.style.transition = 'width .2s ease';
+      bar.style.width = '100%';
+      setTimeout(function() {
+        bar.style.opacity = '0';
+        setTimeout(function() { bar.style.width = '0'; bar.style.opacity = '1'; }, 200);
+      }, 150);
+
+      document.getElementById('ldScreen').classList.add('hidden');
+      var g = document.getElementById('cidadesGrid');
+      if (g) delete g.dataset.skeleton;
+
+      // Formatar todas as datas antes de usar
+      if (d && d.cidades) {
+        d.cidades.forEach(function(cid) {
+          cid.setores.forEach(function(setor) {
+            setor.itens.forEach(function(it) {
+              it.data = _formatarDataUniversal(it.data);
+            });
+          });
+        });
+      }
+
+      dadosCompletos = d;
+      _cacheLocal.set('dadosCompletos', d, 120000); // 2 min cache
+      renderPainel();
+
+      var hoje = new Date();
+      document.getElementById('syncTime').textContent =
+        'Sincronizado às ' + String(hoje.getHours()).padStart(2, '0') + ':' +
+        String(hoje.getMinutes()).padStart(2, '0');
+      setBadge(true);
+    })
+    .catch(function() {
+      bar.style.width = '0';
+      document.getElementById('ldScreen').classList.add('hidden');
+      // Se falhou mas tem cache, usa cache
+      if (!dadosCompletos) {
+        var fallback = _cacheLocal.get('dadosCompletos');
+        if (fallback) { dadosCompletos = fallback; renderPainel(); }
+      }
+      toast('Erro de conexão');
+      setBadge(false);
+    });
+};
+
+// ── 4. CARREGAR HISTÓRICO — COM CACHE ──────────────────────
+carregarHistorico = function() {
+  // Cache instantâneo
+  var cached = _cacheLocal.get('historico');
+  if (cached && !historicoMeses) {
+    historicoMeses = cached;
+    renderHistoricoDashboard();
+  }
+
+  fetch(API_URL + '?userHash=' + sessao.hash + '&acao=historico')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.status === 'ok') {
+        historicoMeses = d.meses || [];
+        _cacheLocal.set('historico', historicoMeses, 180000); // 3 min
+        renderHistoricoDashboard();
+      }
+    })
+    .catch(function() {});
+};
+
+// ── 5. MÊS DETALHE — COM CACHE + LOADING ELEGANTE ──────────
+abrirMesDetalhe = function(mesNome) {
+  document.getElementById('mesDetalheModal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  history.pushState({ modal: 'mesDetalhe' }, '', '');
+  document.getElementById('mesDetalheTitle').textContent = mesNome;
+
+  // Loading elegante
+  document.getElementById('mesDetalheBody').innerHTML =
+    '<div style="text-align:center;padding:60px 20px;">' +
+    '<div class="ld-spinner" style="margin:0 auto 18px;width:24px;height:24px;"></div>' +
+    '<div style="color:var(--text-secondary);font-size:.82rem;font-weight:600;">' + escapeHtml(mesNome) + '</div>' +
+    '<div style="color:var(--text-tertiary);font-size:.68rem;margin-top:4px;">Carregando detalhes...</div></div>';
+
+  // Tenta cache
+  var cacheKey = 'mes_' + mesNome.replace(/[^a-zA-Z0-9]/g, '_');
+  var cached = _cacheLocal.get(cacheKey);
+  if (cached) {
+    renderMesDetalhe(mesNome, cached);
+    return;
+  }
+
+  fetch(API_URL + '?userHash=' + sessao.hash + '&acao=historicomes&mes=' + encodeURIComponent(mesNome))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.status === 'ok') {
+        // Formatar datas
+        if (d.detalhes) {
+          d.detalhes.forEach(function(it) { it.data = _formatarDataUniversal(it.data); });
+        }
+        _cacheLocal.set(cacheKey, d, 300000); // 5 min
+        renderMesDetalhe(mesNome, d);
+      } else {
+        document.getElementById('mesDetalheBody').innerHTML =
+          '<div class="empty-state"><div class="empty-text">' + escapeHtml(d.msg || 'Erro') + '</div></div>';
+      }
+    })
+    .catch(function() {
+      document.getElementById('mesDetalheBody').innerHTML =
+        '<div class="empty-state"><div class="empty-text">Erro de conexão</div></div>';
+    });
+};
+
+// ── 6. RENDER MES DETALHE — DATAS FORMATADAS + DESIGN ELITE ──
+renderMesDetalhe = function(mesNome, dados) {
+  var CIDADES_ORDEM = ['Ibicuí', 'Nova Canaã', 'Boa Nova', 'Dário Meira', 'Floresta Azul'];
+  var resumo = dados.resumo || {}, detalhes = dados.detalhes || [];
+
+  var h = '';
+
+  // Header elite
+  h += '<div class="md-resumo">';
+  h += '<div style="font-size:.58rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.12em;font-weight:700;margin-bottom:6px;">Total do Período</div>';
+  h += '<div class="md-total-geral">' + formatCurrency(resumo.total || 0) + '</div>';
+  h += '<div class="md-total-meta">' + (resumo.totalItens || 0) + ' itens registrados</div>';
+  h += '</div>';
+
+  // Ranking cidades
+  var cidadeArr = [];
+  CIDADES_ORDEM.forEach(function(cid) {
+    cidadeArr.push({ nome: cid, total: (resumo.cidades && resumo.cidades[cid]) || 0 });
+  });
+  cidadeArr.sort(function(a, b) { return b.total - a.total; });
+  var maxCid = cidadeArr[0] && cidadeArr[0].total > 0 ? cidadeArr[0].total : 1;
+
+  h += '<div class="md-section"><div class="md-section-title">Ranking por Cidade</div>';
+  h += '<div class="ranking-card" style="margin-bottom:0;">';
+  cidadeArr.forEach(function(c, idx) {
+    if (c.total <= 0) return;
+    var pct = (c.total / maxCid) * 100;
+    h += '<div class="ranking-item"><div class="r-left"><span class="r-pos">' + (idx + 1) +
+         '</span><div class="r-info"><span class="r-nome">' + escapeHtml(c.nome) +
+         '</span></div></div><div class="r-right"><span class="r-valor">' + formatCurrency(c.total) +
+         '</span><div class="r-bar-bg"><div class="r-bar-fill blue" style="width:' + pct + '%"></div></div></div></div>';
+  });
+  h += '</div></div>';
+
+  // Ranking setores
+  if (resumo.setores) {
+    var setorArr = [];
+    Object.keys(resumo.setores).forEach(function(s) { setorArr.push({ nome: s, total: resumo.setores[s] }); });
+    setorArr.sort(function(a, b) { return b.total - a.total; });
+    var maxSet = setorArr[0] && setorArr[0].total > 0 ? setorArr[0].total : 1;
+
+    h += '<div class="md-section"><div class="md-section-title">Ranking por Setor</div>';
+    h += '<div class="ranking-card" style="margin-bottom:0;">';
+    setorArr.forEach(function(s, idx) {
+      if (s.total <= 0) return;
+      h += '<div class="ranking-item"><div class="r-left"><span class="r-pos">' + (idx + 1) +
+           '</span><div class="r-info"><span class="r-nome">' + escapeHtml(s.nome) +
+           '</span></div></div><div class="r-right"><span class="r-valor">' + formatCurrency(s.total) +
+           '</span><div class="r-bar-bg"><div class="r-bar-fill purple" style="width:' + ((s.total / maxSet) * 100) + '%"></div></div></div></div>';
+    });
+    h += '</div></div>';
+  }
+
+  // Detalhes das requisições
+  if (detalhes.length) {
+    h += '<div class="md-section"><div class="md-section-title">Requisições do Período</div>';
+
+    var agrupado = {};
+    detalhes.forEach(function(it) {
+      var cid = it.cidade || 'N/A', set = it.setor || 'N/A', rid = it.reqId || '-';
+      if (!agrupado[cid]) agrupado[cid] = {};
+      if (!agrupado[cid][set]) agrupado[cid][set] = {};
+      if (!agrupado[cid][set][rid]) agrupado[cid][set][rid] = { itens: [], total: 0, obs: '', data: '' };
+      agrupado[cid][set][rid].itens.push(it);
+      agrupado[cid][set][rid].total += (it.total || 0);
+      if (it.observacao && !agrupado[cid][set][rid].obs) agrupado[cid][set][rid].obs = it.observacao;
+      if (it.data && !agrupado[cid][set][rid].data) agrupado[cid][set][rid].data = it.data;
+    });
+
+    CIDADES_ORDEM.forEach(function(cid) {
+      if (!agrupado[cid]) return;
+      h += '<div class="md-cidade-block">';
+      h += '<div class="md-cidade-nome">' + escapeHtml(cid) + '</div>';
+
+      Object.keys(agrupado[cid]).forEach(function(set) {
+        Object.keys(agrupado[cid][set]).forEach(function(rid) {
+          var grp = agrupado[cid][set][rid];
+          h += '<div class="md-req-block">';
+          h += '<div class="md-req-head">';
+          h += '<div class="md-req-id">' + escapeHtml(rid) + '</div>';
+          h += '<div class="md-req-setor">' + escapeHtml(set) + '</div>';
+          h += '<div class="md-req-val">' + formatCurrency(grp.total) + '</div>';
+          h += '</div>';
+
+          if (grp.obs) h += '<div class="md-req-obs">' + escapeHtml(grp.obs) + '</div>';
+
+          // Data formatada
+          if (grp.data) {
+            h += '<div style="padding:4px 14px;font-size:.62rem;color:var(--text-tertiary);border-bottom:1px solid var(--border-subtle);">' +
+                 _formatarDataUniversal(grp.data) + '</div>';
+          }
+
+          grp.itens.forEach(function(it) {
+            h += '<div class="md-item">';
+            h += '<span class="md-item-desc">' + escapeHtml(it.descricao || '') +
+                 ' <span style="opacity:.4;">(x' + (it.quantidade || 0) + ')</span></span>';
+            h += '<span class="md-item-val">' + formatCurrency(it.total || 0) + '</span>';
+            h += '</div>';
+          });
+          h += '</div>';
+        });
+      });
+      h += '</div>';
+    });
+    h += '</div>';
+  }
+
+  // Ações elite
+  h += '<div class="md-actions">';
+  h += '<button class="hist-acao-btn" onclick="imprimirMesEspecifico(\'' + escapeHtml(mesNome) + '\')">Imprimir este mês</button>';
+  h += '<button class="hist-acao-btn" onclick="whatsappMesEspecifico(\'' + escapeHtml(mesNome) + '\')">Copiar para WhatsApp</button>';
+  h += '</div>';
+
+  document.getElementById('mesDetalheBody').innerHTML = h;
+};
+
+// ── 7. ABRIR CIDADE — DATAS FORMATADAS ──────────────────────
+var _abrirCidadeOriginal = abrirCidade;
+abrirCidade = function(nome) {
+  // Formatar datas antes de renderizar
+  if (dadosCompletos && dadosCompletos.cidades) {
+    var cid = dadosCompletos.cidades.find(function(c) { return c.nome === nome; });
+    if (cid) {
+      cid.setores.forEach(function(setor) {
+        setor.itens.forEach(function(it) {
+          it.data = _formatarDataUniversal(it.data);
+        });
+      });
+    }
+  }
+  _abrirCidadeOriginal(nome);
+};
+
+// ── 8. HISTÓRICO DASHBOARD — DESIGN ELITE ──────────────────
+renderHistoricoDashboard = function() {
+  var container = document.getElementById('historicoCards');
+  if (!container) return;
+
+  if (!historicoMeses || !historicoMeses.length) {
+    container.innerHTML = '<div class="hist-empty"><div class="hist-empty-text">Nenhum mês arquivado ainda.<br>Use "Virada de Mês" no menu para arquivar.</div></div>';
+    return;
+  }
+
+  var ultimos = historicoMeses.slice(-3).reverse();
+  var CIDADES_ORDEM = ['Ibicuí', 'Nova Canaã', 'Boa Nova', 'Dário Meira', 'Floresta Azul'];
+  var h = '';
+
+  ultimos.forEach(function(mes, mIdx) {
+    h += '<div class="hist-mes-card" onclick="abrirMesDetalhe(\'' + escapeHtml(mes.nome) + '\')" style="animation-delay:' + (mIdx * 0.05) + 's;">';
+
+    h += '<div class="hist-mes-top">';
+    h += '<div class="hist-mes-nome">' + escapeHtml(mes.nome) + '</div>';
+    h += '<div class="hist-mes-total">' + formatCurrency(mes.total) + '</div>';
+    h += '</div>';
+
+    // Chips de cidades
+    h += '<div class="hist-mes-cidades">';
+    CIDADES_ORDEM.forEach(function(cid) {
+      var val = (mes.cidades && mes.cidades[cid]) ? mes.cidades[cid] : 0;
+      if (val > 0) {
+        h += '<span class="hist-cidade-chip">' + escapeHtml(cid) +
+             ' <span class="hcc-valor">' + formatCurrency(val) + '</span></span>';
+      }
+    });
+    h += '</div>';
+
+    // Mini barras
+    var maxCid = 1;
+    CIDADES_ORDEM.forEach(function(cid) {
+      var val = (mes.cidades && mes.cidades[cid]) || 0;
+      if (val > maxCid) maxCid = val;
+    });
+    h += '<div class="hist-bars">';
+    CIDADES_ORDEM.forEach(function(cid) {
+      var val = (mes.cidades && mes.cidades[cid]) || 0;
+      var pct = maxCid > 0 ? Math.max(3, (val / maxCid) * 100) : 3;
+      h += '<div class="hist-bar" style="height:' + pct + '%" title="' + escapeHtml(cid) + ': ' + formatCurrency(val) + '"></div>';
+    });
+    h += '</div>';
+
+    h += '</div>';
+  });
+
+  container.innerHTML = h;
+};
+
+// ── 9. HISTÓRICO COMPLETO — COM CACHE ───────────────────────
+abrirHistoricoCompleto = function() {
+  document.body.style.overflow = 'hidden';
+  document.getElementById('historicoModal').classList.add('show');
+  history.pushState({ modal: 'historico' }, '', '');
+
+  if (!historicoMeses) {
+    document.getElementById('historicoBody').innerHTML =
+      '<div style="text-align:center;padding:60px 20px;">' +
+      '<div class="ld-spinner" style="margin:0 auto 18px;width:24px;height:24px;"></div>' +
+      '<div style="color:var(--text-secondary);font-size:.82rem;font-weight:600;">Carregando histórico...</div></div>';
+    carregarHistorico();
+    setTimeout(renderHistoricoCompleto, 2500);
+  } else {
+    renderHistoricoCompleto();
+  }
+};
+
+// ── 10. VIRADA DE MÊS — DATAS FORMATADAS + DESIGN ELITE ────
+abrirViradaMes = function() {
+  document.body.style.overflow = 'hidden';
+  document.getElementById('viradaMesModal').classList.add('show');
+  history.pushState({ modal: 'viradaMes' }, '', '');
+
+  var meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var hoje = new Date();
+  var mesAtual = meses[hoje.getMonth()] + '/' + hoje.getFullYear();
+  var dataHoje = String(hoje.getDate()).padStart(2,'0') + '/' + String(hoje.getMonth()+1).padStart(2,'0') + '/' + hoje.getFullYear();
+
+  var totalGeral = dadosCompletos ? (dadosCompletos.totalGeral || 0) : 0;
+  var totalItens = 0;
+  if (dadosCompletos && dadosCompletos.cidades) dadosCompletos.cidades.forEach(function(c) { totalItens += c.itens; });
+
+  var h = '';
+  h += '<div class="vm-header">';
+  h += '<div class="vm-icon">📅</div>';
+  h += '<div class="vm-title">Virada de Mês</div>';
+  h += '<div class="vm-subtitle">Arquivar o período atual e iniciar novo ciclo</div>';
+  h += '</div>';
+
+  h += '<div class="vm-info-box">';
+  h += '<div class="vm-info-label">Período a ser arquivado</div>';
+  h += '<div class="vm-info-value">' + escapeHtml(mesAtual) + '</div>';
+  h += '<div class="vm-info-stats">';
+  h += '<span>' + formatCurrency(totalGeral) + '</span>';
+  h += '<span>' + totalItens + ' itens</span>';
+  h += '<span>' + dataHoje + '</span>';
+  h += '</div>';
+  h += '</div>';
+
+  if (dadosCompletos && dadosCompletos.cidades) {
+    h += '<div class="vm-cidades-resumo">';
+    dadosCompletos.cidades.forEach(function(cid) {
+      if (cid.itens > 0) {
+        h += '<div class="vm-cidade-row">';
+        h += '<span class="vm-cid-nome">' + escapeHtml(cid.nome) + '</span>';
+        h += '<span class="vm-cid-val">' + formatCurrency(cid.total) + ' · ' + cid.itens + ' itens</span>';
+        h += '</div>';
+      }
+    });
+    h += '</div>';
+  }
+
+  h += '<div class="vm-warning">';
+  h += '<strong>Atenção:</strong> Esta ação irá salvar todos os dados do mês atual no histórico e limpar as requisições para o novo período. Esta ação é irreversível.';
+  h += '</div>';
+
+  h += '<div class="vm-actions">';
+  h += '<button class="vm-btn-cancel" onclick="fecharViradaMes()">Cancelar</button>';
+  h += '<button class="vm-btn-confirm" id="vmBtnConfirm" onclick="confirmarViradaMes()">Confirmar Virada</button>';
+  h += '</div>';
+
+  document.getElementById('viradaMesBody').innerHTML = h;
+};
+
+// ── 11. CONFIRMAR VIRADA — LIMPAR CACHE APÓS ────────────────
+confirmarViradaMes = function() {
+  if (!confirm('TEM CERTEZA que deseja virar o mês?\n\nTodos os dados serão arquivados e as requisições zeradas.')) return;
+  var btn = document.getElementById('vmBtnConfirm');
+  btn.disabled = true; btn.textContent = 'Processando...';
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ acao: 'viradames', usuario: sessao.nome, senha: sessao.hash }),
+    redirect: 'follow'
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    btn.disabled = false; btn.textContent = 'Confirmar Virada';
+    if (d.status === 'ok') {
+      showSuccess('', 'Mês virado com sucesso!', d.mesArquivado || '');
+      fecharViradaMes();
+      // Limpar TODOS os caches
+      historicoMeses = null;
+      dadosCompletos = null;
+      window._precoCustoMapaCache = null;
+      _cacheLocal.clear();
+      carregarDados();
+      carregarHistorico();
+    } else { toast(d.msg || 'Erro na virada de mês'); }
+  })
+  .catch(function() { btn.disabled = false; btn.textContent = 'Confirmar Virada'; toast('Erro de conexão'); });
+};
+
+// ── 12. LIMPAR CACHE — ATUALIZADO ───────────────────────────
+limparCacheLocal = function() {
+  window._precoCustoMapaCache = null;
+  window._catalogoCustoItens = null;
+  catalogo = [];
+  comandosIA = [];
+  historicoMeses = null;
+  dadosCompletos = null;
+  _cacheLocal.clear();
+  toast('Cache limpo');
+  if (sessao) { carregarDados(); carregarHistorico(); }
+};
+
+// ── 13. CATÁLOGO CUSTO — LOADING MAIS RÁPIDO ────────────────
+var _abrirCatalogoCustoOriginal = abrirCatalogoCusto;
+abrirCatalogoCusto = function() {
+  document.body.style.overflow = 'hidden';
+  document.getElementById('catalogoCustoModal').classList.add('show');
+  history.pushState({ modal: 'catalogoCusto' }, '', '');
+
+  _custoCatSort = 'setor';
+  _custoCatSetorFiltro = 'TODOS';
+  document.getElementById('catalogoCustoSearch').value = '';
+  document.getElementById('custoSetorTabs').innerHTML = '';
+  document.querySelectorAll('.custo-filter-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.sort === 'setor');
+  });
+
+  // Tenta cache local primeiro
+  var cached = _cacheLocal.get('catalogoCusto');
+  if (cached && cached.length) {
+    window._catalogoCustoItens = cached.map(function(it) {
+      if (!it._setor) it._setor = _categorizarItem(it.descricao);
+      return it;
+    });
+    _renderCustoSetorTabs();
+    renderCatalogoCusto('');
+
+    // Atualiza em background
+    fetch(API_URL + '?userHash=' + sessao.hash + '&acao=catalogocusto')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.status === 'ok') {
+          var itens = (d.itens || []).map(function(it) { it._setor = _categorizarItem(it.descricao); return it; });
+          window._catalogoCustoItens = itens;
+          _cacheLocal.set('catalogoCusto', itens, 180000);
+        }
+      }).catch(function() {});
+    return;
+  }
+
+  document.getElementById('catalogoCustoBody').innerHTML =
+    '<div style="text-align:center;padding:50px 20px;">' +
+    '<div class="ld-spinner" style="margin:0 auto 16px;"></div>' +
+    '<div style="color:var(--text-secondary);font-size:.8rem;font-weight:600;">Carregando catálogo...</div></div>';
+
+  fetch(API_URL + '?userHash=' + sessao.hash + '&acao=catalogocusto')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.status !== 'ok') { toast(d.msg || 'Erro'); return; }
+      var itens = (d.itens || []).map(function(it) { it._setor = _categorizarItem(it.descricao); return it; });
+      window._catalogoCustoItens = itens;
+      _cacheLocal.set('catalogoCusto', itens, 180000);
+      _renderCustoSetorTabs();
+      renderCatalogoCusto('');
+    })
+    .catch(function() { toast('Erro de conexão'); });
+};
+
+// ── 14. RE-EXPOR NOVAS FUNÇÕES ──────────────────────────────
+window.abrirCidade = abrirCidade;
+window.abrirMesDetalhe = abrirMesDetalhe;
+window.renderMesDetalhe = renderMesDetalhe;
+window.renderHistoricoDashboard = renderHistoricoDashboard;
+window.abrirHistoricoCompleto = abrirHistoricoCompleto;
+window.abrirViradaMes = abrirViradaMes;
+window.confirmarViradaMes = confirmarViradaMes;
+window.limparCacheLocal = limparCacheLocal;
+window.abrirCatalogoCusto = abrirCatalogoCusto;
+window.carregarDados = carregarDados;
+window.carregarHistorico = carregarHistorico;
+
+// ══════════════════════════════════════════════════════════════
+//  FIM PATCH v8.8.1
 // ══════════════════════════════════════════════════════════════
