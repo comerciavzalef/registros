@@ -1,7 +1,7 @@
 // ============================================================
-//  REQUISIÇÕES DIGITAL — app.js v8.7.0 PREMIUM
+//  REQUISIÇÕES DIGITAL — app.js v8.8.0 PREMIUM
 //  Grupo Carlos Vaz — CRV/LAS
-//  v8.7: Virada de Mês via PWA + Histórico visual + Mês específico
+//  v8.8: Redesign UI + Catálogo Custo por Setor + Filtros + Fix IA
 // ============================================================
 
 var API_URL = 'https://script.google.com/macros/s/AKfycbzXuhmVkTDsMGotRuG3-i-YYnx0_nLFWDWjb7hNsTZ2HUg5SzWKDK6jbad_HqOEsnxt/exec';
@@ -26,10 +26,39 @@ var precoCustoTotalCusto    = 0;
 // ── v8.7: Histórico de Meses ──
 var historicoMeses = null;
 
+// ── v8.8: Catálogo Custo - estado de filtro/sort ──
+var _custoCatSort = 'setor';
+var _custoCatSetorFiltro = 'TODOS';
+
+// ── v8.8: Mapa de setores para categorização inteligente ──
+var SETOR_CATEGORIAS = {
+  'MERCEARIA':    { icon: '🛒', color: 'accent',  keywords: ['ARROZ','FEIJÃO','FEIJAO','AÇÚCAR','ACUCAR','ÓLEO','OLEO','SAL','CAFÉ','CAFE','FARINHA','MACARRÃO','MACARRAO','FUBÁ','FUBA','VINAGRE','MOLHO','EXTRATO','TEMPERO','COLORAU','COLORÍFICO','COLORAU','CALDO','SARDINHA','ATUM','MILHO VERDE','ERVILHA','ACHOCOLATADO','LEITE EM PÓ','LEITE EM PO','CREME DE LEITE','LEITE CONDENSADO','GELATINA','AMIDO','FERMENTO','MASSA','BISCOITO','BOLACHA','AVEIA','FLOCOS','PROTEÍNA','PROTEINA','COCO RALADO','LEITE DE COCO','AZEITE','MANTEIGA','MARGARINA'] },
+  'HORTIFRUTI':   { icon: '🥬', color: 'success', keywords: ['ALFACE','TOMATE','CEBOLA','BATATA','CENOURA','BETERRABA','BANANA','MAÇÃ','MACA','LARANJA','LIMÃO','LIMAO','MAMÃO','MAMAO','MANGA','MELANCIA','UVA','ABACAXI','COUVE','REPOLHO','PIMENTÃO','PIMENTAO','ABÓBORA','ABOBORA','CHUCHU','PEPINO','ALHO','CHEIRO VERDE','COENTRO','SALSA','INHAME','MANDIOCA','MACAXEIRA','AIPIM','BERINJELA','QUIABO','JILÓ','JILO','MAXIXE'] },
+  'FRIOS':        { icon: '🧀', color: 'info',    keywords: ['QUEIJO','PRESUNTO','MORTADELA','SALSICHA','LINGUIÇA','LINGUICA','MUSSARELA','MUÇARELA','REQUEIJÃO','REQUEIJAO','IOGURTE','MANTEIGA','CREAM CHEESE','BACON','APRESUNTADO','PEITO DE PERU','SALAMINHO','PROVOLONE','RICOTA','NATA','CREME DE RICOTA'] },
+  'CONGELADOS':   { icon: '🧊', color: 'purple',  keywords: ['FRANGO','CARNE','BOI','PEIXE','TILÁPIA','TILAPIA','CHARQUE','CALABRESA','HAMBÚRGUER','HAMBURGUER','NUGGET','SALSICHA','SOBRECOXA','COXA','PEITO DE FRANGO','FILÉ','FILE','ACÉM','ACEM','COSTELA','CUPIM','ALCATRA','PATINHO','POLPA','COXÃO','COXAO','MÚSCULO','MUSCULO','STEAK','EMPANADO','BOLINHO','CAMARÃO','CAMARAO','POLVO'] },
+  'BEBIDAS':      { icon: '🥤', color: 'warning',  keywords: ['REFRIGERANTE','SUCO','ÁGUA','AGUA','CERVEJA','VINHO','ENERGÉTICO','ENERGETICO','CHÁ','CHA','LEITE','ACHOCOLATADO LÍQUIDO','NECTAR','ISOTÔNICO','ISOTONICO','POLPA DE FRUTA'] },
+  'LIMPEZA':      { icon: '🧹', color: 'teal',    keywords: ['DETERGENTE','SABÃO','SABAO','DESINFETANTE','ÁGUA SANITÁRIA','AGUA SANITARIA','ALVEJANTE','ESPONJA','PANO','VASSOURA','RODO','BALDE','SACO DE LIXO','LUVA','LIMPEZA','MULTIUSO','AMACIANTE','SABÃO EM PÓ','SABAO EM PO','CLORO'] },
+  'DESCARTÁVEIS': { icon: '🥤', color: 'orange',  keywords: ['COPO','PRATO DESCARTÁVEL','PRATO DESCARTAVEL','GUARDANAPO','PAPEL','ALUMÍNIO','ALUMINIO','FILME','SACOLA','EMBALAGEM','MARMITA','TALHER','CANUDO','TOALHA DE PAPEL','PAPEL HIGIÊNICO','PAPEL HIGIENICO','PAPEL TOALHA'] },
+  'PADARIA':      { icon: '🍞', color: 'yellow',  keywords: ['PÃO','PAO','BOLO','TORTA','ROSCA','BISCOITO','SALGADO','COXINHA','PASTEL','EMPADA','SONHO','CROISSANT'] },
+  'OUTROS':       { icon: '📦', color: 'accent',  keywords: [] }
+};
+
+var SETOR_COLOR_MAP = {
+  accent:  { bg: 'var(--accent-soft)',  border: 'var(--accent-mid)',  text: 'var(--accent)' },
+  success: { bg: 'var(--success-soft)', border: 'var(--success-mid)', text: 'var(--success)' },
+  info:    { bg: 'var(--info-soft)',    border: 'rgba(90,126,184,.2)', text: 'var(--info)' },
+  purple:  { bg: 'var(--purple-soft)',  border: 'var(--purple-mid)',  text: 'var(--purple)' },
+  warning: { bg: 'var(--warning-soft)', border: 'var(--warning-mid)', text: 'var(--warning)' },
+  teal:    { bg: 'rgba(90,158,138,.1)', border: 'rgba(90,158,138,.2)', text: 'var(--teal)' },
+  orange:  { bg: 'var(--warning-soft)', border: 'var(--warning-mid)', text: 'var(--orange)' },
+  yellow:  { bg: 'rgba(184,168,90,.1)', border: 'rgba(184,168,90,.2)', text: 'var(--yellow)' },
+  danger:  { bg: 'var(--danger-soft)',  border: 'var(--danger-mid)',  text: 'var(--danger)' }
+};
+
 // ══════════════════════════════════════════════════════════════
 //  INIT & LOGIN
 // ══════════════════════════════════════════════════════════════
-var APP_VERSION = '8.7.0';
+var APP_VERSION = '8.8.0';
 (function () {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
@@ -340,7 +369,7 @@ function renderRankings(arrayCidades, mapSetores) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  v8.7: HISTÓRICO NO DASHBOARD (últimos 3 meses)
+//  v8.7: HISTÓRICO NO DASHBOARD
 // ══════════════════════════════════════════════════════════════
 function renderHistoricoDashboard() {
   var container = document.getElementById('historicoCards');
@@ -351,11 +380,7 @@ function renderHistoricoDashboard() {
     return;
   }
 
-  // Mostrar últimos 3
   var ultimos = historicoMeses.slice(-3).reverse();
-  var maxTotal = 1;
-  ultimos.forEach(function(m) { if (m.total > maxTotal) maxTotal = m.total; });
-
   var CIDADES_ORDEM = ['Ibicuí', 'Nova Canaã', 'Boa Nova', 'Dário Meira', 'Floresta Azul'];
   var h = '';
 
@@ -375,7 +400,6 @@ function renderHistoricoDashboard() {
     });
     h += '</div>';
 
-    // Mini barras comparativas
     h += '<div class="hist-bars">';
     var maxCid = 1;
     CIDADES_ORDEM.forEach(function(cid) {
@@ -388,11 +412,37 @@ function renderHistoricoDashboard() {
       h += '<div class="hist-bar" style="height:' + pct + '%" title="' + escapeHtml(cid) + ': ' + formatCurrency(val) + '"></div>';
     });
     h += '</div>';
-
     h += '</div>';
   });
 
   container.innerHTML = h;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  v8.8: CATEGORIZAÇÃO INTELIGENTE DE ITENS POR SETOR
+// ══════════════════════════════════════════════════════════════
+function _categorizarItem(descricao) {
+  var desc = (descricao || '').toUpperCase().trim();
+  desc = desc.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  var setorKeys = Object.keys(SETOR_CATEGORIAS);
+  for (var s = 0; s < setorKeys.length; s++) {
+    var setor = setorKeys[s];
+    if (setor === 'OUTROS') continue;
+    var keywords = SETOR_CATEGORIAS[setor].keywords;
+    for (var k = 0; k < keywords.length; k++) {
+      var kw = keywords[k].normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (desc.indexOf(kw) > -1) return setor;
+    }
+  }
+  return 'OUTROS';
+}
+
+function _getSetorInfo(setorNome) {
+  return SETOR_CATEGORIAS[setorNome] || SETOR_CATEGORIAS['OUTROS'];
+}
+
+function _getSetorColorStyle(colorKey) {
+  return SETOR_COLOR_MAP[colorKey] || SETOR_COLOR_MAP['accent'];
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -410,10 +460,7 @@ function abrirCidade(nome) {
   if (cid.setores.length) {
     h += '<div style="display:flex;justify-content:center;margin:10px 0 18px;">';
     h += '<button onclick="imprimirTodasRequisicoes(\'' + escapeHtml(cid.nome) + '\')" ' +
-         'style="background:linear-gradient(135deg,#1e3a5f,#2c5282);color:#fff;border:none;border-radius:10px;' +
-         'padding:11px 20px;font-size:.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;' +
-         'box-shadow:0 4px 14px rgba(30,58,95,0.35);font-family:var(--font);">' +
-         '🖨️ Imprimir Todas as Requisições</button>';
+         'class="imp-btn-confirm" style="max-width:280px;">Imprimir Todas as Requisições</button>';
     h += '</div>';
   }
 
@@ -436,7 +483,7 @@ function abrirCidade(nome) {
            '<div class="sh-nome">' + escapeHtml(setor.nome) + '</div></div>' +
            '<div style="display:flex;align-items:center;gap:8px;">' +
            '<button onclick="event.stopPropagation();imprimirPorSetor(\'' + escapeHtml(cid.nome) + '\',\'' + escapeHtml(setor.nome) + '\')" ' +
-           'style="background:linear-gradient(135deg,#1e3a5f,#2c5282);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:.72rem;font-weight:600;cursor:pointer;font-family:var(--font);white-space:nowrap;" title="Imprimir setor">🖨️</button>' +
+           'class="rgh-btn" title="Imprimir setor">Imprimir</button>' +
            '<div class="sh-total">' + formatCurrency(setor.total) + '</div>' +
            '</div></div>' +
            '<div class="setor-items">';
@@ -446,26 +493,24 @@ function abrirCidade(nome) {
 
         h += '<div class="req-group-block">';
         h += '<div class="req-group-header-pro">';
-
         h += '<div class="rgh-top">';
         h += '<div class="rgh-top-left" onclick="editarRequisicao(\'' + escapeHtml(cid.nome) + '\',\'' +
              escapeHtml(setor.nome) + '\',\'' + escapeHtml(rid) + '\')" title="Clique para editar">';
         h += '<span class="rgh-id">' + escapeHtml(rid);
-        if (grp.observacao) h += ' <span style="font-weight:400;opacity:0.7;">—</span> ' + escapeHtml(grp.observacao);
+        if (grp.observacao) h += ' — ' + escapeHtml(grp.observacao);
         h += '</span>';
         h += '<span class="rgh-count">' + grp.itens.length + ' itens · ' + formatCurrency(grp.total) + '</span>';
         h += '</div>';
         h += '<div class="rgh-top-right">';
-        h += '<button class="rgh-btn rgh-btn-edit" onclick="editarRequisicao(\'' + escapeHtml(cid.nome) + '\',\'' +
+        h += '<button class="rgh-btn" onclick="editarRequisicao(\'' + escapeHtml(cid.nome) + '\',\'' +
              escapeHtml(setor.nome) + '\',\'' + escapeHtml(rid) + '\')" title="Editar">Editar</button>';
-        h += '<button class="rgh-btn rgh-btn-print" onclick="event.stopPropagation();imprimirRequisicaoIndividual(\'' + escapeHtml(cid.nome) +
-             '\',\'' + escapeHtml(setor.nome) + '\',\'' + escapeHtml(rid) + '\')" title="Imprimir">🖨️</button>';
-        h += '</div>';
-        h += '</div>';
+        h += '<button class="rgh-btn" onclick="event.stopPropagation();imprimirRequisicaoIndividual(\'' + escapeHtml(cid.nome) +
+             '\',\'' + escapeHtml(setor.nome) + '\',\'' + escapeHtml(rid) + '\')" title="Imprimir">Imprimir</button>';
+        h += '</div></div>';
 
         if (grp.data) {
           h += '<div class="rgh-meta">';
-          h += '<span class="rgh-chip rgh-chip-data"><span class="rgh-chip-ico">📅</span>' + escapeHtml(formatarDataBR(grp.data)) + '</span>';
+          h += '<span class="rgh-chip"><span class="rgh-chip-ico">📅</span>' + escapeHtml(formatarDataBR(grp.data)) + '</span>';
           h += '</div>';
         }
 
@@ -473,9 +518,9 @@ function abrirCidade(nome) {
 
         grp.itens.forEach(function (it) {
           var descDisplay = escapeHtml(it.descricao);
-          descDisplay = descDisplay.replace(/\[([^\]]+)\]/g, '<span style="color:var(--accent);font-size:0.65rem;font-weight:600;display:block;">$1</span>');
+          descDisplay = descDisplay.replace(/\[([^\]]+)\]/g, '<span style="color:var(--accent);font-size:0.63rem;font-weight:600;display:block;">$1</span>');
           h += '<div class="item-row"><div class="item-desc">' + descDisplay +
-               ' <span style="color:var(--text-tertiary);font-size:0.7rem;">(x' + it.quantidade + ')</span></div>' +
+               ' <span style="color:var(--text-tertiary);font-size:0.68rem;">(x' + it.quantidade + ')</span></div>' +
                '<div style="text-align:right;">' +
                '<div class="item-valor">' + formatCurrency(it.total) + '</div>' +
                '<div class="item-custo-ref" data-desc-custo="' + escapeHtml((it.descricao || '').toUpperCase().trim()) + '"></div>' +
@@ -552,14 +597,6 @@ function _brParaIso(ddmmyyyy) {
   return '';
 }
 
-function _isoParaBr(yyyymmdd) {
-  if (!yyyymmdd) return '';
-  var s = String(yyyymmdd).trim();
-  var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (m) return m[3] + '/' + m[2] + '/' + m[1];
-  return s;
-}
-
 function _gerarCabecalhoPDF(cidade) {
   var hoje = new Date();
   var dataHoje = String(hoje.getDate()).padStart(2,'0') + '/' +
@@ -576,24 +613,19 @@ function _gerarCabecalhoPDF(cidade) {
 
 function _gerarBlocoRequisicaoPDF(setorNome, reqId, grp) {
   var h = '<div class="pdf-req-block">';
-
   h += '<div class="pdf-req-head">';
-  h += '<div>';
-  h += '<div class="pdf-req-setor">' + escapeHtml(setorNome) + '</div>';
-  h += '<div class="pdf-req-id">ID: ' + escapeHtml(reqId) + '</div>';
-  h += '</div>';
+  h += '<div><div class="pdf-req-setor">' + escapeHtml(setorNome) + '</div>';
+  h += '<div class="pdf-req-id">ID: ' + escapeHtml(reqId) + '</div></div>';
   h += '<div class="pdf-req-info">';
   if (grp.data) h += '<div>' + escapeHtml(formatarDataBR(grp.data)) + '</div>';
   h += '<div>' + grp.itens.length + ' ite' + (grp.itens.length === 1 ? 'm' : 'ns') + '</div>';
-  h += '</div>';
-  h += '</div>';
+  h += '</div></div>';
 
   if (grp.observacao) {
     h += '<div class="pdf-req-obs"><strong>Observação:</strong> ' + escapeHtml(grp.observacao) + '</div>';
   }
 
-  h += '<table class="pdf-table">';
-  h += '<thead><tr>' +
+  h += '<table class="pdf-table"><thead><tr>' +
        '<th style="width:5%;text-align:center;">#</th>' +
        '<th style="width:43%;">Descrição</th>' +
        '<th style="width:10%;text-align:center;">Qtd</th>' +
@@ -602,10 +634,9 @@ function _gerarBlocoRequisicaoPDF(setorNome, reqId, grp) {
        '<th style="width:18%;text-align:right;">Total</th>' +
        '</tr></thead><tbody>';
   grp.itens.forEach(function(it, idx) {
-    var desc = escapeHtml(it.descricao);
     h += '<tr>' +
          '<td style="text-align:center;color:#64748b;">' + (idx+1) + '</td>' +
-         '<td style="font-weight:500;">' + desc + '</td>' +
+         '<td style="font-weight:500;">' + escapeHtml(it.descricao) + '</td>' +
          '<td style="text-align:center;">' + (it.quantidade || 0) + '</td>' +
          '<td style="text-align:center;color:#64748b;">' + escapeHtml(it.um || '') + '</td>' +
          '<td style="text-align:right;">' + formatCurrency(it.valorUnit || 0) + '</td>' +
@@ -615,9 +646,7 @@ function _gerarBlocoRequisicaoPDF(setorNome, reqId, grp) {
   h += '<tr class="pdf-total-row">' +
        '<td colspan="5" style="text-align:right;padding-right:12px;">TOTAL — ' + escapeHtml(reqId) + '</td>' +
        '<td style="text-align:right;">' + formatCurrency(grp.total) + '</td>' +
-       '</tr>';
-  h += '</tbody></table>';
-  h += '</div>';
+       '</tr></tbody></table></div>';
   return h;
 }
 
@@ -627,39 +656,38 @@ function _abrirJanelaImpressao(titulo, corpoHtml) {
     '@page { size: A4; margin: 10mm 12mm; }',
     '* { box-sizing: border-box; margin: 0; padding: 0; }',
     'body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: #1a1a2e; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; line-height: 1.4; }',
-    '.pdf-header { padding: 10px 0 8px; margin-bottom: 10px; text-align: center; border-bottom: 2px solid #1e3a5f; page-break-after: avoid; }',
+    '.pdf-header { padding: 10px 0 8px; margin-bottom: 10px; text-align: center; border-bottom: 2px solid #1e3a5f; }',
     '.pdf-brand { font-size: 15px; font-weight: 800; letter-spacing: 3px; color: #1e3a5f; text-transform: uppercase; }',
-    '.pdf-divider { width: 40px; height: 2px; background: linear-gradient(90deg, #c9a063, #e8c77b); margin: 4px auto 5px; border-radius: 2px; }',
+    '.pdf-divider { width: 40px; height: 2px; background: #5a7fa3; margin: 4px auto 5px; border-radius: 2px; }',
     '.pdf-title { font-size: 13px; font-weight: 600; color: #2c5282; }',
-    '.pdf-meta { font-size: 9px; color: #777; margin-top: 3px; letter-spacing: 0.5px; }',
+    '.pdf-meta { font-size: 9px; color: #777; margin-top: 3px; }',
     '.pdf-req-block { margin-bottom: 16px; page-break-inside: avoid; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }',
-    '.pdf-req-block + .pdf-req-block { page-break-before: auto; }',
-    '.pdf-req-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 12px; background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%); color: #fff; }',
+    '.pdf-req-head { display: flex; justify-content: space-between; padding: 8px 12px; background: #1e3a5f; color: #fff; }',
     '.pdf-req-setor { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.85; }',
     '.pdf-req-id { font-size: 13px; font-weight: 800; margin-top: 1px; }',
     '.pdf-req-info { font-size: 9px; text-align: right; line-height: 1.5; opacity: 0.9; }',
-    '.pdf-req-obs { margin: 0; padding: 8px 16px; background: #fffbeb; border-bottom: 1px solid #f0e6c8; font-size: 11px; color: #92400e; }',
+    '.pdf-req-obs { padding: 8px 16px; background: #fffbeb; border-bottom: 1px solid #f0e6c8; font-size: 11px; color: #92400e; }',
     '.pdf-req-obs strong { color: #78350f; }',
     '.pdf-table { width: 100%; border-collapse: collapse; font-size: 10px; }',
-    '.pdf-table thead th { background: #f1f5f9; color: #334155; padding: 5px 6px; font-weight: 700; text-align: left; font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #cbd5e1; }',
+    '.pdf-table thead th { background: #f1f5f9; color: #334155; padding: 5px 6px; font-weight: 700; text-align: left; font-size: 8.5px; text-transform: uppercase; border-bottom: 2px solid #cbd5e1; }',
     '.pdf-table tbody td { padding: 4px 6px; border-bottom: 1px solid #f1f5f9; }',
     '.pdf-table tbody tr:nth-child(even) td { background: #f8fafc; }',
-    '.pdf-total-row td { background: #1e3a5f !important; color: #fff !important; border-top: 2px solid #1e3a5f !important; font-weight: 700; font-size: 10px; }',
-    '.pdf-footer { margin-top: 16px; padding: 8px 0; border-top: 2px solid #e2e8f0; font-size: 8px; color: #94a3b8; text-align: center; letter-spacing: 0.5px; }',
+    '.pdf-total-row td { background: #1e3a5f !important; color: #fff !important; font-weight: 700; font-size: 10px; }',
+    '.pdf-footer { margin-top: 16px; padding: 8px 0; border-top: 2px solid #e2e8f0; font-size: 8px; color: #94a3b8; text-align: center; }',
     '.pdf-resumo { margin-top: 12px; padding: 10px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 10px; color: #166534; }',
     '.pdf-resumo strong { font-size: 12px; }',
     '@media print { .no-print { display: none !important; } }',
     '.no-print { position: fixed; top: 14px; right: 14px; z-index: 9999; display: flex; gap: 8px; }',
-    '.no-print button { background: linear-gradient(135deg, #1e3a5f, #2c5282); color: #fff; border: none; padding: 11px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }',
-    '.no-print button.cancel { background: #64748b; box-shadow: none; }',
+    '.no-print button { background: #1e3a5f; color: #fff; border: none; padding: 11px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }',
+    '.no-print button.cancel { background: #64748b; }',
     '</style>'
   ].join('');
 
   var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + escapeHtml(titulo) + '</title>' + css + '</head><body>' +
-             '<div class="no-print"><button onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>' +
+             '<div class="no-print"><button onclick="window.print()">Imprimir / Salvar PDF</button>' +
              '<button class="cancel" onclick="window.close()">Fechar</button></div>' +
              corpoHtml +
-             '<div class="pdf-footer">Grupo Carlos Vaz — CRV/LAS · Sistema de Requisições Digital</div>' +
+             '<div class="pdf-footer">Grupo Carlos Vaz — CRV/LAS · Sistema de Requisições Digital v' + APP_VERSION + '</div>' +
              '</body></html>';
 
   var win = window.open('', '_blank');
@@ -676,9 +704,8 @@ function imprimirTodasRequisicoes(cidadeNome) {
   if (!cid || !cid.setores.length) { toast('Nada para imprimir'); return; }
 
   var corpo = _gerarCabecalhoPDF(cidadeNome);
+  var totalGeral = 0, totalReqs = 0;
 
-  var totalGeral = 0;
-  var totalReqs = 0;
   cid.setores.forEach(function(setor) {
     var reqMap = {};
     setor.itens.forEach(function(it) {
@@ -689,7 +716,6 @@ function imprimirTodasRequisicoes(cidadeNome) {
       if (it.observacao && !reqMap[rid].observacao) reqMap[rid].observacao = it.observacao;
       if (it.data && !reqMap[rid].data) reqMap[rid].data = it.data;
     });
-
     Object.keys(reqMap).forEach(function(rid) {
       corpo += _gerarBlocoRequisicaoPDF(setor.nome, rid, reqMap[rid]);
       totalGeral += reqMap[rid].total;
@@ -706,15 +732,14 @@ function imprimirTodasRequisicoes(cidadeNome) {
 function imprimirRequisicaoIndividual(cidadeNome, setorNome, reqId) {
   if (!dadosCompletos) { toast('Carregue os dados primeiro'); return; }
   var cid = dadosCompletos.cidades.find(function(c) { return c.nome === cidadeNome; });
-  if (!cid) { toast('Cidade não encontrada'); return; }
+  if (!cid) return;
   var setor = cid.setores.find(function(s) { return s.nome === setorNome; });
-  if (!setor) { toast('Setor não encontrado'); return; }
+  if (!setor) return;
 
   var grp = { itens: [], total: 0, observacao: '', data: '' };
   setor.itens.forEach(function(it) {
     if ((it.requisicao || '-') === reqId) {
-      grp.itens.push(it);
-      grp.total += it.total;
+      grp.itens.push(it); grp.total += it.total;
       if (it.observacao && !grp.observacao) grp.observacao = it.observacao;
       if (it.data && !grp.data) grp.data = it.data;
     }
@@ -723,14 +748,13 @@ function imprimirRequisicaoIndividual(cidadeNome, setorNome, reqId) {
 
   var corpo = _gerarCabecalhoPDF(cidadeNome);
   corpo += _gerarBlocoRequisicaoPDF(setorNome, reqId, grp);
-
   _abrirJanelaImpressao('Requisição ' + reqId + ' — ' + cidadeNome, corpo);
 }
 
 function imprimirPorSetor(cidadeNome, setorNome) {
   if (!dadosCompletos) { toast('Carregue os dados primeiro'); return; }
   var cid = dadosCompletos.cidades.find(function(c) { return c.nome === cidadeNome; });
-  if (!cid) { toast('Cidade não encontrada'); return; }
+  if (!cid) return;
   var setor = cid.setores.find(function(s) { return s.nome === setorNome; });
   if (!setor || !setor.itens.length) { toast('Setor vazio'); return; }
 
@@ -738,30 +762,25 @@ function imprimirPorSetor(cidadeNome, setorNome) {
   setor.itens.forEach(function(it) {
     var rid = it.requisicao || '-';
     if (!reqMap[rid]) reqMap[rid] = { itens: [], total: 0, observacao: '', data: '' };
-    reqMap[rid].itens.push(it);
-    reqMap[rid].total += it.total;
+    reqMap[rid].itens.push(it); reqMap[rid].total += it.total;
     if (it.observacao && !reqMap[rid].observacao) reqMap[rid].observacao = it.observacao;
     if (it.data && !reqMap[rid].data) reqMap[rid].data = it.data;
   });
 
   var corpo = _gerarCabecalhoPDF(cidadeNome);
-  var totalSetor = 0;
-  var totalReqs = 0;
-
+  var totalSetor = 0, totalReqs = 0;
   Object.keys(reqMap).forEach(function(rid) {
     corpo += _gerarBlocoRequisicaoPDF(setorNome, rid, reqMap[rid]);
-    totalSetor += reqMap[rid].total;
-    totalReqs++;
+    totalSetor += reqMap[rid].total; totalReqs++;
   });
 
   corpo += '<div class="pdf-resumo"><strong>TOTAL SETOR ' + escapeHtml(setorNome) + ': ' + formatCurrency(totalSetor) + '</strong><br>' +
            totalReqs + ' requisições · ' + setor.itens.length + ' itens</div>';
-
   _abrirJanelaImpressao('Requisições ' + setorNome + ' — ' + cidadeNome, corpo);
 }
 
 // ══════════════════════════════════════════════════════════════
-//  CATÁLOGO
+//  CATÁLOGO DE PREÇOS (venda)
 // ══════════════════════════════════════════════════════════════
 function abrirCatalogo() {
   document.body.style.overflow = 'hidden';
@@ -811,21 +830,16 @@ function renderCatalogo(filtro) {
     return;
   }
 
-  var h = '<div class="cat-meta">' + lista.length + ' ' +
-          (lista.length === 1 ? 'item' : 'itens') +
-          ' · toque no preço para editar</div>';
+  var h = '<div class="cat-meta">' + lista.length + ' ' + (lista.length === 1 ? 'item' : 'itens') + '</div>';
 
   lista.forEach(function (it) {
     var codigoHtml = it.codigo
-      ? '<span class="cat-cod">' + escapeHtml(it.codigo) + '</span>' +
-        '<span class="cat-sep">·</span>'
+      ? '<span class="cat-cod">' + escapeHtml(it.codigo) + '</span><span class="cat-sep">·</span>'
       : '';
 
     h += '<div class="cat-item">' +
-         '<div class="cat-info">' +
-         codigoHtml +
-         '<span class="cat-desc">' + escapeHtml(it.descricao) + '</span>' +
-         '</div>' +
+         '<div class="cat-info">' + codigoHtml +
+         '<span class="cat-desc">' + escapeHtml(it.descricao) + '</span></div>' +
          '<div class="cat-action-wrap">' +
          '<div class="cat-valor-wrap">' +
          '<span class="cat-prefix">R$</span>' +
@@ -836,1000 +850,46 @@ function renderCatalogo(filtro) {
          'data-original="' + it.valor + '" ' +
          'data-desc="' + escapeHtml(it.descricao) + '" ' +
          'onfocus="this.select()" ' +
-         'onkeydown="if(event.key === \'Enter\') dispararSalvar(' + it.linha + ')">' +
+         'onkeydown="if(event.key===\'Enter\')dispararSalvar(' + it.linha + ')">' +
          '</div>' +
-         '<button class="cat-save-btn" onclick="dispararSalvar(' + it.linha + ')" title="Salvar Preço">✓</button>' +
+         '<button class="cat-save-btn" onclick="dispararSalvar(' + it.linha + ')" title="Salvar">✓</button>' +
          '</div></div>';
   });
 
   document.getElementById('catalogoBody').innerHTML = h;
 }
 
-function formatNum(v) {
-  return (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function parseValorBR(str) {
-  var s = String(str || '').trim().replace(/\s/g, '').replace(/R\$/g, '');
-  if (s.indexOf(',') > -1) s = s.replace(/\./g, '').replace(',', '.');
-  var n = parseFloat(s);
-  return isNaN(n) ? null : n;
-}
-
-function dispararSalvar(linha) {
-  var input = document.getElementById('input_cat_' + linha);
-  if (!input) return;
-
-  var original = parseFloat(input.dataset.original);
-  var desc = input.dataset.desc;
-  var novo = parseValorBR(input.value);
-
-  if (novo === null || novo < 0) {
-    toast('Valor inválido');
-    input.value = formatNum(original);
-    return;
-  }
-  if (Math.abs(novo - original) < 0.001) {
-    input.value = formatNum(original);
-    input.blur();
-    return;
-  }
-
-  var msg = 'Atualizar "' + desc + '" para R$ ' + formatNum(novo) +
-            '?\n\nAtualizar também as requisições já APROVADAS/ENTREGUES/NEGADAS deste mês?\n\n' +
-            'OK = sim · Cancelar = só pendentes';
-  var atualizarAntigas = confirm(msg);
-
-  input.dataset.original = novo;
-  input.value = formatNum(novo);
-  input.blur();
-
-  var btn = input.parentElement.nextElementSibling;
-  if (btn) {
-    btn.innerHTML = '...';
-    btn.disabled = true;
-  }
-
-  showSuccess('', 'Preço alterado!', 'Sincronizando no fundo...');
-
-  fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      acao: 'salvarprecoitem',
-      usuario: sessao.nome,
-      senha: sessao.hash,
-      linha: linha,
-      valor: novo,
-      atualizarAntigas: atualizarAntigas
-    }),
-    redirect: 'follow'
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    if (btn) { btn.innerHTML = '✓'; btn.disabled = false; }
-    if (d.status === 'ok') {
-      for (var i = 0; i < catalogo.length; i++) {
-        if (catalogo[i].linha === linha) { catalogo[i].valor = novo; break; }
-      }
-      if (d.atualizadosPendentes > 0 || d.atualizadosAntigos > 0) {
-        carregarDados();
-      }
-    } else {
-      reverterErro(input, original, btn, d.msg || 'Erro ao salvar');
-    }
-  })
-  .catch(function(e) {
-    reverterErro(input, original, btn, 'Erro de conexão. Valor revertido.');
-  });
-}
-
-function reverterErro(input, valorOriginal, btn, msgErro) {
-  input.dataset.original = valorOriginal;
-  input.value = formatNum(valorOriginal);
-  if (btn) { btn.innerHTML = '✓'; btn.disabled = false; }
-  toast(msgErro);
-}
-
 // ══════════════════════════════════════════════════════════════
-//  RESUMO WHATSAPP
-// ══════════════════════════════════════════════════════════════
-function toggleRelatorio() {
-  var btn = document.getElementById('switchRelatorio');
-  if (btn) { btn.classList.add('on'); setTimeout(function () { btn.classList.remove('on'); }, 1000); }
-
-  if (!dadosCompletos) { toast('Carregue os dados primeiro'); return; }
-
-  var texto = '📋 *ORÇAMENTO DE REQUISIÇÕES*\n';
-  var d = new Date();
-  texto += '📅 ' + String(d.getDate()).padStart(2, '0') + '/' +
-           String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear() + '\n';
-  texto += '━━━━━━━━━━━━━━━━━━━━\n\n';
-
-  var total = 0;
-  var ord = [].concat(dadosCompletos.cidades).sort(function (a, b) { return b.total - a.total; });
-  ord.forEach(function (cid) {
-    if (cid.itens > 0) {
-      texto += '🏙️ *' + cid.nome.toUpperCase() + '*\n';
-      texto += '   💰 ' + formatCurrency(cid.total) + ' (' + cid.itens + ' itens)\n\n';
-      total += cid.total;
-    }
-  });
-
-  texto += '━━━━━━━━━━━━━━━━━━━━\n';
-  texto += '📊 *TOTAL GERAL: ' + formatCurrency(total) + '*\n\n';
-  texto += '_Requisições Digital — CRV/LAS_';
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(texto).then(function () {
-      showSuccess('', 'Resumo copiado!', 'Cole no WhatsApp');
-    }).catch(function () { toast('Erro ao copiar'); });
-  } else { toast('Copie manualmente'); }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  UTILS
-// ══════════════════════════════════════════════════════════════
-function getSetorClass(nome) {
-  var n = (nome || '').toUpperCase();
-  if (n.indexOf('EDUCAÇÃO') > -1) return 'edu';
-  if (n.indexOf('SAÚDE') > -1) return 'sau';
-  if (n.indexOf('ASSISTÊNCIA') > -1) return 'ass';
-  if (n.indexOf('ADMINISTRAÇÃO') > -1) return 'adm';
-  if (n.indexOf('INFRAESTRUTURA') > -1) return 'inf';
-  return 'adm';
-}
-
-function formatCurrency(v) {
-  if (typeof v !== 'number' || isNaN(v)) v = 0;
-  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
-
-function escapeHtml(str) {
-  if (!str && str !== 0) return '';
-  return str.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function showSuccess(icon, msg, detail) {
-  document.getElementById('successIcon').textContent = icon;
-  document.getElementById('successMsg').textContent = msg;
-  document.getElementById('successDetail').textContent = detail || '';
-  var ov = document.getElementById('successOverlay');
-  ov.classList.add('show');
-  setTimeout(function () { ov.classList.remove('show'); }, 2200);
-}
-
-function toast(msg) {
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(function () { t.classList.remove('show'); }, 3500);
-}
-
-// ══════════════════════════════════════════════════════════════
-//  IMPORTAÇÃO IA
-// ══════════════════════════════════════════════════════════════
-var importacaoTemp = null;
-
-var CIDADES_PADRAO = ['Ibicuí', 'Nova Canaã', 'Boa Nova', 'Dário Meira', 'Floresta Azul'];
-var SETORES_PADRAO = ['EDUCAÇÃO', 'SAÚDE', 'ASSISTÊNCIA SOCIAL', 'ADMINISTRAÇÃO', 'INFRAESTRUTURA'];
-var LS_CIDADES = 'cv_cidades_custom';
-var LS_SETORES = 'cv_setores_custom';
-
-function _carregarLista(key, padrao) {
-  var saved = localStorage.getItem(key);
-  if (saved) { try { return JSON.parse(saved); } catch(e) {} }
-  return padrao.slice();
-}
-function _salvarLista(key, lista) { localStorage.setItem(key, JSON.stringify(lista)); }
-
-function _popularSelect(id, lista, placeholder) {
-  var sel = document.getElementById(id);
-  var atual = sel.value;
-  sel.innerHTML = '<option value="">' + placeholder + '</option>';
-  lista.forEach(function(item) {
-    var opt = document.createElement('option');
-    opt.value = item; opt.textContent = item;
-    sel.appendChild(opt);
-  });
-  if (atual && lista.indexOf(atual) !== -1) sel.value = atual;
-}
-
-function popularSelectsCidadeSetor() {
-  var cidades = _carregarLista(LS_CIDADES, CIDADES_PADRAO);
-  var setores = _carregarLista(LS_SETORES, SETORES_PADRAO);
-  _popularSelect('impCidade', cidades, 'Selecione...');
-  _popularSelect('impSetor', setores, 'Selecione...');
-}
-
-function adicionarCidade() {
-  var nome = prompt('Nome da nova cidade:');
-  if (!nome || !nome.trim()) return;
-  nome = nome.trim();
-  var lista = _carregarLista(LS_CIDADES, CIDADES_PADRAO);
-  var existe = lista.some(function(c) { return c.toLowerCase() === nome.toLowerCase(); });
-  if (existe) { toast('Cidade já existe'); return; }
-  lista.push(nome);
-  lista.sort();
-  _salvarLista(LS_CIDADES, lista);
-  _popularSelect('impCidade', lista, 'Selecione...');
-  document.getElementById('impCidade').value = nome;
-  toast('Cidade adicionada');
-}
-
-function removerCidade() {
-  var sel = document.getElementById('impCidade');
-  if (!sel.value) { toast('Selecione a cidade para remover'); return; }
-  if (!confirm('Remover "' + sel.value + '" da lista?')) return;
-  var lista = _carregarLista(LS_CIDADES, CIDADES_PADRAO);
-  lista = lista.filter(function(c) { return c !== sel.value; });
-  _salvarLista(LS_CIDADES, lista);
-  _popularSelect('impCidade', lista, 'Selecione...');
-  toast('Cidade removida');
-}
-
-function adicionarSetor() {
-  var nome = prompt('Nome do novo setor:');
-  if (!nome || !nome.trim()) return;
-  nome = nome.trim().toUpperCase();
-  var lista = _carregarLista(LS_SETORES, SETORES_PADRAO);
-  if (lista.indexOf(nome) !== -1) { toast('Setor já existe'); return; }
-  lista.push(nome);
-  lista.sort();
-  _salvarLista(LS_SETORES, lista);
-  _popularSelect('impSetor', lista, 'Selecione...');
-  document.getElementById('impSetor').value = nome;
-  toast('Setor adicionado');
-}
-
-function removerSetor() {
-  var sel = document.getElementById('impSetor');
-  if (!sel.value) { toast('Selecione o setor para remover'); return; }
-  if (!confirm('Remover "' + sel.value + '" da lista?')) return;
-  var lista = _carregarLista(LS_SETORES, SETORES_PADRAO);
-  lista = lista.filter(function(s) { return s !== sel.value; });
-  _salvarLista(LS_SETORES, lista);
-  _popularSelect('impSetor', lista, 'Selecione...');
-  toast('Setor removido');
-}
-
-function abrirImportar() {
-  document.body.style.overflow = 'hidden';
-  document.getElementById('importarModal').classList.add('show');
-  history.pushState({ modal: 'importar' }, '', '');
-  document.getElementById('impStep1').style.display = 'block';
-  document.getElementById('impStep2').style.display = 'none';
-  document.getElementById('impStep3').style.display = 'none';
-  document.getElementById('impTexto').value = '';
-  document.getElementById('impArquivo').value = '';
-  document.getElementById('impPreview').innerHTML = '';
-  var hoje = new Date();
-  document.getElementById('impData').value = hoje.getFullYear() + '-' +
-    String(hoje.getMonth() + 1).padStart(2, '0') + '-' +
-    String(hoje.getDate()).padStart(2, '0');
-  var _idEl = document.getElementById('impReqId'); if (_idEl) _idEl.value = '';
-  document.getElementById('impObs').value = '';
-  importacaoTemp = null;
-  popularSelectsCidadeSetor();
-}
-
-function fecharImportar() {
-  var wasOpen = document.getElementById('importarModal').classList.contains('show');
-  document.body.style.overflow = '';
-  document.getElementById('importarModal').classList.remove('show');
-  if (wasOpen && !_insidePopstate) history.back();
-}
-
-function comprimirImagem(file, maxSize, callback) {
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var img = new Image();
-    img.onload = function() {
-      var canvas = document.createElement('canvas');
-      var width = img.width, height = img.height;
-      if (width > height && width > maxSize) { height *= maxSize / width; width = maxSize; }
-      else if (height > maxSize) { width *= maxSize / height; height = maxSize; }
-      canvas.width = width; canvas.height = height;
-      var ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-      callback(canvas.toDataURL('image/jpeg', 0.75));
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-function escolherCidadeSetor() {
-  var cidade = document.getElementById('impCidade').value;
-  var setor = document.getElementById('impSetor').value;
-  var dataReq = document.getElementById('impData').value;
-  var obsReq = document.getElementById('impObs').value.trim();
-  var arquivo = document.getElementById('impArquivo').files[0];
-  var texto = document.getElementById('impTexto').value.trim();
-
-  if (!cidade || !setor) { toast('Preencha cidade e setor'); return; }
-  if (!dataReq) { toast('Informe a data da requisição'); return; }
-  if (!arquivo && !texto) { toast('Anexe foto OU cole texto'); return; }
-
-  document.getElementById('impStep1').style.display = 'none';
-  document.getElementById('impStep2').style.display = 'block';
-
-  var payload = {
-    acao: 'parsearrequisicao',
-    usuario: sessao.nome,
-    senha: sessao.hash
-  };
-  if (texto) payload.textoBruto = texto;
-
-  if (arquivo) {
-    comprimirImagem(arquivo, 1400, function(base64Otimizado) {
-      payload.imagemBase64 = base64Otimizado.split(',')[1];
-      payload.mimeType = 'image/jpeg';
-      enviarParaIA(payload, cidade, setor, '', dataReq, obsReq);
-    });
-  } else {
-    enviarParaIA(payload, cidade, setor, '', dataReq, obsReq);
-  }
-}
-
-function enviarParaIA(payload, cidade, setor, reqId, dataReq, obsReq) {
-  fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload),
-    redirect: 'follow'
-  })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.status !== 'ok') { toast(d.msg || 'Erro na IA'); voltarStep1(); return; }
-      importacaoTemp = { cidade: cidade, setor: setor, reqId: '(automático)', data: dataReq, observacao: obsReq || '', itens: d.resultado.itens, meta: d.resultado };
-      fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ acao: 'previewproximoid', usuario: sessao.nome, senha: sessao.hash, cidade: cidade, setor: setor }),
-        redirect: 'follow'
-      }).then(function(r){return r.json();}).then(function(pp) {
-        if (pp.status === 'ok') {
-          importacaoTemp.reqId = pp.proximoId;
-          renderPreviewImportacao();
-        } else { renderPreviewImportacao(); }
-      }).catch(function(){ renderPreviewImportacao(); });
-    })
-    .catch(function(e) { toast('Erro de conexão'); voltarStep1(); });
-}
-
-function voltarStep1() {
-  document.getElementById('impStep1').style.display = 'block';
-  document.getElementById('impStep2').style.display = 'none';
-  document.getElementById('impStep3').style.display = 'none';
-}
-
-function renderPreviewImportacao() {
-  document.getElementById('impStep2').style.display = 'none';
-  document.getElementById('impStep3').style.display = 'block';
-
-  var meta = importacaoTemp.meta;
-  var itens = importacaoTemp.itens;
-  var totalGeral = 0;
-
-  var h = '<div class="imp-meta-box">';
-  h += '<div><strong>Cidade:</strong> ' + escapeHtml(importacaoTemp.cidade) + ' / ' + escapeHtml(importacaoTemp.setor) + '</div>';
-  h += '<div><strong>Req ID (auto):</strong> <span style="color:var(--accent);font-weight:700;">' + escapeHtml(importacaoTemp.reqId) + '</span></div>';
-  if (importacaoTemp.observacao) {
-    h += '<div style="color:var(--accent);font-weight:600;font-size:.85rem;margin:4px 0;"><strong>Obs:</strong> ' + escapeHtml(importacaoTemp.observacao) + '</div>';
-  }
-  if (importacaoTemp.data) {
-    var partes = importacaoTemp.data.split('-');
-    h += '<div><strong>Data:</strong> ' + partes[2] + '/' + partes[1] + '/' + partes[0] + '</div>';
-  }
-  if (meta.cidade_detectada) h += '<div style="color:var(--text-tertiary);font-size:.7rem;margin-top:6px;">IA detectou: ' + escapeHtml(meta.cidade_detectada) + ' / ' + escapeHtml(meta.setor_detectado || '?') + '</div>';
-  h += '</div>';
-
-  h += '<div class="imp-legenda"><span class="leg-dot leg-ok"></span>OK <span class="leg-dot leg-novo"></span>Novo <span class="leg-dot leg-div"></span>Divergente <span class="leg-dot leg-baixa"></span>Conferir</div>';
-
-  itens.forEach(function(it, idx) {
-    var classe = 'imp-row';
-    if (it.confianca === 'BAIXA') classe += ' baixa';
-    else if (it.status_catalogo === 'NOVO') classe += ' novo';
-    else if (it.status_catalogo === 'DIVERGENTE' || it.status_catalogo === 'MANUAL_PROTEGIDO') classe += ' div';
-    else classe += ' ok';
-
-    totalGeral += parseFloat(it.valor_total) || 0;
-
-    h += '<div class="' + classe + '">';
-    h += '<div class="imp-row-head"><span class="imp-num">' + (idx + 1) + '</span><input class="imp-desc" value="' + escapeHtml(it.descricao_normalizada || it.descricao) + '" data-idx="' + idx + '" data-campo="descricao_normalizada"></div>';
-    if (it.destinatario) {
-      h += '<div class="imp-dest-row"><label>Escola/Local<input class="imp-input imp-dest" value="' + escapeHtml(it.destinatario) + '" data-idx="' + idx + '" data-campo="destinatario" placeholder="Nome da escola/local"></label></div>';
-    }
-    h += '<div class="imp-row-grid">';
-    h += '<label>Qtd<input type="number" step="0.01" class="imp-input" value="' + it.quantidade + '" data-idx="' + idx + '" data-campo="quantidade"></label>';
-    h += '<label>Un<input class="imp-input" value="' + escapeHtml(it.unidade_compra) + '" data-idx="' + idx + '" data-campo="unidade_compra"></label>';
-    h += '<label>Por emb<input type="number" step="1" class="imp-input" value="' + (it.qtd_por_embalagem || 1) + '" data-idx="' + idx + '" data-campo="qtd_por_embalagem"></label>';
-    h += '<label>Unit R$<input type="number" step="0.01" class="imp-input imp-unit" value="' + (it.valor_unitario_calc || 0).toFixed(4) + '" data-idx="' + idx + '" data-campo="valor_unitario_calc" id="impUnit' + idx + '" onchange="recalcTotal(' + idx + ')"></label>';
-    h += '<label>Total R$<input type="number" step="0.01" class="imp-input" value="' + it.valor_total + '" data-idx="' + idx + '" data-campo="valor_total" id="impTotal' + idx + '" onchange="recalcUnit(' + idx + ')"></label>';
-    h += '</div>';
-
-    var statusTxt = '';
-    if (it.status_catalogo === 'NOVO') statusTxt = 'Item novo — entrará no catálogo como AUTO';
-    else if (it.status_catalogo === 'DIVERGENTE') statusTxt = 'Catálogo: R$ ' + (it.preco_no_catalogo || 0).toFixed(2) + ' (AUTO) — será atualizado';
-    else if (it.status_catalogo === 'MANUAL_PROTEGIDO') statusTxt = 'Catálogo: R$ ' + (it.preco_no_catalogo || 0).toFixed(2) + ' (MANUAL) — protegido';
-    else if (it.status_catalogo === 'OK') statusTxt = 'Bate com catálogo';
-    if (it.confianca === 'BAIXA') statusTxt = 'CONFIRMAR — ' + (it.observacao || 'IA com baixa confiança');
-    h += '<div class="imp-status-msg">' + statusTxt + '</div>';
-    h += '<button class="imp-remove" onclick="removerItemImp(' + idx + ')">Remover</button>';
-    h += '</div>';
-  });
-
-  h += '<button class="imp-add-item-btn" onclick="adicionarItemImpManual()">';
-  h += '<span class="iaim-icon">+</span>';
-  h += '<span class="iaim-text"><span class="iaim-title">Adicionar item manualmente</span>';
-  h += '<span class="iaim-sub">Inclua um item que a IA não detectou</span></span>';
-  h += '</button>';
-
-  h += '<div class="imp-total-box">Total da Requisição: <strong id="impTotalGeral">R$ ' + totalGeral.toFixed(2).replace('.', ',') + '</strong></div>';
-  h += '<div class="imp-actions">';
-  h += '<button class="imp-btn-cancel" onclick="voltarStep1()">Refazer</button>';
-  h += '<button class="imp-btn-confirm" onclick="confirmarImportacao()">Confirmar e Lançar</button>';
-  h += '</div>';
-
-  document.getElementById('impPreview').innerHTML = h;
-
-  document.querySelectorAll('#impPreview input').forEach(function(inp) {
-    inp.addEventListener('input', function() {
-      var idx = parseInt(this.dataset.idx);
-      var campo = this.dataset.campo;
-      var val = this.type === 'number' ? parseFloat(this.value) : this.value;
-      importacaoTemp.itens[idx][campo] = val;
-    });
-  });
-}
-
-function recalcUnit(idx) {
-  var it = importacaoTemp.itens[idx];
-  var qtdEmb = it.qtd_por_embalagem || 1;
-  var qtd = it.quantidade || 1;
-  var unit = it.valor_total / (qtd * qtdEmb);
-  it.valor_unitario_calc = unit;
-  var unitEl = document.getElementById('impUnit' + idx);
-  if (unitEl) unitEl.value = unit.toFixed(4);
-  _recalcTotalGeral();
-}
-
-function recalcTotal(idx) {
-  var it = importacaoTemp.itens[idx];
-  var qtdEmb = it.qtd_por_embalagem || 1;
-  var qtd = it.quantidade || 1;
-  var total = (it.valor_unitario_calc || 0) * qtd * qtdEmb;
-  it.valor_total = total;
-  var totalEl = document.getElementById('impTotal' + idx);
-  if (totalEl) totalEl.value = total.toFixed(2);
-  _recalcTotalGeral();
-}
-
-function _recalcTotalGeral() {
-  var t = 0;
-  importacaoTemp.itens.forEach(function(i) { t += parseFloat(i.valor_total) || 0; });
-  var el = document.getElementById('impTotalGeral');
-  if (el) el.textContent = 'R$ ' + t.toFixed(2).replace('.', ',');
-}
-
-function removerItemImp(idx) {
-  if (!importacaoTemp || !importacaoTemp.itens || !importacaoTemp.itens[idx]) return;
-  importacaoTemp.itens.splice(idx, 1);
-  if (importacaoTemp.itens.length === 0) {
-    toast('Todos os itens removidos');
-    voltarStep1();
-    return;
-  }
-  toast('Item removido');
-  renderPreviewImportacao();
-}
-
-function adicionarItemImpManual() {
-  if (!importacaoTemp) { toast('Sem importação ativa'); return; }
-
-  var novoItem = {
-    ordem: importacaoTemp.itens.length + 1,
-    descricao: '',
-    descricao_normalizada: '',
-    quantidade: 1,
-    unidade_compra: 'UN',
-    qtd_por_embalagem: 1,
-    valor_total: 0,
-    valor_unitario_calc: 0,
-    confianca: 'ALTA',
-    observacao: 'Adicionado manualmente',
-    destinatario: '',
-    status_catalogo: 'NOVO',
-    preco_no_catalogo: null,
-    origem_atual: null,
-    _manual: true
-  };
-
-  importacaoTemp.itens.push(novoItem);
-  renderPreviewImportacao();
-
-  setTimeout(function() {
-    var inputs = document.querySelectorAll('#impPreview .imp-desc');
-    var ultimoInput = inputs[inputs.length - 1];
-    if (ultimoInput) {
-      ultimoInput.focus();
-      ultimoInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, 80);
-
-  showSuccess('', 'Item adicionado', 'Preencha a descrição e os valores');
-}
-
-function confirmarImportacao() {
-  if (!importacaoTemp || !importacaoTemp.itens.length) { toast('Sem itens'); return; }
-  var btn = document.querySelector('.imp-btn-confirm');
-  btn.disabled = true; btn.textContent = 'Lançando...';
-
-  fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      acao: 'confirmarimportacao',
-      usuario: sessao.nome, senha: sessao.hash,
-      cidade: importacaoTemp.cidade,
-      setor: importacaoTemp.setor,
-      reqId: importacaoTemp.reqId,
-      data: importacaoTemp.data,
-      observacao: importacaoTemp.observacao || '',
-      itens: importacaoTemp.itens
-    }),
-    redirect: 'follow'
-  })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.status === 'ok') {
-        showSuccess('', 'Requisição lançada!', d.itensInseridos + ' itens · R$ ' + d.totalRequisicao.toFixed(2));
-        fecharImportar();
-        carregarDados();
-      } else {
-        toast(d.msg || 'Erro ao lançar');
-        btn.disabled = false; btn.textContent = 'Confirmar e Lançar';
-      }
-    })
-    .catch(function() {
-      toast('Erro de conexão');
-      btn.disabled = false; btn.textContent = 'Confirmar e Lançar';
-    });
-}
-
-// ══════════════════════════════════════════════════════════════
-//  EDIÇÃO DE REQUISIÇÃO
-// ══════════════════════════════════════════════════════════════
-var editTemp = null;
-
-function editarRequisicao(cidade, setor, reqId) {
-  if (!dadosCompletos) return;
-  var cid = dadosCompletos.cidades.find(function(c) { return c.nome === cidade; });
-  if (!cid) return;
-  var set = cid.setores.find(function(s) { return s.nome === setor; });
-  if (!set) return;
-
-  var itens = set.itens.filter(function(it) { return (it.requisicao || '-') === reqId; });
-  if (!itens.length) { toast('Requisição não encontrada'); return; }
-
-  editTemp = {
-    cidade: cidade,
-    setor: setor,
-    reqId: reqId,
-    setorOriginal: setor,
-    itens: itens.map(function(it) {
-      return {
-        linha: it.linha,
-        descricao: it.descricao,
-        quantidade: it.quantidade,
-        um: it.um || '',
-        valorUnit: it.valorUnit || 0,
-        total: it.total || 0,
-        observacao: it.observacao || '',
-        data: it.data || '',
-        destinatario: it.destinatario || ''
-      };
-    }),
-    observacao: itens[0].observacao || '',
-    data: itens[0].data || ''
-  };
-
-  renderEditReq();
-  document.getElementById('editReqModal').classList.add('show');
-  document.body.style.overflow = 'hidden';
-  history.pushState({ modal: 'editReq' }, '', '');
-}
-
-function fecharEditReq() {
-  var wasOpen = document.getElementById('editReqModal').classList.contains('show');
-  document.getElementById('editReqModal').classList.remove('show');
-  document.body.style.overflow = '';
-  editTemp = null;
-  if (wasOpen && !_insidePopstate) history.back();
-}
-
-function renderEditReq() {
-  if (!editTemp) return;
-  document.getElementById('editReqTitle').textContent = editTemp.reqId + ' — ' + editTemp.cidade;
-
-  var h = '';
-
-  // Cabeçalho: observação e data
-  h += '<div class="edit-header-box">';
-  h += '<label class="edit-label">Observação<input type="text" class="edit-input" id="editObs" value="' + escapeHtml(editTemp.observacao) + '"></label>';
-  h += '<label class="edit-label">Data<input type="date" class="edit-input" id="editData" value="' + _brParaIso(editTemp.data) + '"></label>';
-
-  // Select para mover de setor
-  h += '<label class="edit-label">Setor atual';
-  h += '<select id="editSetorMover" class="edit-input">';
-  SETORES_PADRAO.forEach(function(s) {
-    var sel = (s === editTemp.setor) ? ' selected' : '';
-    h += '<option value="' + escapeHtml(s) + '"' + sel + '>' + escapeHtml(s) + '</option>';
-  });
-  h += '</select></label>';
-  h += '</div>';
-
-  // Itens
-  editTemp.itens.forEach(function(it, idx) {
-    h += '<div class="edit-item-row">';
-    h += '<div class="edit-item-head"><span class="edit-item-num">' + (idx + 1) + '</span>';
-    h += '<input class="edit-item-desc" value="' + escapeHtml(it.descricao) + '" data-idx="' + idx + '" data-campo="descricao"></div>';
-
-    if (it.destinatario) {
-      h += '<label class="edit-sublabel">Escola/Local<input class="edit-input edit-dest" value="' + escapeHtml(it.destinatario) + '" data-idx="' + idx + '" data-campo="destinatario"></label>';
-    }
-
-    h += '<div class="edit-item-grid">';
-    h += '<label>Qtd<input type="number" step="0.01" class="edit-input" value="' + it.quantidade + '" data-idx="' + idx + '" data-campo="quantidade" onchange="editRecalcTotal(' + idx + ')"></label>';
-    h += '<label>Un<input class="edit-input" value="' + escapeHtml(it.um) + '" data-idx="' + idx + '" data-campo="um"></label>';
-    h += '<label>Unit R$<input type="number" step="0.01" class="edit-input" value="' + (it.valorUnit || 0).toFixed(2) + '" data-idx="' + idx + '" data-campo="valorUnit" id="editUnit' + idx + '" onchange="editRecalcTotal(' + idx + ')"></label>';
-    h += '<label>Total R$<input type="number" step="0.01" class="edit-input" value="' + (it.total || 0).toFixed(2) + '" data-idx="' + idx + '" data-campo="total" id="editTotal' + idx + '" readonly></label>';
-    h += '</div>';
-
-    h += '<button class="edit-remove-btn" onclick="editRemoverItem(' + idx + ')">Remover item</button>';
-    h += '</div>';
-  });
-
-  // Adicionar item
-  h += '<button class="imp-add-item-btn" onclick="editAdicionarItem()" style="margin:12px 0;">';
-  h += '<span class="iaim-icon">+</span>';
-  h += '<span class="iaim-text"><span class="iaim-title">Adicionar item</span>';
-  h += '<span class="iaim-sub">Inclua um novo item nesta requisição</span></span>';
-  h += '</button>';
-
-  // Total
-  var totalReq = 0;
-  editTemp.itens.forEach(function(it) { totalReq += (it.total || 0); });
-  h += '<div class="imp-total-box">Total: <strong id="editTotalGeral">' + formatCurrency(totalReq) + '</strong></div>';
-
-  // Botões
-  h += '<div class="edit-actions">';
-  h += '<button class="imp-btn-cancel" onclick="editExcluirRequisicao()">Excluir Requisição</button>';
-  h += '<button class="imp-btn-confirm" onclick="editSalvar()">Salvar Alterações</button>';
-  h += '</div>';
-
-  document.getElementById('editReqBody').innerHTML = h;
-
-  // Bind inputs
-  document.querySelectorAll('#editReqBody input[data-idx]').forEach(function(inp) {
-    inp.addEventListener('input', function() {
-      var idx = parseInt(this.dataset.idx);
-      var campo = this.dataset.campo;
-      if (campo === 'quantidade' || campo === 'valorUnit' || campo === 'total') {
-        editTemp.itens[idx][campo] = parseFloat(this.value) || 0;
-      } else {
-        editTemp.itens[idx][campo] = this.value;
-      }
-    });
-  });
-}
-
-function editRecalcTotal(idx) {
-  var it = editTemp.itens[idx];
-  it.total = (it.quantidade || 0) * (it.valorUnit || 0);
-  var el = document.getElementById('editTotal' + idx);
-  if (el) el.value = it.total.toFixed(2);
-  _editRecalcGeral();
-}
-
-function _editRecalcGeral() {
-  var t = 0;
-  editTemp.itens.forEach(function(it) { t += (it.total || 0); });
-  var el = document.getElementById('editTotalGeral');
-  if (el) el.textContent = formatCurrency(t);
-}
-
-function editRemoverItem(idx) {
-  if (!editTemp || !editTemp.itens[idx]) return;
-  if (!confirm('Remover "' + editTemp.itens[idx].descricao + '"?')) return;
-  editTemp.itens.splice(idx, 1);
-  if (!editTemp.itens.length) {
-    toast('Sem itens — use Excluir Requisição');
-    renderEditReq();
-    return;
-  }
-  renderEditReq();
-}
-
-function editAdicionarItem() {
-  if (!editTemp) return;
-  editTemp.itens.push({
-    linha: null,
-    descricao: '',
-    quantidade: 1,
-    um: 'UN',
-    valorUnit: 0,
-    total: 0,
-    observacao: '',
-    data: editTemp.data,
-    destinatario: '',
-    _novo: true
-  });
-  renderEditReq();
-  setTimeout(function() {
-    var inputs = document.querySelectorAll('#editReqBody .edit-item-desc');
-    var ultimo = inputs[inputs.length - 1];
-    if (ultimo) { ultimo.focus(); ultimo.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-  }, 80);
-}
-
-function editSalvar() {
-  if (!editTemp) return;
-  var obs = document.getElementById('editObs').value.trim();
-  var data = document.getElementById('editData').value;
-  var novoSetor = document.getElementById('editSetorMover').value;
-  var moverSetor = novoSetor !== editTemp.setorOriginal;
-
-  var btn = document.querySelector('.edit-actions .imp-btn-confirm');
-  btn.disabled = true; btn.textContent = 'Salvando...';
-
-  fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      acao: 'editarrequisicao',
-      usuario: sessao.nome,
-      senha: sessao.hash,
-      cidade: editTemp.cidade,
-      setor: editTemp.setorOriginal,
-      reqId: editTemp.reqId,
-      novoSetor: moverSetor ? novoSetor : null,
-      observacao: obs,
-      data: data,
-      itens: editTemp.itens
-    }),
-    redirect: 'follow'
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    btn.disabled = false; btn.textContent = 'Salvar Alterações';
-    if (d.status === 'ok') {
-      showSuccess('', 'Requisição salva!', moverSetor ? 'Movida para ' + novoSetor : '');
-      fecharEditReq();
-      fecharCidade();
-      carregarDados();
-    } else {
-      toast(d.msg || 'Erro ao salvar');
-    }
-  })
-  .catch(function() {
-    btn.disabled = false; btn.textContent = 'Salvar Alterações';
-    toast('Erro de conexão');
-  });
-}
-
-function editExcluirRequisicao() {
-  if (!editTemp) return;
-  if (!confirm('EXCLUIR requisição ' + editTemp.reqId + ' de ' + editTemp.cidade + '/' + editTemp.setor + '?\n\nEssa ação é irreversível!')) return;
-  if (!confirm('TEM CERTEZA? Todos os itens serão removidos permanentemente.')) return;
-
-  fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      acao: 'excluirrequisicao',
-      usuario: sessao.nome,
-      senha: sessao.hash,
-      cidade: editTemp.cidade,
-      setor: editTemp.setorOriginal,
-      reqId: editTemp.reqId
-    }),
-    redirect: 'follow'
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    if (d.status === 'ok') {
-      showSuccess('', 'Requisição excluída', editTemp.reqId);
-      fecharEditReq();
-      fecharCidade();
-      carregarDados();
-    } else {
-      toast(d.msg || 'Erro ao excluir');
-    }
-  })
-  .catch(function() { toast('Erro de conexão'); });
-}
-
-// ══════════════════════════════════════════════════════════════
-//  ASSISTENTE IA
-// ══════════════════════════════════════════════════════════════
-function abrirAssistenteIA() {
-  document.body.style.overflow = 'hidden';
-  document.getElementById('iaModal').classList.add('show');
-  history.pushState({ modal: 'ia' }, '', '');
-
-  if (!comandosIA.length) {
-    document.getElementById('iaBody').innerHTML =
-      '<div style="text-align:center;padding:40px;"><div class="ld-spinner" style="margin:0 auto 16px;"></div>' +
-      '<div class="empty-text">Carregando comandos...</div></div>';
-    fetch(API_URL + '?userHash=' + sessao.hash + '&acao=comandosia')
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        if (d.status === 'ok') {
-          comandosIA = d.comandos || [];
-          renderComandosIA();
-        } else {
-          document.getElementById('iaBody').innerHTML =
-            '<div class="empty-state"><div class="empty-text">' + (d.msg || 'Erro') + '</div></div>';
-        }
-      })
-      .catch(function() {
-        document.getElementById('iaBody').innerHTML =
-          '<div class="empty-state"><div class="empty-text">Erro de conexão</div></div>';
-      });
-  } else {
-    renderComandosIA();
-  }
-}
-
-function fecharAssistenteIA() {
-  var wasOpen = document.getElementById('iaModal').classList.contains('show');
-  document.body.style.overflow = '';
-  document.getElementById('iaModal').classList.remove('show');
-  if (wasOpen && !_insidePopstate) history.back();
-}
-
-function renderComandosIA() {
-  var h = '<div class="ia-cmds-grid">';
-  comandosIA.forEach(function(cmd) {
-    h += '<button class="ia-cmd-btn" onclick="executarComandoIA(\'' + escapeHtml(cmd.id) + '\')">';
-    h += '<div class="ia-cmd-icon">' + (cmd.icone || '🤖') + '</div>';
-    h += '<div class="ia-cmd-nome">' + escapeHtml(cmd.nome) + '</div>';
-    h += '<div class="ia-cmd-desc">' + escapeHtml(cmd.descricao || '') + '</div>';
-    h += '</button>';
-  });
-  h += '</div>';
-
-  h += '<div id="iaResultado" class="ia-resultado"></div>';
-  document.getElementById('iaBody').innerHTML = h;
-}
-
-function executarComandoIA(cmdId) {
-  var resBox = document.getElementById('iaResultado');
-  resBox.innerHTML = '<div style="text-align:center;padding:30px;"><div class="ld-spinner" style="margin:0 auto 16px;"></div>' +
-                     '<div class="empty-text">Processando comando...</div></div>';
-  resBox.scrollIntoView({ behavior: 'smooth' });
-
-  var cmd = comandosIA.find(function(c) { return c.id === cmdId; });
-  var needsInput = cmd && cmd.requerInput;
-  var inputUsuario = '';
-
-  if (needsInput) {
-    inputUsuario = prompt(cmd.promptInput || 'Digite o parâmetro:');
-    if (inputUsuario === null || !inputUsuario.trim()) {
-      resBox.innerHTML = '';
-      return;
-    }
-  }
-
-  fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      acao: 'executarcomandia',
-      usuario: sessao.nome,
-      senha: sessao.hash,
-      comandoId: cmdId,
-      input: inputUsuario
-    }),
-    redirect: 'follow'
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    if (d.status === 'ok') {
-      var resp = d.resultado || d.texto || '';
-      resBox.innerHTML = '<div class="ia-resp-box">' +
-        '<div class="ia-resp-head">Resultado — ' + escapeHtml(cmd ? cmd.nome : cmdId) + '</div>' +
-        '<div class="ia-resp-body">' + formatIAResp(resp) + '</div>' +
-        '<div class="ia-resp-actions">' +
-        '<button class="ia-copy-btn" onclick="copiarTextoIA()">Copiar</button>' +
-        '</div></div>';
-
-      if (d.atualizacao) {
-        iaAtualizacaoTemp = d.atualizacao;
-        resBox.innerHTML += '<div class="ia-update-box">' +
-          '<div class="ia-update-msg">' + escapeHtml(d.atualizacao.mensagem || 'Atualização disponível') + '</div>' +
-          '<button class="ia-apply-btn" onclick="aplicarAtualizacaoIA()">Aplicar Atualização</button></div>';
-      }
-    } else {
-      resBox.innerHTML = '<div class="ia-resp-box ia-resp-erro">' +
-        '<div class="ia-resp-head">Erro</div>' +
-        '<div class="ia-resp-body">' + escapeHtml(d.msg || 'Erro desconhecido') + '</div></div>';
-    }
-  })
-  .catch(function() {
-    resBox.innerHTML = '<div class="ia-resp-box ia-resp-erro">' +
-      '<div class="ia-resp-head">Erro</div>' +
-      '<div class="ia-resp-body">Sem conexão com o servidor</div></div>';
-  });
-}
-
-function formatIAResp(texto) {
-  if (!texto) return '';
-  var t = escapeHtml(texto);
-  t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  t = t.replace(/\n/g, '<br>');
-  return t;
-}
-
-function copiarTextoIA() {
-  var box = document.querySelector('.ia-resp-body');
-  if (!box) return;
-  var texto = box.innerText || box.textContent;
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(texto).then(function() { toast('Copiado!'); });
-  } else {
-    toast('Erro ao copiar');
-  }
-}
-
-function aplicarAtualizacaoIA() {
-  if (!iaAtualizacaoTemp) return;
-
-  fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      acao: 'aplicaratualizacaoia',
-      usuario: sessao.nome,
-      senha: sessao.hash,
-      atualizacao: iaAtualizacaoTemp
-    }),
-    redirect: 'follow'
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    if (d.status === 'ok') {
-      showSuccess('', 'Atualização aplicada!', d.msg || '');
-      iaAtualizacaoTemp = null;
-      carregarDados();
-    } else {
-      toast(d.msg || 'Erro ao aplicar');
-    }
-  })
-  .catch(function() { toast('Erro de conexão'); });
-}
-
-// ══════════════════════════════════════════════════════════════
-//  CATÁLOGO DE CUSTO (v8.6)
+//  v8.8: CATÁLOGO PREÇO DE CUSTO — SEPARADO POR SETOR + FILTROS
 // ══════════════════════════════════════════════════════════════
 function abrirCatalogoCusto() {
   document.body.style.overflow = 'hidden';
   document.getElementById('catalogoCustoModal').classList.add('show');
   history.pushState({ modal: 'catalogoCusto' }, '', '');
 
+  _custoCatSort = 'setor';
+  _custoCatSetorFiltro = 'TODOS';
+
   document.getElementById('catalogoCustoBody').innerHTML =
     '<div style="text-align:center;padding:40px 20px;"><div class="ld-spinner" style="margin:0 auto 16px;"></div>' +
     '<div class="empty-text">Carregando catálogo de custo...</div></div>';
   document.getElementById('catalogoCustoSearch').value = '';
+  document.getElementById('custoSetorTabs').innerHTML = '';
+
+  // Reset filter buttons
+  document.querySelectorAll('.custo-filter-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.sort === 'setor');
+  });
 
   fetch(API_URL + '?userHash=' + sessao.hash + '&acao=catalogocusto')
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (d.status !== 'ok') { toast(d.msg || 'Erro'); return; }
-      window._catalogoCustoItens = d.itens || [];
+      window._catalogoCustoItens = (d.itens || []).map(function(it) {
+        it._setor = _categorizarItem(it.descricao);
+        return it;
+      });
+      _renderCustoSetorTabs();
       renderCatalogoCusto('');
     })
     .catch(function() { toast('Erro de conexão'); });
@@ -1842,17 +902,67 @@ function fecharCatalogoCusto() {
   if (wasOpen && !_insidePopstate) history.back();
 }
 
+function _renderCustoSetorTabs() {
+  var itens = window._catalogoCustoItens || [];
+  var contagem = {};
+  itens.forEach(function(it) {
+    var s = it._setor || 'OUTROS';
+    contagem[s] = (contagem[s] || 0) + 1;
+  });
+
+  var tabs = document.getElementById('custoSetorTabs');
+  if (!tabs) return;
+
+  var setorKeys = Object.keys(SETOR_CATEGORIAS).filter(function(k) { return contagem[k] > 0; });
+  if (setorKeys.length < 2) { tabs.innerHTML = ''; return; }
+
+  var h = '<button class="custo-setor-tab active" data-setor="TODOS" onclick="filtrarCustoSetor(\'TODOS\')">Todos <span class="cst-count">' + itens.length + '</span></button>';
+  setorKeys.forEach(function(k) {
+    var info = SETOR_CATEGORIAS[k];
+    h += '<button class="custo-setor-tab" data-setor="' + k + '" onclick="filtrarCustoSetor(\'' + k + '\')">' +
+         info.icon + ' ' + k.charAt(0) + k.slice(1).toLowerCase() +
+         ' <span class="cst-count">' + contagem[k] + '</span></button>';
+  });
+
+  tabs.innerHTML = h;
+}
+
+function filtrarCustoSetor(setor) {
+  _custoCatSetorFiltro = setor;
+  document.querySelectorAll('.custo-setor-tab').forEach(function(tab) {
+    tab.classList.toggle('active', tab.dataset.setor === setor);
+  });
+  var q = document.getElementById('catalogoCustoSearch').value.toLowerCase().trim();
+  renderCatalogoCusto(q);
+}
+
+function sortCatalogoCusto(tipo) {
+  _custoCatSort = tipo;
+  document.querySelectorAll('.custo-filter-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.sort === tipo);
+  });
+  var q = document.getElementById('catalogoCustoSearch').value.toLowerCase().trim();
+  renderCatalogoCusto(q);
+}
+
 function filtrarCatalogoCusto() {
   var q = document.getElementById('catalogoCustoSearch').value.toLowerCase().trim();
   renderCatalogoCusto(q);
 }
 
 function renderCatalogoCusto(filtro) {
-  var lista = window._catalogoCustoItens || [];
+  var lista = (window._catalogoCustoItens || []).slice();
+
+  // Filtrar por texto
   if (filtro) {
     lista = lista.filter(function(it) {
       return (it.descricao || '').toLowerCase().indexOf(filtro) > -1;
     });
+  }
+
+  // Filtrar por setor
+  if (_custoCatSetorFiltro !== 'TODOS') {
+    lista = lista.filter(function(it) { return it._setor === _custoCatSetorFiltro; });
   }
 
   if (!lista.length) {
@@ -1862,28 +972,104 @@ function renderCatalogoCusto(filtro) {
     return;
   }
 
-  var h = '<div class="cat-meta">' + lista.length + ' ' + (lista.length === 1 ? 'item' : 'itens') + '</div>';
+  // Ordenar
+  if (_custoCatSort === 'az') {
+    lista.sort(function(a, b) { return (a.descricao || '').localeCompare(b.descricao || ''); });
+  } else if (_custoCatSort === 'za') {
+    lista.sort(function(a, b) { return (b.descricao || '').localeCompare(a.descricao || ''); });
+  } else if (_custoCatSort === 'preco-asc') {
+    lista.sort(function(a, b) { return (a.custo || 0) - (b.custo || 0); });
+  } else if (_custoCatSort === 'preco-desc') {
+    lista.sort(function(a, b) { return (b.custo || 0) - (a.custo || 0); });
+  }
 
-  lista.forEach(function(it) {
-    h += '<div class="cat-item">';
-    h += '<div class="cat-info"><span class="cat-desc">' + escapeHtml(it.descricao) + '</span></div>';
-    h += '<div class="cat-action-wrap">';
-    h += '<div class="cat-valor-wrap">';
-    h += '<span class="cat-prefix">R$</span>';
-    h += '<input type="text" inputmode="decimal" class="cat-input" ' +
-         'id="input_custo_' + it.linha + '" ' +
-         'value="' + formatNum(it.custo || 0) + '" ' +
-         'data-linha="' + it.linha + '" ' +
-         'data-original="' + (it.custo || 0) + '" ' +
-         'data-desc="' + escapeHtml(it.descricao) + '" ' +
-         'onfocus="this.select()" ' +
-         'onkeydown="if(event.key === \'Enter\') salvarPrecoCusto(' + it.linha + ')">';
-    h += '</div>';
-    h += '<button class="cat-save-btn" onclick="salvarPrecoCusto(' + it.linha + ')" title="Salvar">✓</button>';
-    h += '</div></div>';
-  });
+  // Stats
+  var totalCusto = 0;
+  lista.forEach(function(it) { totalCusto += (it.custo || 0); });
+
+  var h = '<div class="custo-stats-bar">';
+  h += '<span class="custo-stat-chip"><span class="csc-val">' + lista.length + '</span> itens</span>';
+  if (totalCusto > 0) {
+    h += '<span class="custo-stat-chip chip-total">Total: <span class="csc-val">' + formatCurrency(totalCusto) + '</span></span>';
+  }
+  h += '</div>';
+
+  // Renderizar agrupado por setor ou flat
+  if (_custoCatSort === 'setor' && _custoCatSetorFiltro === 'TODOS') {
+    // Agrupar
+    var grupos = {};
+    lista.forEach(function(it) {
+      var s = it._setor || 'OUTROS';
+      if (!grupos[s]) grupos[s] = [];
+      grupos[s].push(it);
+    });
+
+    var setorKeys = Object.keys(SETOR_CATEGORIAS);
+    setorKeys.forEach(function(setorKey) {
+      var grpItens = grupos[setorKey];
+      if (!grpItens || !grpItens.length) return;
+      var info = SETOR_CATEGORIAS[setorKey];
+      var colorStyle = _getSetorColorStyle(info.color);
+      var totalGrupo = 0;
+      grpItens.forEach(function(it) { totalGrupo += (it.custo || 0); });
+
+      h += '<div class="custo-setor-group">';
+      h += '<div class="custo-setor-group-header">';
+      h += '<div class="custo-setor-group-icon" style="background:' + colorStyle.bg + ';border:1px solid ' + colorStyle.border + ';color:' + colorStyle.text + ';">' + info.icon + '</div>';
+      h += '<div class="custo-setor-group-nome">' + setorKey.charAt(0) + setorKey.slice(1).toLowerCase() + '</div>';
+      h += '<div class="custo-setor-group-count">' + grpItens.length + ' itens</div>';
+      if (totalGrupo > 0) h += '<div class="custo-setor-group-total">' + formatCurrency(totalGrupo) + '</div>';
+      h += '</div>';
+
+      grpItens.forEach(function(it) {
+        h += _renderCustoItem(it);
+      });
+      h += '</div>';
+    });
+  } else {
+    // Flat
+    lista.forEach(function(it) {
+      h += _renderCustoItem(it);
+    });
+  }
 
   document.getElementById('catalogoCustoBody').innerHTML = h;
+}
+
+function _renderCustoItem(it) {
+  var setorInfo = _getSetorInfo(it._setor);
+  var confClass = '';
+  var confLabel = '';
+  if (it.confianca) {
+    var cf = it.confianca.toUpperCase();
+    if (cf === 'ALTA') { confClass = 'conf-alta'; confLabel = 'Alta'; }
+    else if (cf === 'MEDIA' || cf === 'MÉDIA') { confClass = 'conf-media'; confLabel = 'Média'; }
+    else { confClass = 'conf-baixa'; confLabel = 'Baixa'; }
+  }
+
+  var h = '<div class="custo-item">';
+  h += '<div class="custo-item-info">';
+  h += '<div class="custo-item-nome">' + escapeHtml(it.descricao) + '</div>';
+  h += '<div class="custo-item-meta">';
+  h += '<span style="opacity:.7;">' + setorInfo.icon + ' ' + (it._setor || 'Outros').charAt(0) + (it._setor || 'Outros').slice(1).toLowerCase() + '</span>';
+  if (confLabel) h += '<span class="custo-item-badge ' + confClass + '">' + confLabel + '</span>';
+  h += '</div></div>';
+
+  h += '<div class="custo-item-action">';
+  h += '<div class="custo-valor-wrap">';
+  h += '<span class="custo-prefix">R$</span>';
+  h += '<input type="text" inputmode="decimal" class="custo-input" ' +
+       'id="input_custo_' + it.linha + '" ' +
+       'value="' + formatNum(it.custo || 0) + '" ' +
+       'data-linha="' + it.linha + '" ' +
+       'data-original="' + (it.custo || 0) + '" ' +
+       'data-desc="' + escapeHtml(it.descricao) + '" ' +
+       'onfocus="this.select()" ' +
+       'onkeydown="if(event.key===\'Enter\')salvarPrecoCusto(' + it.linha + ')">';
+  h += '</div>';
+  h += '<button class="custo-save-btn" onclick="salvarPrecoCusto(' + it.linha + ')" title="Salvar">✓</button>';
+  h += '</div></div>';
+  return h;
 }
 
 function salvarPrecoCusto(linha) {
@@ -1947,147 +1133,795 @@ function _carregarPrecosCustoParaRef(callback) {
         });
         window._precoCustoMapaCache = mapa;
         callback(mapa);
-      } else {
-        callback({});
-      }
+      } else { callback({}); }
     })
     .catch(function() { callback({}); });
 }
 
 // ══════════════════════════════════════════════════════════════
-//  PESQUISA DE PREÇO DE CUSTO POR SETOR (v8.6)
+//  UTILS
 // ══════════════════════════════════════════════════════════════
-function abrirPesquisaCusto() {
-  if (!dadosCompletos || !dadosCompletos.cidades.length) {
-    toast('Carregue os dados primeiro');
-    return;
-  }
-
-  // Coletar setores únicos com itens
-  var setoresComItens = {};
-  dadosCompletos.cidades.forEach(function(cid) {
-    cid.setores.forEach(function(s) {
-      if (s.itens && s.itens.length) {
-        if (!setoresComItens[s.nome]) setoresComItens[s.nome] = [];
-        s.itens.forEach(function(it) {
-          var desc = (it.descricao || '').toUpperCase().trim();
-          if (desc && setoresComItens[s.nome].indexOf(desc) === -1) {
-            setoresComItens[s.nome].push(desc);
-          }
-        });
-      }
-    });
-  });
-
-  precoCustoSetores = Object.keys(setoresComItens).map(function(nome) {
-    return { nome: nome, descricoes: setoresComItens[nome] };
-  });
-
-  if (!precoCustoSetores.length) { toast('Nenhum setor com itens'); return; }
-
-  precoCustoJaProcessados = {};
-  precoCustoResultados = [];
-  precoCustoSetorAtual = 0;
-  precoCustoPesquisando = true;
-  precoCustoTotalCusto = 0;
-
-  // Renderizar UI no painel de custo
-  var panel = document.getElementById('precoCustoPanel');
-  if (panel) {
-    panel.style.display = 'block';
-    panel.innerHTML = '<div class="pc-header">Pesquisa de Custo por Setor</div>' +
-      '<div id="pcProgress" class="pc-progress"></div>' +
-      '<div id="pcResultados" class="pc-resultados"></div>' +
-      '<button class="pc-cancel-btn" onclick="cancelarPesquisaCusto()">Cancelar</button>';
-  }
-
-  processarProximoSetorCusto();
+function getSetorClass(nome) {
+  var n = (nome || '').toUpperCase();
+  if (n.indexOf('EDUCAÇÃO') > -1 || n.indexOf('EDUCACAO') > -1) return 'edu';
+  if (n.indexOf('SAÚDE') > -1 || n.indexOf('SAUDE') > -1) return 'sau';
+  if (n.indexOf('ASSISTÊNCIA') > -1 || n.indexOf('ASSISTENCIA') > -1) return 'ass';
+  if (n.indexOf('ADMINISTRAÇÃO') > -1 || n.indexOf('ADMINISTRACAO') > -1) return 'adm';
+  if (n.indexOf('INFRAESTRUTURA') > -1) return 'inf';
+  return 'adm';
 }
 
-function cancelarPesquisaCusto() {
-  precoCustoPesquisando = false;
-  var panel = document.getElementById('precoCustoPanel');
-  if (panel) panel.style.display = 'none';
+function formatCurrency(v) {
+  if (typeof v !== 'number' || isNaN(v)) v = 0;
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-function processarProximoSetorCusto() {
-  if (!precoCustoPesquisando) return;
-  if (precoCustoSetorAtual >= precoCustoSetores.length) {
-    finalizarPesquisaCusto();
-    return;
-  }
+function formatNum(v) {
+  return (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
-  var setor = precoCustoSetores[precoCustoSetorAtual];
-  var progEl = document.getElementById('pcProgress');
-  if (progEl) {
-    var pct = Math.round(((precoCustoSetorAtual) / precoCustoSetores.length) * 100);
-    progEl.innerHTML = '<div class="pc-prog-text">' + escapeHtml(setor.nome) + ' (' + (precoCustoSetorAtual + 1) + '/' + precoCustoSetores.length + ')</div>' +
-      '<div class="pc-bar-bg"><div class="pc-bar-fill" style="width:' + pct + '%"></div></div>';
-  }
+function parseValorBR(str) {
+  var s = String(str || '').trim().replace(/\s/g, '').replace(/R\$/g, '');
+  if (s.indexOf(',') > -1) s = s.replace(/\./g, '').replace(',', '.');
+  var n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
 
-  // Filtrar apenas descricoes ainda não processadas
-  var descParaProcessar = setor.descricoes.filter(function(d) {
-    return !precoCustoJaProcessados[_normFront(d)];
-  });
+function escapeHtml(str) {
+  if (!str && str !== 0) return '';
+  return str.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
-  if (!descParaProcessar.length) {
-    precoCustoSetorAtual++;
-    processarProximoSetorCusto();
-    return;
-  }
+function showSuccess(icon, msg, detail) {
+  document.getElementById('successIcon').textContent = icon;
+  document.getElementById('successMsg').textContent = msg;
+  document.getElementById('successDetail').textContent = detail || '';
+  var ov = document.getElementById('successOverlay');
+  ov.classList.add('show');
+  setTimeout(function () { ov.classList.remove('show'); }, 2200);
+}
 
-  // Enviar ao backend para pesquisa de custo IA
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function () { t.classList.remove('show'); }, 3500);
+}
+
+function _dataHoraAtual() {
+  var d = new Date();
+  return String(d.getDate()).padStart(2,'0') + '/' +
+         String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear() + ' às ' +
+         String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+function _normFront(str) {
+  if (!str) return '';
+  var s = String(str).toUpperCase().trim();
+  s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  s = s.replace(/[^A-Z0-9 ]/g, ' ');
+  s = s.replace(/\s+/g, ' ').trim();
+  return s;
+}
+
+function dispararSalvar(linha) {
+  var input = document.getElementById('input_cat_' + linha);
+  if (!input) return;
+
+  var original = parseFloat(input.dataset.original);
+  var desc = input.dataset.desc;
+  var novo = parseValorBR(input.value);
+
+  if (novo === null || novo < 0) { toast('Valor inválido'); input.value = formatNum(original); return; }
+  if (Math.abs(novo - original) < 0.001) { input.value = formatNum(original); input.blur(); return; }
+
+  var msg = 'Atualizar "' + desc + '" para R$ ' + formatNum(novo) + '?\n\nAtualizar também requisições antigas?\n\nOK = sim · Cancelar = só pendentes';
+  var atualizarAntigas = confirm(msg);
+
+  input.dataset.original = novo;
+  input.value = formatNum(novo);
+  input.blur();
+
+  var btn = input.parentElement.nextElementSibling;
+  if (btn) { btn.innerHTML = '...'; btn.disabled = true; }
+
+  showSuccess('', 'Preço alterado!', 'Sincronizando...');
+
   fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({
-      acao: 'pesquisarcusto',
+      acao: 'salvarprecoitem',
       usuario: sessao.nome,
       senha: sessao.hash,
-      setor: setor.nome,
-      descricoes: descParaProcessar
+      linha: linha,
+      valor: novo,
+      atualizarAntigas: atualizarAntigas
     }),
     redirect: 'follow'
   })
   .then(function(r) { return r.json(); })
   .then(function(d) {
-    if (d.status === 'ok' && d.resultados) {
-      d.resultados.forEach(function(r) {
-        precoCustoJaProcessados[_normFront(r.descricao)] = true;
-        precoCustoResultados.push(r);
-        precoCustoTotalCusto += (r.custo || 0);
-      });
-      _renderPcResultadosParciais();
+    if (btn) { btn.innerHTML = '✓'; btn.disabled = false; }
+    if (d.status === 'ok') {
+      for (var i = 0; i < catalogo.length; i++) {
+        if (catalogo[i].linha === linha) { catalogo[i].valor = novo; break; }
+      }
+      if (d.atualizadosPendentes > 0 || d.atualizadosAntigos > 0) carregarDados();
+    } else {
+      input.dataset.original = original; input.value = formatNum(original);
+      if (btn) { btn.innerHTML = '✓'; btn.disabled = false; }
+      toast(d.msg || 'Erro ao salvar');
     }
-    precoCustoSetorAtual++;
-    setTimeout(processarProximoSetorCusto, 500);
   })
   .catch(function() {
-    precoCustoSetorAtual++;
-    setTimeout(processarProximoSetorCusto, 500);
+    input.dataset.original = original; input.value = formatNum(original);
+    if (btn) { btn.innerHTML = '✓'; btn.disabled = false; }
+    toast('Erro de conexão');
   });
 }
 
-function _renderPcResultadosParciais() {
-  var el = document.getElementById('pcResultados');
-  if (!el) return;
-  var h = '<div class="pc-total">Total acumulado: ' + formatCurrency(precoCustoTotalCusto) + '</div>';
-  precoCustoResultados.slice(-10).reverse().forEach(function(r) {
-    h += '<div class="pc-item"><span class="pc-desc">' + escapeHtml(r.descricao) + '</span>' +
-         '<span class="pc-custo">' + formatCurrency(r.custo || 0) + '</span></div>';
+// ══════════════════════════════════════════════════════════════
+//  RESUMO WHATSAPP
+// ══════════════════════════════════════════════════════════════
+function toggleRelatorio() {
+  var btn = document.getElementById('switchRelatorio');
+  if (btn) { btn.classList.add('on'); setTimeout(function () { btn.classList.remove('on'); }, 1000); }
+
+  if (!dadosCompletos) { toast('Carregue os dados primeiro'); return; }
+
+  var texto = '📋 *ORÇAMENTO DE REQUISIÇÕES*\n';
+  var d = new Date();
+  texto += '📅 ' + String(d.getDate()).padStart(2, '0') + '/' +
+           String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear() + '\n';
+  texto += '━━━━━━━━━━━━━━━━━━━━\n\n';
+
+  var total = 0;
+  var ord = [].concat(dadosCompletos.cidades).sort(function (a, b) { return b.total - a.total; });
+  ord.forEach(function (cid) {
+    if (cid.itens > 0) {
+      texto += '🏙️ *' + cid.nome.toUpperCase() + '*\n';
+      texto += '   💰 ' + formatCurrency(cid.total) + ' (' + cid.itens + ' itens)\n\n';
+      total += cid.total;
+    }
   });
-  el.innerHTML = h;
+
+  texto += '━━━━━━━━━━━━━━━━━━━━\n';
+  texto += '📊 *TOTAL GERAL: ' + formatCurrency(total) + '*\n\n';
+  texto += '_Requisições Digital v' + APP_VERSION + ' — CRV/LAS_';
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto).then(function () {
+      showSuccess('', 'Resumo copiado!', 'Cole no WhatsApp');
+    }).catch(function () { toast('Erro ao copiar'); });
+  } else { toast('Copie manualmente'); }
 }
 
-function finalizarPesquisaCusto() {
-  precoCustoPesquisando = false;
-  var progEl = document.getElementById('pcProgress');
-  if (progEl) {
-    progEl.innerHTML = '<div class="pc-prog-text">Concluído!</div>' +
-      '<div class="pc-bar-bg"><div class="pc-bar-fill" style="width:100%"></div></div>';
+// ══════════════════════════════════════════════════════════════
+//  IMPORTAÇÃO IA
+// ══════════════════════════════════════════════════════════════
+var importacaoTemp = null;
+
+var CIDADES_PADRAO = ['Ibicuí', 'Nova Canaã', 'Boa Nova', 'Dário Meira', 'Floresta Azul'];
+var SETORES_PADRAO = ['EDUCAÇÃO', 'SAÚDE', 'ASSISTÊNCIA SOCIAL', 'ADMINISTRAÇÃO', 'INFRAESTRUTURA'];
+var LS_CIDADES = 'cv_cidades_custom';
+var LS_SETORES = 'cv_setores_custom';
+
+function _carregarLista(key, padrao) {
+  var saved = localStorage.getItem(key);
+  if (saved) { try { return JSON.parse(saved); } catch(e) {} }
+  return padrao.slice();
+}
+function _salvarLista(key, lista) { localStorage.setItem(key, JSON.stringify(lista)); }
+
+function _popularSelect(id, lista, placeholder) {
+  var sel = document.getElementById(id);
+  var atual = sel.value;
+  sel.innerHTML = '<option value="">' + placeholder + '</option>';
+  lista.forEach(function(item) {
+    var opt = document.createElement('option');
+    opt.value = item; opt.textContent = item;
+    sel.appendChild(opt);
+  });
+  if (atual && lista.indexOf(atual) !== -1) sel.value = atual;
+}
+
+function popularSelectsCidadeSetor() {
+  var cidades = _carregarLista(LS_CIDADES, CIDADES_PADRAO);
+  var setores = _carregarLista(LS_SETORES, SETORES_PADRAO);
+  _popularSelect('impCidade', cidades, 'Selecione...');
+  _popularSelect('impSetor', setores, 'Selecione...');
+}
+
+function adicionarCidade() {
+  var nome = prompt('Nome da nova cidade:');
+  if (!nome || !nome.trim()) return;
+  nome = nome.trim();
+  var lista = _carregarLista(LS_CIDADES, CIDADES_PADRAO);
+  if (lista.some(function(c) { return c.toLowerCase() === nome.toLowerCase(); })) { toast('Cidade já existe'); return; }
+  lista.push(nome); lista.sort();
+  _salvarLista(LS_CIDADES, lista);
+  _popularSelect('impCidade', lista, 'Selecione...');
+  document.getElementById('impCidade').value = nome;
+  toast('Cidade adicionada');
+}
+
+function removerCidade() {
+  var sel = document.getElementById('impCidade');
+  if (!sel.value) { toast('Selecione a cidade para remover'); return; }
+  if (!confirm('Remover "' + sel.value + '" da lista?')) return;
+  var lista = _carregarLista(LS_CIDADES, CIDADES_PADRAO);
+  lista = lista.filter(function(c) { return c !== sel.value; });
+  _salvarLista(LS_CIDADES, lista);
+  _popularSelect('impCidade', lista, 'Selecione...');
+  toast('Cidade removida');
+}
+
+function adicionarSetor() {
+  var nome = prompt('Nome do novo setor:');
+  if (!nome || !nome.trim()) return;
+  nome = nome.trim().toUpperCase();
+  var lista = _carregarLista(LS_SETORES, SETORES_PADRAO);
+  if (lista.indexOf(nome) !== -1) { toast('Setor já existe'); return; }
+  lista.push(nome); lista.sort();
+  _salvarLista(LS_SETORES, lista);
+  _popularSelect('impSetor', lista, 'Selecione...');
+  document.getElementById('impSetor').value = nome;
+  toast('Setor adicionado');
+}
+
+function removerSetor() {
+  var sel = document.getElementById('impSetor');
+  if (!sel.value) { toast('Selecione o setor para remover'); return; }
+  if (!confirm('Remover "' + sel.value + '" da lista?')) return;
+  var lista = _carregarLista(LS_SETORES, SETORES_PADRAO);
+  lista = lista.filter(function(s) { return s !== sel.value; });
+  _salvarLista(LS_SETORES, lista);
+  _popularSelect('impSetor', lista, 'Selecione...');
+  toast('Setor removido');
+}
+
+function abrirImportar() {
+  document.body.style.overflow = 'hidden';
+  document.getElementById('importarModal').classList.add('show');
+  history.pushState({ modal: 'importar' }, '', '');
+  document.getElementById('impStep1').style.display = 'block';
+  document.getElementById('impStep2').style.display = 'none';
+  document.getElementById('impStep3').style.display = 'none';
+  document.getElementById('impTexto').value = '';
+  document.getElementById('impArquivo').value = '';
+  document.getElementById('impPreview').innerHTML = '';
+  var hoje = new Date();
+  document.getElementById('impData').value = hoje.getFullYear() + '-' +
+    String(hoje.getMonth() + 1).padStart(2, '0') + '-' + String(hoje.getDate()).padStart(2, '0');
+  document.getElementById('impObs').value = '';
+  importacaoTemp = null;
+  popularSelectsCidadeSetor();
+}
+
+function fecharImportar() {
+  var wasOpen = document.getElementById('importarModal').classList.contains('show');
+  document.body.style.overflow = '';
+  document.getElementById('importarModal').classList.remove('show');
+  if (wasOpen && !_insidePopstate) history.back();
+}
+
+function comprimirImagem(file, maxSize, callback) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var width = img.width, height = img.height;
+      if (width > height && width > maxSize) { height *= maxSize / width; width = maxSize; }
+      else if (height > maxSize) { width *= maxSize / height; height = maxSize; }
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      callback(canvas.toDataURL('image/jpeg', 0.75));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function escolherCidadeSetor() {
+  var cidade = document.getElementById('impCidade').value;
+  var setor = document.getElementById('impSetor').value;
+  var dataReq = document.getElementById('impData').value;
+  var obsReq = document.getElementById('impObs').value.trim();
+  var arquivo = document.getElementById('impArquivo').files[0];
+  var texto = document.getElementById('impTexto').value.trim();
+
+  if (!cidade || !setor) { toast('Preencha cidade e setor'); return; }
+  if (!dataReq) { toast('Informe a data da requisição'); return; }
+  if (!arquivo && !texto) { toast('Anexe foto OU cole texto'); return; }
+
+  document.getElementById('impStep1').style.display = 'none';
+  document.getElementById('impStep2').style.display = 'block';
+
+  var payload = { acao: 'parsearrequisicao', usuario: sessao.nome, senha: sessao.hash };
+  if (texto) payload.textoBruto = texto;
+
+  if (arquivo) {
+    comprimirImagem(arquivo, 1400, function(base64) {
+      payload.imagemBase64 = base64.split(',')[1];
+      payload.mimeType = 'image/jpeg';
+      enviarParaIA(payload, cidade, setor, '', dataReq, obsReq);
+    });
+  } else {
+    enviarParaIA(payload, cidade, setor, '', dataReq, obsReq);
   }
-  _renderPcResultadosParciais();
-  toast('Pesquisa de custo finalizada');
+}
+
+function enviarParaIA(payload, cidade, setor, reqId, dataReq, obsReq) {
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload), redirect: 'follow'
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.status !== 'ok') { toast(d.msg || 'Erro na IA'); voltarStep1(); return; }
+      importacaoTemp = { cidade: cidade, setor: setor, reqId: '(automático)', data: dataReq, observacao: obsReq || '', itens: d.resultado.itens, meta: d.resultado };
+      fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ acao: 'previewproximoid', usuario: sessao.nome, senha: sessao.hash, cidade: cidade, setor: setor }),
+        redirect: 'follow'
+      }).then(function(r){return r.json();}).then(function(pp) {
+        if (pp.status === 'ok') importacaoTemp.reqId = pp.proximoId;
+        renderPreviewImportacao();
+      }).catch(function(){ renderPreviewImportacao(); });
+    })
+    .catch(function() { toast('Erro de conexão'); voltarStep1(); });
+}
+
+function voltarStep1() {
+  document.getElementById('impStep1').style.display = 'block';
+  document.getElementById('impStep2').style.display = 'none';
+  document.getElementById('impStep3').style.display = 'none';
+}
+
+function renderPreviewImportacao() {
+  document.getElementById('impStep2').style.display = 'none';
+  document.getElementById('impStep3').style.display = 'block';
+
+  var meta = importacaoTemp.meta;
+  var itens = importacaoTemp.itens;
+  var totalGeral = 0;
+
+  var h = '<div class="imp-meta-box">';
+  h += '<div><strong>Cidade:</strong> ' + escapeHtml(importacaoTemp.cidade) + ' / ' + escapeHtml(importacaoTemp.setor) + '</div>';
+  h += '<div><strong>Req ID:</strong> <span style="color:var(--accent);font-weight:700;">' + escapeHtml(importacaoTemp.reqId) + '</span></div>';
+  if (importacaoTemp.observacao) h += '<div style="color:var(--accent);"><strong>Obs:</strong> ' + escapeHtml(importacaoTemp.observacao) + '</div>';
+  if (importacaoTemp.data) { var p = importacaoTemp.data.split('-'); h += '<div><strong>Data:</strong> ' + p[2] + '/' + p[1] + '/' + p[0] + '</div>'; }
+  h += '</div>';
+
+  h += '<div class="imp-legenda"><span class="leg-dot leg-ok"></span>OK <span class="leg-dot leg-novo"></span>Novo <span class="leg-dot leg-div"></span>Divergente <span class="leg-dot leg-baixa"></span>Conferir</div>';
+
+  itens.forEach(function(it, idx) {
+    var classe = 'imp-row';
+    if (it.confianca === 'BAIXA') classe += ' baixa';
+    else if (it.status_catalogo === 'NOVO') classe += ' novo';
+    else if (it.status_catalogo === 'DIVERGENTE' || it.status_catalogo === 'MANUAL_PROTEGIDO') classe += ' div';
+    else classe += ' ok';
+    totalGeral += parseFloat(it.valor_total) || 0;
+
+    h += '<div class="' + classe + '">';
+    h += '<div class="imp-row-head"><span class="imp-num">' + (idx + 1) + '</span><input class="imp-desc" value="' + escapeHtml(it.descricao_normalizada || it.descricao) + '" data-idx="' + idx + '" data-campo="descricao_normalizada"></div>';
+    if (it.destinatario) {
+      h += '<div class="imp-dest-row"><label>Escola/Local<input class="imp-input imp-dest" value="' + escapeHtml(it.destinatario) + '" data-idx="' + idx + '" data-campo="destinatario"></label></div>';
+    }
+    h += '<div class="imp-row-grid">';
+    h += '<label>Qtd<input type="number" step="0.01" class="imp-input" value="' + it.quantidade + '" data-idx="' + idx + '" data-campo="quantidade"></label>';
+    h += '<label>Un<input class="imp-input" value="' + escapeHtml(it.unidade_compra) + '" data-idx="' + idx + '" data-campo="unidade_compra"></label>';
+    h += '<label>Por emb<input type="number" step="1" class="imp-input" value="' + (it.qtd_por_embalagem || 1) + '" data-idx="' + idx + '" data-campo="qtd_por_embalagem"></label>';
+    h += '<label>Unit R$<input type="number" step="0.01" class="imp-input imp-unit" value="' + (it.valor_unitario_calc || 0).toFixed(4) + '" data-idx="' + idx + '" data-campo="valor_unitario_calc" id="impUnit' + idx + '" onchange="recalcTotal(' + idx + ')"></label>';
+    h += '<label>Total R$<input type="number" step="0.01" class="imp-input" value="' + it.valor_total + '" data-idx="' + idx + '" data-campo="valor_total" id="impTotal' + idx + '" onchange="recalcUnit(' + idx + ')"></label>';
+    h += '</div>';
+
+    var statusTxt = '';
+    if (it.status_catalogo === 'NOVO') statusTxt = 'Item novo — entrará no catálogo';
+    else if (it.status_catalogo === 'DIVERGENTE') statusTxt = 'Catálogo: R$ ' + (it.preco_no_catalogo || 0).toFixed(2) + ' (AUTO) — será atualizado';
+    else if (it.status_catalogo === 'MANUAL_PROTEGIDO') statusTxt = 'Catálogo: R$ ' + (it.preco_no_catalogo || 0).toFixed(2) + ' (MANUAL) — protegido';
+    else if (it.status_catalogo === 'OK') statusTxt = 'Bate com catálogo';
+    if (it.confianca === 'BAIXA') statusTxt = 'CONFIRMAR — ' + (it.observacao || 'IA com baixa confiança');
+    h += '<div class="imp-status-msg">' + statusTxt + '</div>';
+    h += '<button class="imp-remove" onclick="removerItemImp(' + idx + ')">Remover</button>';
+    h += '</div>';
+  });
+
+  h += '<button class="imp-add-item-btn" onclick="adicionarItemImpManual()"><span class="iaim-icon">+</span><span class="iaim-text"><span class="iaim-title">Adicionar item manualmente</span><span class="iaim-sub">Inclua um item que a IA não detectou</span></span></button>';
+
+  h += '<div class="imp-total-box">Total da Requisição: <strong id="impTotalGeral">R$ ' + totalGeral.toFixed(2).replace('.', ',') + '</strong></div>';
+  h += '<div class="imp-actions"><button class="imp-btn-cancel" onclick="voltarStep1()">Refazer</button><button class="imp-btn-confirm" onclick="confirmarImportacao()">Confirmar e Lançar</button></div>';
+
+  document.getElementById('impPreview').innerHTML = h;
+
+  document.querySelectorAll('#impPreview input').forEach(function(inp) {
+    inp.addEventListener('input', function() {
+      var idx = parseInt(this.dataset.idx);
+      var campo = this.dataset.campo;
+      importacaoTemp.itens[idx][campo] = this.type === 'number' ? parseFloat(this.value) : this.value;
+    });
+  });
+}
+
+function recalcUnit(idx) {
+  var it = importacaoTemp.itens[idx];
+  var unit = it.valor_total / ((it.quantidade || 1) * (it.qtd_por_embalagem || 1));
+  it.valor_unitario_calc = unit;
+  var el = document.getElementById('impUnit' + idx);
+  if (el) el.value = unit.toFixed(4);
+  _recalcTotalGeral();
+}
+
+function recalcTotal(idx) {
+  var it = importacaoTemp.itens[idx];
+  var total = (it.valor_unitario_calc || 0) * (it.quantidade || 1) * (it.qtd_por_embalagem || 1);
+  it.valor_total = total;
+  var el = document.getElementById('impTotal' + idx);
+  if (el) el.value = total.toFixed(2);
+  _recalcTotalGeral();
+}
+
+function _recalcTotalGeral() {
+  var t = 0;
+  importacaoTemp.itens.forEach(function(i) { t += parseFloat(i.valor_total) || 0; });
+  var el = document.getElementById('impTotalGeral');
+  if (el) el.textContent = 'R$ ' + t.toFixed(2).replace('.', ',');
+}
+
+function removerItemImp(idx) {
+  if (!importacaoTemp || !importacaoTemp.itens[idx]) return;
+  importacaoTemp.itens.splice(idx, 1);
+  if (!importacaoTemp.itens.length) { toast('Todos os itens removidos'); voltarStep1(); return; }
+  toast('Item removido');
+  renderPreviewImportacao();
+}
+
+function adicionarItemImpManual() {
+  if (!importacaoTemp) return;
+  importacaoTemp.itens.push({
+    ordem: importacaoTemp.itens.length + 1, descricao: '', descricao_normalizada: '',
+    quantidade: 1, unidade_compra: 'UN', qtd_por_embalagem: 1,
+    valor_total: 0, valor_unitario_calc: 0, confianca: 'ALTA',
+    observacao: 'Manual', destinatario: '', status_catalogo: 'NOVO',
+    preco_no_catalogo: null, origem_atual: null, _manual: true
+  });
+  renderPreviewImportacao();
+  setTimeout(function() {
+    var inputs = document.querySelectorAll('#impPreview .imp-desc');
+    var ultimo = inputs[inputs.length - 1];
+    if (ultimo) { ultimo.focus(); ultimo.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  }, 80);
+  showSuccess('', 'Item adicionado', 'Preencha os valores');
+}
+
+function confirmarImportacao() {
+  if (!importacaoTemp || !importacaoTemp.itens.length) { toast('Sem itens'); return; }
+  var btn = document.querySelector('.imp-btn-confirm');
+  btn.disabled = true; btn.textContent = 'Lançando...';
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'confirmarimportacao', usuario: sessao.nome, senha: sessao.hash,
+      cidade: importacaoTemp.cidade, setor: importacaoTemp.setor,
+      reqId: importacaoTemp.reqId, data: importacaoTemp.data,
+      observacao: importacaoTemp.observacao || '', itens: importacaoTemp.itens
+    }), redirect: 'follow'
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.status === 'ok') {
+        showSuccess('', 'Requisição lançada!', d.itensInseridos + ' itens · R$ ' + d.totalRequisicao.toFixed(2));
+        fecharImportar(); carregarDados();
+      } else { toast(d.msg || 'Erro ao lançar'); btn.disabled = false; btn.textContent = 'Confirmar e Lançar'; }
+    })
+    .catch(function() { toast('Erro de conexão'); btn.disabled = false; btn.textContent = 'Confirmar e Lançar'; });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  EDIÇÃO DE REQUISIÇÃO
+// ══════════════════════════════════════════════════════════════
+var editTemp = null;
+
+function editarRequisicao(cidade, setor, reqId) {
+  if (!dadosCompletos) return;
+  var cid = dadosCompletos.cidades.find(function(c) { return c.nome === cidade; });
+  if (!cid) return;
+  var set = cid.setores.find(function(s) { return s.nome === setor; });
+  if (!set) return;
+  var itens = set.itens.filter(function(it) { return (it.requisicao || '-') === reqId; });
+  if (!itens.length) { toast('Requisição não encontrada'); return; }
+
+  editTemp = {
+    cidade: cidade, setor: setor, reqId: reqId, setorOriginal: setor,
+    itens: itens.map(function(it) {
+      return { linha: it.linha, descricao: it.descricao, quantidade: it.quantidade, um: it.um || '', valorUnit: it.valorUnit || 0, total: it.total || 0, observacao: it.observacao || '', data: it.data || '', destinatario: it.destinatario || '' };
+    }),
+    observacao: itens[0].observacao || '', data: itens[0].data || ''
+  };
+
+  renderEditReq();
+  document.getElementById('editReqModal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  history.pushState({ modal: 'editReq' }, '', '');
+}
+
+function fecharEditReq() {
+  var wasOpen = document.getElementById('editReqModal').classList.contains('show');
+  document.getElementById('editReqModal').classList.remove('show');
+  document.body.style.overflow = ''; editTemp = null;
+  if (wasOpen && !_insidePopstate) history.back();
+}
+
+function renderEditReq() {
+  if (!editTemp) return;
+  document.getElementById('editReqTitle').textContent = editTemp.reqId + ' — ' + editTemp.cidade;
+
+  var h = '<div class="edit-header-box">';
+  h += '<label class="edit-label">Observação<input type="text" class="edit-input" id="editObs" value="' + escapeHtml(editTemp.observacao) + '"></label>';
+  h += '<label class="edit-label">Data<input type="date" class="edit-input" id="editData" value="' + _brParaIso(editTemp.data) + '"></label>';
+  h += '<label class="edit-label">Setor atual<select id="editSetorMover" class="edit-input">';
+  SETORES_PADRAO.forEach(function(s) {
+    h += '<option value="' + escapeHtml(s) + '"' + (s === editTemp.setor ? ' selected' : '') + '>' + escapeHtml(s) + '</option>';
+  });
+  h += '</select></label></div>';
+
+  editTemp.itens.forEach(function(it, idx) {
+    h += '<div class="edit-item-row">';
+    h += '<div class="edit-item-head"><span class="edit-item-num">' + (idx + 1) + '</span>';
+    h += '<input class="edit-item-desc" value="' + escapeHtml(it.descricao) + '" data-idx="' + idx + '" data-campo="descricao"></div>';
+    if (it.destinatario) {
+      h += '<label class="edit-sublabel">Escola/Local<input class="edit-input edit-dest" value="' + escapeHtml(it.destinatario) + '" data-idx="' + idx + '" data-campo="destinatario"></label>';
+    }
+    h += '<div class="edit-item-grid">';
+    h += '<label>Qtd<input type="number" step="0.01" class="edit-input" value="' + it.quantidade + '" data-idx="' + idx + '" data-campo="quantidade" onchange="editRecalcTotal(' + idx + ')"></label>';
+    h += '<label>Un<input class="edit-input" value="' + escapeHtml(it.um) + '" data-idx="' + idx + '" data-campo="um"></label>';
+    h += '<label>Unit R$<input type="number" step="0.01" class="edit-input" value="' + (it.valorUnit || 0).toFixed(2) + '" data-idx="' + idx + '" data-campo="valorUnit" id="editUnit' + idx + '" onchange="editRecalcTotal(' + idx + ')"></label>';
+    h += '<label>Total R$<input type="number" step="0.01" class="edit-input" value="' + (it.total || 0).toFixed(2) + '" data-idx="' + idx + '" data-campo="total" id="editTotal' + idx + '" readonly></label>';
+    h += '</div>';
+    h += '<button class="edit-remove-btn" onclick="editRemoverItem(' + idx + ')">Remover item</button></div>';
+  });
+
+  h += '<button class="imp-add-item-btn" onclick="editAdicionarItem()" style="margin:12px 0;"><span class="iaim-icon">+</span><span class="iaim-text"><span class="iaim-title">Adicionar item</span><span class="iaim-sub">Inclua um novo item nesta requisição</span></span></button>';
+
+  var totalReq = 0;
+  editTemp.itens.forEach(function(it) { totalReq += (it.total || 0); });
+  h += '<div class="imp-total-box">Total: <strong id="editTotalGeral">' + formatCurrency(totalReq) + '</strong></div>';
+  h += '<div class="edit-actions"><button class="imp-btn-cancel" onclick="editExcluirRequisicao()">Excluir Requisição</button><button class="imp-btn-confirm" onclick="editSalvar()">Salvar Alterações</button></div>';
+
+  document.getElementById('editReqBody').innerHTML = h;
+
+  document.querySelectorAll('#editReqBody input[data-idx]').forEach(function(inp) {
+    inp.addEventListener('input', function() {
+      var idx = parseInt(this.dataset.idx), campo = this.dataset.campo;
+      if (campo === 'quantidade' || campo === 'valorUnit' || campo === 'total') editTemp.itens[idx][campo] = parseFloat(this.value) || 0;
+      else editTemp.itens[idx][campo] = this.value;
+    });
+  });
+}
+
+function editRecalcTotal(idx) {
+  var it = editTemp.itens[idx];
+  it.total = (it.quantidade || 0) * (it.valorUnit || 0);
+  var el = document.getElementById('editTotal' + idx);
+  if (el) el.value = it.total.toFixed(2);
+  var t = 0; editTemp.itens.forEach(function(i) { t += (i.total || 0); });
+  var el2 = document.getElementById('editTotalGeral');
+  if (el2) el2.textContent = formatCurrency(t);
+}
+
+function editRemoverItem(idx) {
+  if (!editTemp || !editTemp.itens[idx]) return;
+  if (!confirm('Remover "' + editTemp.itens[idx].descricao + '"?')) return;
+  editTemp.itens.splice(idx, 1);
+  if (!editTemp.itens.length) { toast('Sem itens — use Excluir Requisição'); }
+  renderEditReq();
+}
+
+function editAdicionarItem() {
+  if (!editTemp) return;
+  editTemp.itens.push({ linha: null, descricao: '', quantidade: 1, um: 'UN', valorUnit: 0, total: 0, observacao: '', data: editTemp.data, destinatario: '', _novo: true });
+  renderEditReq();
+  setTimeout(function() {
+    var inputs = document.querySelectorAll('#editReqBody .edit-item-desc');
+    var u = inputs[inputs.length - 1];
+    if (u) { u.focus(); u.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  }, 80);
+}
+
+function editSalvar() {
+  if (!editTemp) return;
+  var obs = document.getElementById('editObs').value.trim();
+  var data = document.getElementById('editData').value;
+  var novoSetor = document.getElementById('editSetorMover').value;
+  var moverSetor = novoSetor !== editTemp.setorOriginal;
+
+  var btn = document.querySelector('.edit-actions .imp-btn-confirm');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'editarrequisicao', usuario: sessao.nome, senha: sessao.hash,
+      cidade: editTemp.cidade, setor: editTemp.setorOriginal, reqId: editTemp.reqId,
+      novoSetor: moverSetor ? novoSetor : null, observacao: obs, data: data, itens: editTemp.itens
+    }), redirect: 'follow'
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    btn.disabled = false; btn.textContent = 'Salvar Alterações';
+    if (d.status === 'ok') {
+      showSuccess('', 'Requisição salva!', moverSetor ? 'Movida para ' + novoSetor : '');
+      fecharEditReq(); fecharCidade(); carregarDados();
+    } else { toast(d.msg || 'Erro ao salvar'); }
+  })
+  .catch(function() { btn.disabled = false; btn.textContent = 'Salvar Alterações'; toast('Erro de conexão'); });
+}
+
+function editExcluirRequisicao() {
+  if (!editTemp) return;
+  if (!confirm('EXCLUIR requisição ' + editTemp.reqId + '?\n\nAção irreversível!')) return;
+  if (!confirm('TEM CERTEZA? Todos os itens serão removidos.')) return;
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'excluirrequisicao', usuario: sessao.nome, senha: sessao.hash,
+      cidade: editTemp.cidade, setor: editTemp.setorOriginal, reqId: editTemp.reqId
+    }), redirect: 'follow'
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.status === 'ok') {
+      showSuccess('', 'Requisição excluída', editTemp.reqId);
+      fecharEditReq(); fecharCidade(); carregarDados();
+    } else { toast(d.msg || 'Erro ao excluir'); }
+  })
+  .catch(function() { toast('Erro de conexão'); });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ASSISTENTE IA — v8.8 FIX
+// ══════════════════════════════════════════════════════════════
+function abrirAssistenteIA() {
+  document.body.style.overflow = 'hidden';
+  document.getElementById('iaModal').classList.add('show');
+  history.pushState({ modal: 'ia' }, '', '');
+
+  var iaBody = document.getElementById('iaBody');
+  if (!iaBody) { toast('Erro interno: container IA não encontrado'); return; }
+
+  if (!comandosIA.length) {
+    iaBody.innerHTML =
+      '<div style="text-align:center;padding:40px;"><div class="ld-spinner" style="margin:0 auto 16px;"></div>' +
+      '<div class="empty-text">Carregando comandos...</div></div>';
+    fetch(API_URL + '?userHash=' + sessao.hash + '&acao=comandosia')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.status === 'ok') {
+          comandosIA = d.comandos || [];
+          renderComandosIA();
+        } else {
+          iaBody.innerHTML = '<div class="empty-state"><div class="empty-text">' + (d.msg || 'Erro') + '</div></div>';
+        }
+      })
+      .catch(function() {
+        iaBody.innerHTML = '<div class="empty-state"><div class="empty-text">Erro de conexão</div></div>';
+      });
+  } else {
+    renderComandosIA();
+  }
+}
+
+function fecharAssistenteIA() {
+  var wasOpen = document.getElementById('iaModal').classList.contains('show');
+  document.body.style.overflow = '';
+  document.getElementById('iaModal').classList.remove('show');
+  if (wasOpen && !_insidePopstate) history.back();
+}
+
+function renderComandosIA() {
+  var iaBody = document.getElementById('iaBody');
+  if (!iaBody) return;
+
+  var h = '<div class="ia-cmds-grid">';
+  comandosIA.forEach(function(cmd) {
+    h += '<button class="ia-cmd-btn" onclick="executarComandoIA(\'' + escapeHtml(cmd.id) + '\')">';
+    h += '<div class="ia-cmd-icon">' + (cmd.icone || '🤖') + '</div>';
+    h += '<div style="flex:1;min-width:0;">';
+    h += '<div class="ia-cmd-nome">' + escapeHtml(cmd.nome) + '</div>';
+    h += '<div class="ia-cmd-desc">' + escapeHtml(cmd.descricao || '') + '</div>';
+    h += '</div></button>';
+  });
+  h += '</div>';
+  h += '<div id="iaResultado" class="ia-resultado"></div>';
+  iaBody.innerHTML = h;
+}
+
+function executarComandoIA(cmdId) {
+  var resBox = document.getElementById('iaResultado');
+  if (!resBox) return;
+  resBox.innerHTML = '<div style="text-align:center;padding:30px;"><div class="ld-spinner" style="margin:0 auto 16px;"></div><div class="empty-text">Processando...</div></div>';
+  resBox.scrollIntoView({ behavior: 'smooth' });
+
+  var cmd = comandosIA.find(function(c) { return c.id === cmdId; });
+  var needsInput = cmd && cmd.requerInput;
+  var inputUsuario = '';
+
+  if (needsInput) {
+    inputUsuario = prompt(cmd.promptInput || 'Digite o parâmetro:');
+    if (inputUsuario === null || !inputUsuario.trim()) { resBox.innerHTML = ''; return; }
+  }
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'executarcomandia', usuario: sessao.nome, senha: sessao.hash,
+      comandoId: cmdId, input: inputUsuario
+    }), redirect: 'follow'
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.status === 'ok') {
+      var resp = d.resultado || d.texto || '';
+      resBox.innerHTML = '<div class="ia-resp-box"><div class="ia-resp-head">Resultado — ' + escapeHtml(cmd ? cmd.nome : cmdId) + '</div>' +
+        '<div class="ia-resp-body">' + _formatIAResp(resp) + '</div>' +
+        '<div class="ia-resp-actions"><button class="ia-copy-btn" onclick="copiarTextoIA()">Copiar</button></div></div>';
+
+      if (d.atualizacao) {
+        iaAtualizacaoTemp = d.atualizacao;
+        resBox.innerHTML += '<div class="ia-update-box"><div class="ia-update-msg">' + escapeHtml(d.atualizacao.mensagem || 'Atualização disponível') + '</div>' +
+          '<button class="ia-apply-btn" onclick="aplicarAtualizacaoIA()">Aplicar Atualização</button></div>';
+      }
+    } else {
+      resBox.innerHTML = '<div class="ia-resp-box ia-resp-erro"><div class="ia-resp-head">Erro</div><div class="ia-resp-body">' + escapeHtml(d.msg || 'Erro desconhecido') + '</div></div>';
+    }
+  })
+  .catch(function() {
+    resBox.innerHTML = '<div class="ia-resp-box ia-resp-erro"><div class="ia-resp-head">Erro</div><div class="ia-resp-body">Sem conexão com o servidor</div></div>';
+  });
+}
+
+function _formatIAResp(texto) {
+  if (!texto) return '';
+  var t = escapeHtml(texto);
+  t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  t = t.replace(/\n/g, '<br>');
+  return t;
+}
+
+function copiarTextoIA() {
+  var box = document.querySelector('.ia-resp-body');
+  if (!box) return;
+  var texto = box.innerText || box.textContent;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto).then(function() { toast('Copiado!'); });
+  }
+}
+
+function aplicarAtualizacaoIA() {
+  if (!iaAtualizacaoTemp) return;
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ acao: 'aplicaratualizacaoia', usuario: sessao.nome, senha: sessao.hash, atualizacao: iaAtualizacaoTemp }),
+    redirect: 'follow'
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.status === 'ok') { showSuccess('', 'Atualização aplicada!', d.msg || ''); iaAtualizacaoTemp = null; carregarDados(); }
+    else { toast(d.msg || 'Erro ao aplicar'); }
+  })
+  .catch(function() { toast('Erro de conexão'); });
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2098,58 +1932,29 @@ function abrirViradaMes() {
   document.getElementById('viradaMesModal').classList.add('show');
   history.pushState({ modal: 'viradaMes' }, '', '');
 
-  var meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-               'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   var hoje = new Date();
   var mesAtual = meses[hoje.getMonth()] + '/' + hoje.getFullYear();
-
   var totalGeral = dadosCompletos ? (dadosCompletos.totalGeral || 0) : 0;
   var totalItens = 0;
-  if (dadosCompletos && dadosCompletos.cidades) {
-    dadosCompletos.cidades.forEach(function(c) { totalItens += c.itens; });
-  }
+  if (dadosCompletos && dadosCompletos.cidades) dadosCompletos.cidades.forEach(function(c) { totalItens += c.itens; });
 
-  var h = '<div class="vm-header">';
-  h += '<div class="vm-icon">📅</div>';
-  h += '<div class="vm-title">Virada de Mês</div>';
-  h += '<div class="vm-subtitle">Arquivar mês atual e iniciar novo período</div>';
-  h += '</div>';
+  var h = '<div class="vm-header"><div class="vm-icon">📅</div><div class="vm-title">Virada de Mês</div><div class="vm-subtitle">Arquivar mês atual e iniciar novo período</div></div>';
+  h += '<div class="vm-info-box"><div class="vm-info-label">Mês a ser arquivado</div><div class="vm-info-value" id="vmMesNome">' + escapeHtml(mesAtual) + '</div>';
+  h += '<div class="vm-info-stats"><span>' + formatCurrency(totalGeral) + '</span><span>' + totalItens + ' itens</span></div></div>';
 
-  h += '<div class="vm-info-box">';
-  h += '<div class="vm-info-label">Mês a ser arquivado:</div>';
-  h += '<div class="vm-info-value" id="vmMesNome">' + escapeHtml(mesAtual) + '</div>';
-  h += '<div class="vm-info-stats">';
-  h += '<span>' + formatCurrency(totalGeral) + '</span>';
-  h += '<span>' + totalItens + ' itens</span>';
-  h += '</div>';
-  h += '</div>';
-
-  // Resumo por cidade
   if (dadosCompletos && dadosCompletos.cidades) {
     h += '<div class="vm-cidades-resumo">';
     dadosCompletos.cidades.forEach(function(cid) {
       if (cid.itens > 0) {
-        h += '<div class="vm-cidade-row">';
-        h += '<span class="vm-cid-nome">' + escapeHtml(cid.nome) + '</span>';
-        h += '<span class="vm-cid-val">' + formatCurrency(cid.total) + ' · ' + cid.itens + ' itens</span>';
-        h += '</div>';
+        h += '<div class="vm-cidade-row"><span class="vm-cid-nome">' + escapeHtml(cid.nome) + '</span><span class="vm-cid-val">' + formatCurrency(cid.total) + ' · ' + cid.itens + ' itens</span></div>';
       }
     });
     h += '</div>';
   }
 
-  h += '<div class="vm-warning">';
-  h += '<strong>Atenção:</strong> Esta ação irá:';
-  h += '<br>1. Salvar os totais do mês atual no histórico';
-  h += '<br>2. Salvar o detalhamento de cada requisição';
-  h += '<br>3. Limpar todas as requisições para o novo mês';
-  h += '<br><br>Esta ação <strong>não pode ser desfeita</strong>.';
-  h += '</div>';
-
-  h += '<div class="vm-actions">';
-  h += '<button class="vm-btn-cancel" onclick="fecharViradaMes()">Cancelar</button>';
-  h += '<button class="vm-btn-confirm" id="vmBtnConfirm" onclick="confirmarViradaMes()">Confirmar Virada de Mês</button>';
-  h += '</div>';
+  h += '<div class="vm-warning"><strong>Atenção:</strong> Esta ação irá salvar os totais e detalhes no histórico, depois limpar todas as requisições. <strong>Não pode ser desfeita.</strong></div>';
+  h += '<div class="vm-actions"><button class="vm-btn-cancel" onclick="fecharViradaMes()">Cancelar</button><button class="vm-btn-confirm" id="vmBtnConfirm" onclick="confirmarViradaMes()">Confirmar Virada</button></div>';
 
   document.getElementById('viradaMesBody').innerHTML = h;
 }
@@ -2162,46 +1967,30 @@ function fecharViradaMes() {
 }
 
 function confirmarViradaMes() {
-  if (!confirm('TEM CERTEZA que deseja virar o mês?\n\nTodos os dados atuais serão arquivados e as requisições serão zeradas.')) return;
-
+  if (!confirm('TEM CERTEZA que deseja virar o mês?\n\nTodos os dados serão arquivados e as requisições zeradas.')) return;
   var btn = document.getElementById('vmBtnConfirm');
-  btn.disabled = true;
-  btn.textContent = 'Processando...';
+  btn.disabled = true; btn.textContent = 'Processando...';
 
   fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      acao: 'viradames',
-      usuario: sessao.nome,
-      senha: sessao.hash
-    }),
+    body: JSON.stringify({ acao: 'viradames', usuario: sessao.nome, senha: sessao.hash }),
     redirect: 'follow'
   })
   .then(function(r) { return r.json(); })
   .then(function(d) {
-    btn.disabled = false;
-    btn.textContent = 'Confirmar Virada de Mês';
+    btn.disabled = false; btn.textContent = 'Confirmar Virada';
     if (d.status === 'ok') {
-      showSuccess('', 'Mês virado com sucesso!', d.mesArquivado || 'Dados arquivados');
-      fecharViradaMes();
-      historicoMeses = null;
-      window._precoCustoMapaCache = null;
-      carregarDados();
-      carregarHistorico();
-    } else {
-      toast(d.msg || 'Erro na virada de mês');
-    }
+      showSuccess('', 'Mês virado!', d.mesArquivado || '');
+      fecharViradaMes(); historicoMeses = null; window._precoCustoMapaCache = null;
+      carregarDados(); carregarHistorico();
+    } else { toast(d.msg || 'Erro'); }
   })
-  .catch(function() {
-    btn.disabled = false;
-    btn.textContent = 'Confirmar Virada de Mês';
-    toast('Erro de conexão');
-  });
+  .catch(function() { btn.disabled = false; btn.textContent = 'Confirmar Virada'; toast('Erro de conexão'); });
 }
 
 // ══════════════════════════════════════════════════════════════
-//  v8.7: HISTÓRICO COMPLETO (modal com todos os meses)
+//  v8.7: HISTÓRICO COMPLETO + MÊS DETALHE
 // ══════════════════════════════════════════════════════════════
 function abrirHistoricoCompleto() {
   document.body.style.overflow = 'hidden';
@@ -2209,14 +1998,10 @@ function abrirHistoricoCompleto() {
   history.pushState({ modal: 'historico' }, '', '');
 
   if (!historicoMeses) {
-    document.getElementById('historicoBody').innerHTML =
-      '<div style="text-align:center;padding:40px;"><div class="ld-spinner" style="margin:0 auto 16px;"></div>' +
-      '<div class="empty-text">Carregando histórico...</div></div>';
+    document.getElementById('historicoBody').innerHTML = '<div style="text-align:center;padding:40px;"><div class="ld-spinner" style="margin:0 auto 16px;"></div><div class="empty-text">Carregando...</div></div>';
     carregarHistorico();
-    setTimeout(function() { renderHistoricoCompleto(); }, 2000);
-  } else {
-    renderHistoricoCompleto();
-  }
+    setTimeout(renderHistoricoCompleto, 2000);
+  } else { renderHistoricoCompleto(); }
 }
 
 function fecharHistorico() {
@@ -2228,80 +2013,47 @@ function fecharHistorico() {
 
 function renderHistoricoCompleto() {
   if (!historicoMeses || !historicoMeses.length) {
-    document.getElementById('historicoBody').innerHTML =
-      '<div class="empty-state"><div class="empty-text">Nenhum mês arquivado ainda</div></div>';
+    document.getElementById('historicoBody').innerHTML = '<div class="empty-state"><div class="empty-text">Nenhum mês arquivado ainda</div></div>';
     return;
   }
-
   var CIDADES_ORDEM = ['Ibicuí', 'Nova Canaã', 'Boa Nova', 'Dário Meira', 'Floresta Azul'];
   var meses = historicoMeses.slice().reverse();
   var totalAcumulado = 0;
   meses.forEach(function(m) { totalAcumulado += (m.total || 0); });
 
-  var h = '<div class="hist-full-header">';
-  h += '<div class="hfh-total">Acumulado: ' + formatCurrency(totalAcumulado) + '</div>';
-  h += '<div class="hfh-count">' + meses.length + ' ' + (meses.length === 1 ? 'mês' : 'meses') + ' arquivados</div>';
-  h += '</div>';
+  var h = '<div class="hist-full-header"><div class="hfh-total">' + formatCurrency(totalAcumulado) + '</div>';
+  h += '<div class="hfh-count">' + meses.length + ' meses arquivados</div></div>';
+  h += '<div class="hist-acoes"><button class="hist-acao-btn" onclick="imprimirHistorico3Meses()">Imprimir últimos 3 meses</button>';
+  h += '<button class="hist-acao-btn" onclick="whatsappHistorico3Meses()">WhatsApp últimos 3 meses</button></div>';
 
-  // Ações de resumo
-  h += '<div class="hist-acoes">';
-  h += '<button class="hist-acao-btn" onclick="imprimirHistorico3Meses()">🖨️ Imprimir últimos 3 meses</button>';
-  h += '<button class="hist-acao-btn" onclick="whatsappHistorico3Meses()">📱 WhatsApp últimos 3 meses</button>';
-  h += '</div>';
-
-  // Lista de meses
   meses.forEach(function(mes) {
     h += '<div class="hist-full-mes" onclick="abrirMesDetalhe(\'' + escapeHtml(mes.nome) + '\')">';
-    h += '<div class="hfm-top">';
-    h += '<div class="hfm-nome">' + escapeHtml(mes.nome) + '</div>';
-    h += '<div class="hfm-total">' + formatCurrency(mes.total) + '</div>';
-    h += '</div>';
-
+    h += '<div class="hfm-top"><div class="hfm-nome">' + escapeHtml(mes.nome) + '</div><div class="hfm-total">' + formatCurrency(mes.total) + '</div></div>';
     h += '<div class="hfm-cidades">';
     CIDADES_ORDEM.forEach(function(cid) {
       var val = (mes.cidades && mes.cidades[cid]) ? mes.cidades[cid] : 0;
-      if (val > 0) {
-        h += '<div class="hfm-cid-row">';
-        h += '<span class="hfm-cid-nome">' + escapeHtml(cid) + '</span>';
-        h += '<span class="hfm-cid-val">' + formatCurrency(val) + '</span>';
-        h += '</div>';
-      }
+      if (val > 0) h += '<div class="hfm-cid-row"><span class="hfm-cid-nome">' + escapeHtml(cid) + '</span><span class="hfm-cid-val">' + formatCurrency(val) + '</span></div>';
     });
-    h += '</div>';
-
-    h += '</div>';
+    h += '</div></div>';
   });
 
   document.getElementById('historicoBody').innerHTML = h;
 }
 
-// ══════════════════════════════════════════════════════════════
-//  v8.7: MÊS ESPECÍFICO (detalhe completo)
-// ══════════════════════════════════════════════════════════════
 function abrirMesDetalhe(mesNome) {
   document.getElementById('mesDetalheModal').classList.add('show');
   document.body.style.overflow = 'hidden';
   history.pushState({ modal: 'mesDetalhe' }, '', '');
-
   document.getElementById('mesDetalheTitle').textContent = mesNome;
-  document.getElementById('mesDetalheBody').innerHTML =
-    '<div style="text-align:center;padding:40px;"><div class="ld-spinner" style="margin:0 auto 16px;"></div>' +
-    '<div class="empty-text">Carregando detalhes de ' + escapeHtml(mesNome) + '...</div></div>';
+  document.getElementById('mesDetalheBody').innerHTML = '<div style="text-align:center;padding:40px;"><div class="ld-spinner" style="margin:0 auto 16px;"></div><div class="empty-text">Carregando...</div></div>';
 
   fetch(API_URL + '?userHash=' + sessao.hash + '&acao=historicomes&mes=' + encodeURIComponent(mesNome))
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      if (d.status === 'ok') {
-        renderMesDetalhe(mesNome, d);
-      } else {
-        document.getElementById('mesDetalheBody').innerHTML =
-          '<div class="empty-state"><div class="empty-text">' + escapeHtml(d.msg || 'Erro') + '</div></div>';
-      }
+      if (d.status === 'ok') renderMesDetalhe(mesNome, d);
+      else document.getElementById('mesDetalheBody').innerHTML = '<div class="empty-state"><div class="empty-text">' + escapeHtml(d.msg || 'Erro') + '</div></div>';
     })
-    .catch(function() {
-      document.getElementById('mesDetalheBody').innerHTML =
-        '<div class="empty-state"><div class="empty-text">Erro de conexão</div></div>';
-    });
+    .catch(function() { document.getElementById('mesDetalheBody').innerHTML = '<div class="empty-state"><div class="empty-text">Erro de conexão</div></div>'; });
 }
 
 function fecharMesDetalhe() {
@@ -2313,521 +2065,170 @@ function fecharMesDetalhe() {
 
 function renderMesDetalhe(mesNome, dados) {
   var CIDADES_ORDEM = ['Ibicuí', 'Nova Canaã', 'Boa Nova', 'Dário Meira', 'Floresta Azul'];
-  var resumo = dados.resumo || {};
-  var detalhes = dados.detalhes || [];
+  var resumo = dados.resumo || {}, detalhes = dados.detalhes || [];
 
-  var h = '';
-
-  // Resumo geral
-  h += '<div class="md-resumo">';
-  h += '<div class="md-total-geral">' + formatCurrency(resumo.total || 0) + '</div>';
-  h += '<div class="md-total-meta">' + (resumo.totalItens || 0) + ' itens no período</div>';
-  h += '</div>';
+  var h = '<div class="md-resumo"><div class="md-total-geral">' + formatCurrency(resumo.total || 0) + '</div><div class="md-total-meta">' + (resumo.totalItens || 0) + ' itens</div></div>';
 
   // Rankings
   var cidadeArr = [];
-  CIDADES_ORDEM.forEach(function(cid) {
-    var val = (resumo.cidades && resumo.cidades[cid]) ? resumo.cidades[cid] : 0;
-    cidadeArr.push({ nome: cid, total: val });
-  });
+  CIDADES_ORDEM.forEach(function(cid) { cidadeArr.push({ nome: cid, total: (resumo.cidades && resumo.cidades[cid]) || 0 }); });
   cidadeArr.sort(function(a, b) { return b.total - a.total; });
-  var maxCid = cidadeArr.length && cidadeArr[0].total > 0 ? cidadeArr[0].total : 1;
+  var maxCid = cidadeArr[0] && cidadeArr[0].total > 0 ? cidadeArr[0].total : 1;
 
   h += '<div class="md-section"><div class="md-section-title">Ranking por Cidade</div>';
   cidadeArr.forEach(function(c, idx) {
     if (c.total <= 0) return;
     var pct = (c.total / maxCid) * 100;
-    h += '<div class="ranking-item"><div class="r-left"><span class="r-pos">' + (idx + 1) +
-         '</span><div class="r-info"><span class="r-nome">' + escapeHtml(c.nome) +
-         '</span></div></div><div class="r-right"><span class="r-valor">' + formatCurrency(c.total) +
-         '</span><div class="r-bar-bg"><div class="r-bar-fill blue" style="width:' + pct + '%"></div></div></div></div>';
+    h += '<div class="ranking-item"><div class="r-left"><span class="r-pos">' + (idx+1) + '</span><div class="r-info"><span class="r-nome">' + escapeHtml(c.nome) + '</span></div></div><div class="r-right"><span class="r-valor">' + formatCurrency(c.total) + '</span><div class="r-bar-bg"><div class="r-bar-fill blue" style="width:' + pct + '%"></div></div></div></div>';
   });
   h += '</div>';
 
-  // Ranking por setor
   if (resumo.setores) {
     var setorArr = [];
-    Object.keys(resumo.setores).forEach(function(s) {
-      setorArr.push({ nome: s, total: resumo.setores[s] });
-    });
+    Object.keys(resumo.setores).forEach(function(s) { setorArr.push({ nome: s, total: resumo.setores[s] }); });
     setorArr.sort(function(a, b) { return b.total - a.total; });
-    var maxSet = setorArr.length && setorArr[0].total > 0 ? setorArr[0].total : 1;
+    var maxSet = setorArr[0] && setorArr[0].total > 0 ? setorArr[0].total : 1;
 
     h += '<div class="md-section"><div class="md-section-title">Ranking por Setor</div>';
     setorArr.forEach(function(s, idx) {
       if (s.total <= 0) return;
-      var pct = (s.total / maxSet) * 100;
-      h += '<div class="ranking-item"><div class="r-left"><span class="r-pos">' + (idx + 1) +
-           '</span><div class="r-info"><span class="r-nome">' + escapeHtml(s.nome) +
-           '</span></div></div><div class="r-right"><span class="r-valor">' + formatCurrency(s.total) +
-           '</span><div class="r-bar-bg"><div class="r-bar-fill purple" style="width:' + pct + '%"></div></div></div></div>';
+      h += '<div class="ranking-item"><div class="r-left"><span class="r-pos">' + (idx+1) + '</span><div class="r-info"><span class="r-nome">' + escapeHtml(s.nome) + '</span></div></div><div class="r-right"><span class="r-valor">' + formatCurrency(s.total) + '</span><div class="r-bar-bg"><div class="r-bar-fill purple" style="width:' + ((s.total/maxSet)*100) + '%"></div></div></div></div>';
     });
     h += '</div>';
   }
 
-  // Detalhes das requisições
   if (detalhes.length) {
     h += '<div class="md-section"><div class="md-section-title">Requisições do Período</div>';
-
-    // Agrupar por cidade > setor > reqId
     var agrupado = {};
     detalhes.forEach(function(it) {
-      var cid = it.cidade || 'N/A';
-      var set = it.setor || 'N/A';
-      var rid = it.reqId || '-';
+      var cid = it.cidade || 'N/A', set = it.setor || 'N/A', rid = it.reqId || '-';
       if (!agrupado[cid]) agrupado[cid] = {};
       if (!agrupado[cid][set]) agrupado[cid][set] = {};
-      if (!agrupado[cid][set][rid]) agrupado[cid][set][rid] = { itens: [], total: 0, obs: '', data: '' };
+      if (!agrupado[cid][set][rid]) agrupado[cid][set][rid] = { itens: [], total: 0, obs: '' };
       agrupado[cid][set][rid].itens.push(it);
       agrupado[cid][set][rid].total += (it.total || 0);
       if (it.observacao && !agrupado[cid][set][rid].obs) agrupado[cid][set][rid].obs = it.observacao;
-      if (it.data && !agrupado[cid][set][rid].data) agrupado[cid][set][rid].data = it.data;
     });
 
     CIDADES_ORDEM.forEach(function(cid) {
       if (!agrupado[cid]) return;
-      h += '<div class="md-cidade-block">';
-      h += '<div class="md-cidade-nome">' + escapeHtml(cid) + '</div>';
-
+      h += '<div class="md-cidade-block"><div class="md-cidade-nome">' + escapeHtml(cid) + '</div>';
       Object.keys(agrupado[cid]).forEach(function(set) {
         Object.keys(agrupado[cid][set]).forEach(function(rid) {
           var grp = agrupado[cid][set][rid];
-          h += '<div class="md-req-block">';
-          h += '<div class="md-req-head">';
-          h += '<div class="md-req-id">' + escapeHtml(rid) + '</div>';
-          h += '<div class="md-req-setor">' + escapeHtml(set) + '</div>';
-          h += '<div class="md-req-val">' + formatCurrency(grp.total) + '</div>';
-          h += '</div>';
+          h += '<div class="md-req-block"><div class="md-req-head"><div class="md-req-id">' + escapeHtml(rid) + '</div><div class="md-req-setor">' + escapeHtml(set) + '</div><div class="md-req-val">' + formatCurrency(grp.total) + '</div></div>';
           if (grp.obs) h += '<div class="md-req-obs">' + escapeHtml(grp.obs) + '</div>';
           grp.itens.forEach(function(it) {
-            h += '<div class="md-item">';
-            h += '<span class="md-item-desc">' + escapeHtml(it.descricao || '') + ' <span style="opacity:.6;">(x' + (it.quantidade || 0) + ')</span></span>';
-            h += '<span class="md-item-val">' + formatCurrency(it.total || 0) + '</span>';
-            h += '</div>';
+            h += '<div class="md-item"><span class="md-item-desc">' + escapeHtml(it.descricao || '') + ' <span style="opacity:.5;">(x' + (it.quantidade || 0) + ')</span></span><span class="md-item-val">' + formatCurrency(it.total || 0) + '</span></div>';
           });
           h += '</div>';
         });
       });
-
       h += '</div>';
     });
-
     h += '</div>';
   }
 
-  // Ações
-  h += '<div class="md-actions">';
-  h += '<button class="hist-acao-btn" onclick="imprimirMesEspecifico(\'' + escapeHtml(mesNome) + '\')">🖨️ Imprimir este mês</button>';
-  h += '<button class="hist-acao-btn" onclick="whatsappMesEspecifico(\'' + escapeHtml(mesNome) + '\')">📱 WhatsApp</button>';
-  h += '</div>';
-
+  h += '<div class="md-actions"><button class="hist-acao-btn" onclick="imprimirMesEspecifico(\'' + escapeHtml(mesNome) + '\')">Imprimir</button><button class="hist-acao-btn" onclick="whatsappMesEspecifico(\'' + escapeHtml(mesNome) + '\')">WhatsApp</button></div>';
   document.getElementById('mesDetalheBody').innerHTML = h;
 }
 
 // ══════════════════════════════════════════════════════════════
-//  v8.7: IMPRESSÃO E WHATSAPP DO HISTÓRICO
+//  IMPRESSÃO / WHATSAPP HISTÓRICO
 // ══════════════════════════════════════════════════════════════
 function imprimirHistorico3Meses() {
   if (!historicoMeses || !historicoMeses.length) { toast('Sem histórico'); return; }
-
   var ultimos = historicoMeses.slice(-3).reverse();
-  var corpo = '<div class="pdf-header">' +
-    '<div class="pdf-brand">GRUPO CARLOS VAZ</div>' +
-    '<div class="pdf-divider"></div>' +
-    '<div class="pdf-title">Resumo dos Últimos 3 Meses</div>' +
-    '<div class="pdf-meta">Emitido em ' + _dataHoraAtual() + '</div></div>';
-
   var CIDADES_ORDEM = ['Ibicuí', 'Nova Canaã', 'Boa Nova', 'Dário Meira', 'Floresta Azul'];
+  var corpo = '<div class="pdf-header"><div class="pdf-brand">GRUPO CARLOS VAZ</div><div class="pdf-divider"></div><div class="pdf-title">Resumo dos Últimos 3 Meses</div><div class="pdf-meta">' + _dataHoraAtual() + '</div></div>';
   var acumulado = 0;
-
   ultimos.forEach(function(mes) {
     acumulado += (mes.total || 0);
-    corpo += '<div class="pdf-req-block">';
-    corpo += '<div class="pdf-req-head"><div><div class="pdf-req-setor">MÊS</div><div class="pdf-req-id">' + escapeHtml(mes.nome) + '</div></div>';
-    corpo += '<div class="pdf-req-info"><div>' + formatCurrency(mes.total) + '</div></div></div>';
-
+    corpo += '<div class="pdf-req-block"><div class="pdf-req-head"><div><div class="pdf-req-setor">MÊS</div><div class="pdf-req-id">' + escapeHtml(mes.nome) + '</div></div><div class="pdf-req-info"><div>' + formatCurrency(mes.total) + '</div></div></div>';
     corpo += '<table class="pdf-table"><thead><tr><th style="width:60%;">Cidade</th><th style="width:40%;text-align:right;">Total</th></tr></thead><tbody>';
     CIDADES_ORDEM.forEach(function(cid) {
-      var val = (mes.cidades && mes.cidades[cid]) ? mes.cidades[cid] : 0;
-      if (val > 0) {
-        corpo += '<tr><td>' + escapeHtml(cid) + '</td><td style="text-align:right;font-weight:600;">' + formatCurrency(val) + '</td></tr>';
-      }
+      var val = (mes.cidades && mes.cidades[cid]) || 0;
+      if (val > 0) corpo += '<tr><td>' + escapeHtml(cid) + '</td><td style="text-align:right;font-weight:600;">' + formatCurrency(val) + '</td></tr>';
     });
-    corpo += '<tr class="pdf-total-row"><td style="text-align:right;padding-right:12px;">TOTAL</td>';
-    corpo += '<td style="text-align:right;">' + formatCurrency(mes.total) + '</td></tr>';
-    corpo += '</tbody></table></div>';
+    corpo += '<tr class="pdf-total-row"><td style="text-align:right;">TOTAL</td><td style="text-align:right;">' + formatCurrency(mes.total) + '</td></tr></tbody></table></div>';
   });
-
-  corpo += '<div class="pdf-resumo"><strong>ACUMULADO ' + ultimos.length + ' MESES: ' + formatCurrency(acumulado) + '</strong></div>';
-
+  corpo += '<div class="pdf-resumo"><strong>ACUMULADO: ' + formatCurrency(acumulado) + '</strong></div>';
   _abrirJanelaImpressao('Resumo 3 Meses — CRV/LAS', corpo);
 }
 
 function whatsappHistorico3Meses() {
   if (!historicoMeses || !historicoMeses.length) { toast('Sem histórico'); return; }
-
   var ultimos = historicoMeses.slice(-3).reverse();
   var CIDADES_ORDEM = ['Ibicuí', 'Nova Canaã', 'Boa Nova', 'Dário Meira', 'Floresta Azul'];
-
-  var texto = '📊 *RESUMO — ÚLTIMOS 3 MESES*\n';
-  texto += '📅 Emitido em ' + _dataHoraAtual() + '\n';
-  texto += '━━━━━━━━━━━━━━━━━━━━\n\n';
-
+  var texto = '📊 *RESUMO — ÚLTIMOS 3 MESES*\n📅 ' + _dataHoraAtual() + '\n━━━━━━━━━━━━━━━━━━━━\n\n';
   var acumulado = 0;
   ultimos.forEach(function(mes) {
     acumulado += (mes.total || 0);
     texto += '📅 *' + mes.nome.toUpperCase() + '*\n';
     CIDADES_ORDEM.forEach(function(cid) {
-      var val = (mes.cidades && mes.cidades[cid]) ? mes.cidades[cid] : 0;
-      if (val > 0) {
-        texto += '   🏙️ ' + cid + ': ' + formatCurrency(val) + '\n';
-      }
+      var val = (mes.cidades && mes.cidades[cid]) || 0;
+      if (val > 0) texto += '   🏙️ ' + cid + ': ' + formatCurrency(val) + '\n';
     });
     texto += '   💰 *Total: ' + formatCurrency(mes.total) + '*\n\n';
   });
-
-  texto += '━━━━━━━━━━━━━━━━━━━━\n';
-  texto += '📊 *ACUMULADO: ' + formatCurrency(acumulado) + '*\n\n';
-  texto += '_Requisições Digital — CRV/LAS_';
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(texto).then(function() {
-      showSuccess('', 'Resumo copiado!', 'Cole no WhatsApp');
-    }).catch(function() { toast('Erro ao copiar'); });
-  } else {
-    toast('Copie manualmente');
-  }
+  texto += '━━━━━━━━━━━━━━━━━━━━\n📊 *ACUMULADO: ' + formatCurrency(acumulado) + '*\n\n_Requisições Digital v' + APP_VERSION + ' — CRV/LAS_';
+  if (navigator.clipboard) navigator.clipboard.writeText(texto).then(function() { showSuccess('', 'Copiado!', 'Cole no WhatsApp'); });
 }
 
 function imprimirMesEspecifico(mesNome) {
   var mes = historicoMeses ? historicoMeses.find(function(m) { return m.nome === mesNome; }) : null;
   if (!mes) { toast('Mês não encontrado'); return; }
-
   var CIDADES_ORDEM = ['Ibicuí', 'Nova Canaã', 'Boa Nova', 'Dário Meira', 'Floresta Azul'];
-
-  var corpo = '<div class="pdf-header">' +
-    '<div class="pdf-brand">GRUPO CARLOS VAZ</div>' +
-    '<div class="pdf-divider"></div>' +
-    '<div class="pdf-title">Resumo — ' + escapeHtml(mesNome) + '</div>' +
-    '<div class="pdf-meta">Emitido em ' + _dataHoraAtual() + '</div></div>';
-
-  corpo += '<div class="pdf-req-block">';
-  corpo += '<div class="pdf-req-head"><div><div class="pdf-req-setor">PERÍODO</div><div class="pdf-req-id">' + escapeHtml(mesNome) + '</div></div>';
-  corpo += '<div class="pdf-req-info"><div>' + formatCurrency(mes.total) + '</div></div></div>';
-
+  var corpo = '<div class="pdf-header"><div class="pdf-brand">GRUPO CARLOS VAZ</div><div class="pdf-divider"></div><div class="pdf-title">Resumo — ' + escapeHtml(mesNome) + '</div><div class="pdf-meta">' + _dataHoraAtual() + '</div></div>';
+  corpo += '<div class="pdf-req-block"><div class="pdf-req-head"><div><div class="pdf-req-setor">PERÍODO</div><div class="pdf-req-id">' + escapeHtml(mesNome) + '</div></div><div class="pdf-req-info"><div>' + formatCurrency(mes.total) + '</div></div></div>';
   corpo += '<table class="pdf-table"><thead><tr><th style="width:60%;">Cidade</th><th style="width:40%;text-align:right;">Total</th></tr></thead><tbody>';
   CIDADES_ORDEM.forEach(function(cid) {
-    var val = (mes.cidades && mes.cidades[cid]) ? mes.cidades[cid] : 0;
-    if (val > 0) {
-      corpo += '<tr><td>' + escapeHtml(cid) + '</td><td style="text-align:right;font-weight:600;">' + formatCurrency(val) + '</td></tr>';
-    }
+    var val = (mes.cidades && mes.cidades[cid]) || 0;
+    if (val > 0) corpo += '<tr><td>' + escapeHtml(cid) + '</td><td style="text-align:right;font-weight:600;">' + formatCurrency(val) + '</td></tr>';
   });
-  corpo += '<tr class="pdf-total-row"><td style="text-align:right;padding-right:12px;">TOTAL</td>';
-  corpo += '<td style="text-align:right;">' + formatCurrency(mes.total) + '</td></tr>';
-  corpo += '</tbody></table></div>';
-
-  _abrirJanelaImpressao('Resumo ' + mesNome + ' — CRV/LAS', corpo);
+  corpo += '<tr class="pdf-total-row"><td style="text-align:right;">TOTAL</td><td style="text-align:right;">' + formatCurrency(mes.total) + '</td></tr></tbody></table></div>';
+  _abrirJanelaImpressao('Resumo ' + mesNome, corpo);
 }
 
 function whatsappMesEspecifico(mesNome) {
   var mes = historicoMeses ? historicoMeses.find(function(m) { return m.nome === mesNome; }) : null;
   if (!mes) { toast('Mês não encontrado'); return; }
-
   var CIDADES_ORDEM = ['Ibicuí', 'Nova Canaã', 'Boa Nova', 'Dário Meira', 'Floresta Azul'];
-
-  var texto = '📊 *RESUMO — ' + mesNome.toUpperCase() + '*\n';
-  texto += '📅 ' + _dataHoraAtual() + '\n';
-  texto += '━━━━━━━━━━━━━━━━━━━━\n\n';
-
+  var texto = '📊 *RESUMO — ' + mesNome.toUpperCase() + '*\n📅 ' + _dataHoraAtual() + '\n━━━━━━━━━━━━━━━━━━━━\n\n';
   CIDADES_ORDEM.forEach(function(cid) {
-    var val = (mes.cidades && mes.cidades[cid]) ? mes.cidades[cid] : 0;
-    if (val > 0) {
-      texto += '🏙️ *' + cid.toUpperCase() + '*\n';
-      texto += '   💰 ' + formatCurrency(val) + '\n\n';
-    }
+    var val = (mes.cidades && mes.cidades[cid]) || 0;
+    if (val > 0) texto += '🏙️ *' + cid.toUpperCase() + '*\n   💰 ' + formatCurrency(val) + '\n\n';
   });
-
-  texto += '━━━━━━━━━━━━━━━━━━━━\n';
-  texto += '📊 *TOTAL: ' + formatCurrency(mes.total) + '*\n\n';
-  texto += '_Requisições Digital — CRV/LAS_';
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(texto).then(function() {
-      showSuccess('', 'Resumo copiado!', 'Cole no WhatsApp');
-    }).catch(function() { toast('Erro ao copiar'); });
-  } else {
-    toast('Copie manualmente');
-  }
-}
-
-function _dataHoraAtual() {
-  var d = new Date();
-  return String(d.getDate()).padStart(2,'0') + '/' +
-         String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear() + ' às ' +
-         String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  texto += '━━━━━━━━━━━━━━━━━━━━\n📊 *TOTAL: ' + formatCurrency(mes.total) + '*\n\n_Requisições Digital v' + APP_VERSION + ' — CRV/LAS_';
+  if (navigator.clipboard) navigator.clipboard.writeText(texto).then(function() { showSuccess('', 'Copiado!', 'Cole no WhatsApp'); });
 }
 
 // ══════════════════════════════════════════════════════════════
-//  NORMALIZAÇÃO FRONT-END (_normFront)
-// ══════════════════════════════════════════════════════════════
-function _normFront(str) {
-  if (!str) return '';
-  var s = String(str).toUpperCase().trim();
-  // Remove acentos
-  s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  // Remove caracteres especiais, mantém letras, números e espaço
-  s = s.replace(/[^A-Z0-9 ]/g, ' ');
-  // Colapsa espaços múltiplos
-  s = s.replace(/\s+/g, ' ').trim();
-  return s;
-}
-
-// ══════════════════════════════════════════════════════════════
-//  LEVENSHTEIN — DEDUP LOCAL (sem custo IA)
+//  LEVENSHTEIN + DEDUP LOCAL
 // ══════════════════════════════════════════════════════════════
 function _levenshtein(a, b) {
-  if (!a || !b) return Math.max((a || '').length, (b || '').length);
+  if (!a || !b) return Math.max((a||'').length, (b||'').length);
   var la = a.length, lb = b.length;
-  if (la === 0) return lb;
-  if (lb === 0) return la;
-
+  if (!la) return lb; if (!lb) return la;
   var matrix = [];
-  var i, j;
-
-  for (i = 0; i <= la; i++) {
-    matrix[i] = [i];
-  }
-  for (j = 0; j <= lb; j++) {
-    matrix[0][j] = j;
-  }
-
-  for (i = 1; i <= la; i++) {
-    for (j = 1; j <= lb; j++) {
-      var cost = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1,
-        matrix[i][j - 1] + 1,
-        matrix[i - 1][j - 1] + cost
-      );
+  for (var i = 0; i <= la; i++) { matrix[i] = [i]; }
+  for (var j = 0; j <= lb; j++) { matrix[0][j] = j; }
+  for (var i2 = 1; i2 <= la; i2++) {
+    for (var j2 = 1; j2 <= lb; j2++) {
+      var cost = a.charAt(i2-1) === b.charAt(j2-1) ? 0 : 1;
+      matrix[i2][j2] = Math.min(matrix[i2-1][j2]+1, matrix[i2][j2-1]+1, matrix[i2-1][j2-1]+cost);
     }
   }
-
   return matrix[la][lb];
 }
 
-function _similaridade(a, b) {
-  var na = _normFront(a);
-  var nb = _normFront(b);
-  if (na === nb) return 1;
-  var maxLen = Math.max(na.length, nb.length);
-  if (maxLen === 0) return 1;
-  var dist = _levenshtein(na, nb);
-  return 1 - (dist / maxLen);
-}
-
-function detectarDuplicadosLocal(itens, limiar) {
-  limiar = limiar || 0.85;
-  var duplicados = [];
-  for (var i = 0; i < itens.length; i++) {
-    for (var j = i + 1; j < itens.length; j++) {
-      var sim = _similaridade(itens[i].descricao || itens[i].descricao_normalizada, itens[j].descricao || itens[j].descricao_normalizada);
-      if (sim >= limiar) {
-        duplicados.push({
-          idx1: i,
-          idx2: j,
-          desc1: itens[i].descricao || itens[i].descricao_normalizada,
-          desc2: itens[j].descricao || itens[j].descricao_normalizada,
-          similaridade: Math.round(sim * 100)
-        });
-      }
-    }
-  }
-  return duplicados;
-}
-
 // ══════════════════════════════════════════════════════════════
-//  WHATSAPP — RESUMO HISTÓRICO POR MÊS ESPECÍFICO (DETALHADO)
+//  DETECÇÃO OFFLINE / ONLINE + ATALHOS + PULL-TO-REFRESH
 // ══════════════════════════════════════════════════════════════
-function whatsappMesDetalhado(mesNome) {
-  // Busca detalhes do mês via API e gera resumo WhatsApp com requisições
-  fetch(API_URL + '?userHash=' + sessao.hash + '&acao=historicomes&mes=' + encodeURIComponent(mesNome))
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.status !== 'ok') { toast(d.msg || 'Erro'); return; }
+window.addEventListener('online', function() { setBadge(true); toast('Conexão restaurada'); if (sessao) carregarDados(); });
+window.addEventListener('offline', function() { setBadge(false); toast('Modo offline'); });
 
-      var resumo = d.resumo || {};
-      var detalhes = d.detalhes || [];
-      var CIDADES_ORDEM = ['Ibicuí', 'Nova Canaã', 'Boa Nova', 'Dário Meira', 'Floresta Azul'];
-
-      var texto = '📊 *DETALHAMENTO — ' + mesNome.toUpperCase() + '*\n';
-      texto += '📅 ' + _dataHoraAtual() + '\n';
-      texto += '━━━━━━━━━━━━━━━━━━━━\n\n';
-
-      // Agrupar por cidade > setor
-      var agrupado = {};
-      detalhes.forEach(function(it) {
-        var cid = it.cidade || 'N/A';
-        var set = it.setor || 'N/A';
-        if (!agrupado[cid]) agrupado[cid] = {};
-        if (!agrupado[cid][set]) agrupado[cid][set] = { itens: [], total: 0 };
-        agrupado[cid][set].itens.push(it);
-        agrupado[cid][set].total += (it.total || 0);
-      });
-
-      CIDADES_ORDEM.forEach(function(cid) {
-        if (!agrupado[cid]) return;
-        texto += '🏙️ *' + cid.toUpperCase() + '*\n';
-        Object.keys(agrupado[cid]).forEach(function(set) {
-          var grp = agrupado[cid][set];
-          texto += '   📁 ' + set + ' — ' + formatCurrency(grp.total) + '\n';
-          texto += '   ' + grp.itens.length + ' itens\n';
-        });
-        var totalCid = (resumo.cidades && resumo.cidades[cid]) ? resumo.cidades[cid] : 0;
-        texto += '   💰 *Subtotal: ' + formatCurrency(totalCid) + '*\n\n';
-      });
-
-      texto += '━━━━━━━━━━━━━━━━━━━━\n';
-      texto += '📊 *TOTAL GERAL: ' + formatCurrency(resumo.total || 0) + '*\n';
-      texto += '📦 ' + (resumo.totalItens || 0) + ' itens\n\n';
-      texto += '_Requisições Digital — CRV/LAS_';
-
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(texto).then(function() {
-          showSuccess('', 'Detalhamento copiado!', 'Cole no WhatsApp');
-        }).catch(function() { toast('Erro ao copiar'); });
-      } else {
-        toast('Copie manualmente');
-      }
-    })
-    .catch(function() { toast('Erro de conexão'); });
-}
-
-// ══════════════════════════════════════════════════════════════
-//  IMPRESSÃO MÊS DETALHADO (com todas as requisições)
-// ══════════════════════════════════════════════════════════════
-function imprimirMesDetalhado(mesNome) {
-  fetch(API_URL + '?userHash=' + sessao.hash + '&acao=historicomes&mes=' + encodeURIComponent(mesNome))
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.status !== 'ok') { toast(d.msg || 'Erro'); return; }
-
-      var resumo = d.resumo || {};
-      var detalhes = d.detalhes || [];
-      var CIDADES_ORDEM = ['Ibicuí', 'Nova Canaã', 'Boa Nova', 'Dário Meira', 'Floresta Azul'];
-
-      var corpo = '<div class="pdf-header">' +
-        '<div class="pdf-brand">GRUPO CARLOS VAZ</div>' +
-        '<div class="pdf-divider"></div>' +
-        '<div class="pdf-title">Detalhamento — ' + escapeHtml(mesNome) + '</div>' +
-        '<div class="pdf-meta">Emitido em ' + _dataHoraAtual() + '</div></div>';
-
-      // Agrupar por cidade > setor > reqId
-      var agrupado = {};
-      detalhes.forEach(function(it) {
-        var cid = it.cidade || 'N/A';
-        var set = it.setor || 'N/A';
-        var rid = it.reqId || '-';
-        if (!agrupado[cid]) agrupado[cid] = {};
-        if (!agrupado[cid][set]) agrupado[cid][set] = {};
-        if (!agrupado[cid][set][rid]) agrupado[cid][set][rid] = { itens: [], total: 0, obs: '', data: '' };
-        agrupado[cid][set][rid].itens.push(it);
-        agrupado[cid][set][rid].total += (it.total || 0);
-        if (it.observacao && !agrupado[cid][set][rid].obs) agrupado[cid][set][rid].obs = it.observacao;
-        if (it.data && !agrupado[cid][set][rid].data) agrupado[cid][set][rid].data = it.data;
-      });
-
-      var totalGeral = 0;
-
-      CIDADES_ORDEM.forEach(function(cid) {
-        if (!agrupado[cid]) return;
-        Object.keys(agrupado[cid]).forEach(function(set) {
-          Object.keys(agrupado[cid][set]).forEach(function(rid) {
-            var grp = agrupado[cid][set][rid];
-            corpo += _gerarBlocoRequisicaoPDF(set + ' — ' + cid, rid, grp);
-            totalGeral += grp.total;
-          });
-        });
-      });
-
-      corpo += '<div class="pdf-resumo"><strong>TOTAL ' + escapeHtml(mesNome).toUpperCase() + ': ' +
-               formatCurrency(totalGeral) + '</strong><br>' +
-               detalhes.length + ' itens</div>';
-
-      _abrirJanelaImpressao('Detalhamento ' + mesNome + ' — CRV/LAS', corpo);
-    })
-    .catch(function() { toast('Erro de conexão'); });
-}
-
-// ══════════════════════════════════════════════════════════════
-//  SCROLL SUAVE & UI HELPERS
-// ══════════════════════════════════════════════════════════════
-function scrollToTop() {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function scrollToElement(id) {
-  var el = document.getElementById(id);
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-// ══════════════════════════════════════════════════════════════
-//  TEMA & VISUAL
-// ══════════════════════════════════════════════════════════════
-function ajustarAlturaViewport() {
-  var vh = window.innerHeight * 0.01;
-  document.documentElement.style.setProperty('--vh', vh + 'px');
-}
-window.addEventListener('resize', ajustarAlturaViewport);
-ajustarAlturaViewport();
-
-// ══════════════════════════════════════════════════════════════
-//  PWA INSTALL PROMPT
-// ══════════════════════════════════════════════════════════════
-var deferredPrompt = null;
-
-window.addEventListener('beforeinstallprompt', function(e) {
-  e.preventDefault();
-  deferredPrompt = e;
-  var installBtn = document.getElementById('installBtn');
-  if (installBtn) {
-    installBtn.style.display = 'inline-flex';
-    installBtn.addEventListener('click', function() {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(function(choice) {
-          deferredPrompt = null;
-          installBtn.style.display = 'none';
-        });
-      }
-    });
-  }
-});
-
-window.addEventListener('appinstalled', function() {
-  deferredPrompt = null;
-  var installBtn = document.getElementById('installBtn');
-  if (installBtn) installBtn.style.display = 'none';
-});
-
-// ══════════════════════════════════════════════════════════════
-//  DETECÇÃO OFFLINE / ONLINE
-// ══════════════════════════════════════════════════════════════
-window.addEventListener('online', function() {
-  setBadge(true);
-  toast('Conexão restaurada');
-  if (sessao) carregarDados();
-});
-
-window.addEventListener('offline', function() {
-  setBadge(false);
-  toast('Sem conexão — modo offline');
-});
-
-// ══════════════════════════════════════════════════════════════
-//  ATALHOS DE TECLADO
-// ══════════════════════════════════════════════════════════════
 document.addEventListener('keydown', function(e) {
-  // ESC fecha qualquer modal aberto
   if (e.key === 'Escape') {
     if (document.getElementById('mesDetalheModal').classList.contains('show')) { fecharMesDetalhe(); return; }
     if (document.getElementById('historicoModal').classList.contains('show')) { fecharHistorico(); return; }
@@ -2842,368 +2243,45 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// ══════════════════════════════════════════════════════════════
-//  PULL-TO-REFRESH (mobile touch)
-// ══════════════════════════════════════════════════════════════
 (function() {
-  var startY = 0;
-  var pulling = false;
-
+  var startY = 0, pulling = false;
   document.addEventListener('touchstart', function(e) {
-    if (window.scrollY === 0 && !document.querySelector('.show')) {
-      startY = e.touches[0].clientY;
-      pulling = true;
-    }
+    if (window.scrollY === 0 && !document.querySelector('.modal-full.show')) { startY = e.touches[0].clientY; pulling = true; }
   }, { passive: true });
-
   document.addEventListener('touchmove', function(e) {
     if (!pulling) return;
-    var diff = e.touches[0].clientY - startY;
-    if (diff > 100) {
-      pulling = false;
-      if (sessao) {
-        toast('Atualizando...');
-        carregarDados();
-        carregarHistorico();
-      }
-    }
+    if (e.touches[0].clientY - startY > 100) { pulling = false; if (sessao) { toast('Atualizando...'); carregarDados(); carregarHistorico(); } }
   }, { passive: true });
-
-  document.addEventListener('touchend', function() {
-    pulling = false;
-  }, { passive: true });
+  document.addEventListener('touchend', function() { pulling = false; }, { passive: true });
 })();
 
-// ══════════════════════════════════════════════════════════════
-//  PREÇO DE CUSTO — PAINEL UI NO DASHBOARD (v8.6)
-// ══════════════════════════════════════════════════════════════
-function renderPainelPrecoCusto() {
-  var panel = document.getElementById('precoCustoPanel');
-  if (!panel) return;
-
-  if (!precoCustoResultados.length) {
-    panel.style.display = 'none';
-    return;
-  }
-
-  panel.style.display = 'block';
-  var h = '<div class="pc-header">Preços de Custo Estimados</div>';
-
-  h += '<div class="pc-total">Total estimado: ' + formatCurrency(precoCustoTotalCusto) + '</div>';
-
-  // Agrupar por setor
-  var porSetor = {};
-  precoCustoResultados.forEach(function(r) {
-    var s = r.setor || 'GERAL';
-    if (!porSetor[s]) porSetor[s] = { itens: [], total: 0 };
-    porSetor[s].itens.push(r);
-    porSetor[s].total += (r.custo || 0);
-  });
-
-  Object.keys(porSetor).forEach(function(setor) {
-    var grp = porSetor[setor];
-    h += '<div class="pc-setor-block">';
-    h += '<div class="pc-setor-head">';
-    h += '<span class="pc-setor-nome">' + escapeHtml(setor) + '</span>';
-    h += '<span class="pc-setor-total">' + formatCurrency(grp.total) + '</span>';
-    h += '</div>';
-    grp.itens.forEach(function(it) {
-      h += '<div class="pc-item">';
-      h += '<span class="pc-desc">' + escapeHtml(it.descricao) + '</span>';
-      h += '<span class="pc-custo">' + formatCurrency(it.custo || 0) + '</span>';
-      h += '</div>';
-    });
-    h += '</div>';
-  });
-
-  h += '<div class="pc-actions">';
-  h += '<button class="pc-action-btn" onclick="imprimirPrecoCusto()">🖨️ Imprimir</button>';
-  h += '<button class="pc-action-btn" onclick="whatsappPrecoCusto()">📱 WhatsApp</button>';
-  h += '<button class="pc-close-btn" onclick="fecharPainelCusto()">Fechar</button>';
-  h += '</div>';
-
-  panel.innerHTML = h;
+function ajustarAlturaViewport() {
+  document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
 }
+window.addEventListener('resize', ajustarAlturaViewport);
+ajustarAlturaViewport();
 
-function fecharPainelCusto() {
-  var panel = document.getElementById('precoCustoPanel');
-  if (panel) panel.style.display = 'none';
-}
+// PWA install
+var deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) { e.preventDefault(); deferredPrompt = e; });
 
-function imprimirPrecoCusto() {
-  if (!precoCustoResultados.length) { toast('Sem dados'); return; }
-
-  var corpo = '<div class="pdf-header">' +
-    '<div class="pdf-brand">GRUPO CARLOS VAZ</div>' +
-    '<div class="pdf-divider"></div>' +
-    '<div class="pdf-title">Estimativa de Preço de Custo</div>' +
-    '<div class="pdf-meta">Emitido em ' + _dataHoraAtual() + '</div></div>';
-
-  var porSetor = {};
-  precoCustoResultados.forEach(function(r) {
-    var s = r.setor || 'GERAL';
-    if (!porSetor[s]) porSetor[s] = { itens: [], total: 0 };
-    porSetor[s].itens.push(r);
-    porSetor[s].total += (r.custo || 0);
-  });
-
-  Object.keys(porSetor).forEach(function(setor) {
-    var grp = porSetor[setor];
-    corpo += '<div class="pdf-req-block">';
-    corpo += '<div class="pdf-req-head"><div><div class="pdf-req-setor">SETOR</div><div class="pdf-req-id">' + escapeHtml(setor) + '</div></div>';
-    corpo += '<div class="pdf-req-info"><div>' + formatCurrency(grp.total) + '</div></div></div>';
-
-    corpo += '<table class="pdf-table"><thead><tr>';
-    corpo += '<th style="width:5%;text-align:center;">#</th>';
-    corpo += '<th style="width:65%;">Descrição</th>';
-    corpo += '<th style="width:30%;text-align:right;">Custo Estimado</th>';
-    corpo += '</tr></thead><tbody>';
-
-    grp.itens.forEach(function(it, idx) {
-      corpo += '<tr>';
-      corpo += '<td style="text-align:center;color:#64748b;">' + (idx + 1) + '</td>';
-      corpo += '<td>' + escapeHtml(it.descricao) + '</td>';
-      corpo += '<td style="text-align:right;font-weight:600;">' + formatCurrency(it.custo || 0) + '</td>';
-      corpo += '</tr>';
-    });
-
-    corpo += '<tr class="pdf-total-row">';
-    corpo += '<td colspan="2" style="text-align:right;padding-right:12px;">TOTAL — ' + escapeHtml(setor) + '</td>';
-    corpo += '<td style="text-align:right;">' + formatCurrency(grp.total) + '</td>';
-    corpo += '</tr></tbody></table></div>';
-  });
-
-  corpo += '<div class="pdf-resumo"><strong>TOTAL GERAL CUSTO: ' + formatCurrency(precoCustoTotalCusto) + '</strong></div>';
-
-  _abrirJanelaImpressao('Preço de Custo — CRV/LAS', corpo);
-}
-
-function whatsappPrecoCusto() {
-  if (!precoCustoResultados.length) { toast('Sem dados'); return; }
-
-  var texto = '💰 *ESTIMATIVA DE PREÇO DE CUSTO*\n';
-  texto += '📅 ' + _dataHoraAtual() + '\n';
-  texto += '━━━━━━━━━━━━━━━━━━━━\n\n';
-
-  var porSetor = {};
-  precoCustoResultados.forEach(function(r) {
-    var s = r.setor || 'GERAL';
-    if (!porSetor[s]) porSetor[s] = { itens: [], total: 0 };
-    porSetor[s].itens.push(r);
-    porSetor[s].total += (r.custo || 0);
-  });
-
-  Object.keys(porSetor).forEach(function(setor) {
-    var grp = porSetor[setor];
-    texto += '📁 *' + setor + '* — ' + formatCurrency(grp.total) + '\n';
-    grp.itens.forEach(function(it) {
-      texto += '   · ' + it.descricao + ': ' + formatCurrency(it.custo || 0) + '\n';
-    });
-    texto += '\n';
-  });
-
-  texto += '━━━━━━━━━━━━━━━━━━━━\n';
-  texto += '💰 *TOTAL CUSTO: ' + formatCurrency(precoCustoTotalCusto) + '*\n\n';
-  texto += '_Requisições Digital — CRV/LAS_';
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(texto).then(function() {
-      showSuccess('', 'Resumo copiado!', 'Cole no WhatsApp');
-    }).catch(function() { toast('Erro ao copiar'); });
-  } else {
-    toast('Copie manualmente');
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  COMPARATIVO VENDA vs CUSTO
-// ══════════════════════════════════════════════════════════════
-function gerarComparativoVendaCusto() {
-  if (!dadosCompletos) { toast('Carregue os dados primeiro'); return; }
-
-  _carregarPrecosCustoParaRef(function(mapa) {
-    if (!mapa || !Object.keys(mapa).length) {
-      toast('Catálogo de custo vazio');
-      return;
-    }
-
-    var mapaNorm = {};
-    Object.keys(mapa).forEach(function(k) { mapaNorm[_normFront(k)] = mapa[k]; });
-
-    var comparativo = [];
-    var totalVenda = 0;
-    var totalCusto = 0;
-
-    dadosCompletos.cidades.forEach(function(cid) {
-      cid.setores.forEach(function(setor) {
-        setor.itens.forEach(function(it) {
-          var desc = (it.descricao || '').toUpperCase().trim();
-          var custoUnit = mapa[desc];
-          if (custoUnit === undefined) custoUnit = mapaNorm[_normFront(desc)];
-
-          if (custoUnit !== undefined && custoUnit > 0) {
-            var custoTotal = custoUnit * (it.quantidade || 1);
-            var margem = it.total > 0 ? ((it.total - custoTotal) / it.total) * 100 : 0;
-
-            comparativo.push({
-              cidade: cid.nome,
-              setor: setor.nome,
-              descricao: it.descricao,
-              qtd: it.quantidade,
-              vendaUnit: it.valorUnit || 0,
-              vendaTotal: it.total || 0,
-              custoUnit: custoUnit,
-              custoTotal: custoTotal,
-              margem: margem
-            });
-
-            totalVenda += (it.total || 0);
-            totalCusto += custoTotal;
-          }
-        });
-      });
-    });
-
-    if (!comparativo.length) {
-      toast('Nenhum item com preço de custo cadastrado');
-      return;
-    }
-
-    var margemGeral = totalVenda > 0 ? ((totalVenda - totalCusto) / totalVenda) * 100 : 0;
-
-    var texto = '📊 *COMPARATIVO VENDA vs CUSTO*\n';
-    texto += '📅 ' + _dataHoraAtual() + '\n';
-    texto += '━━━━━━━━━━━━━━━━━━━━\n\n';
-    texto += '💰 Total Venda: ' + formatCurrency(totalVenda) + '\n';
-    texto += '📦 Total Custo: ' + formatCurrency(totalCusto) + '\n';
-    texto += '📈 Margem Geral: ' + margemGeral.toFixed(1) + '%\n';
-    texto += '📋 ' + comparativo.length + ' itens comparados\n\n';
-    texto += '_Requisições Digital — CRV/LAS_';
-
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(texto).then(function() {
-        showSuccess('', 'Comparativo copiado!', 'Margem: ' + margemGeral.toFixed(1) + '%');
-      }).catch(function() { toast('Erro ao copiar'); });
-    }
-  });
-}
-
-// ══════════════════════════════════════════════════════════════
-//  VALIDAÇÃO DE DADOS NA IMPORTAÇÃO
-// ══════════════════════════════════════════════════════════════
-function validarItensImportacao(itens) {
-  var erros = [];
-  itens.forEach(function(it, idx) {
-    var num = idx + 1;
-    if (!it.descricao_normalizada && !it.descricao) {
-      erros.push('Item ' + num + ': descrição vazia');
-    }
-    if (!it.quantidade || it.quantidade <= 0) {
-      erros.push('Item ' + num + ': quantidade inválida');
-    }
-    if (it.valor_total < 0) {
-      erros.push('Item ' + num + ': total negativo');
-    }
-  });
-  return erros;
-}
-
-// ══════════════════════════════════════════════════════════════
-//  FORMATAÇÃO AUXILIAR
-// ══════════════════════════════════════════════════════════════
-function formatarNumeroCompacto(n) {
-  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-  return n.toString();
-}
-
-function pluralizar(qtd, singular, plural) {
-  return qtd === 1 ? singular : (plural || singular + 's');
-}
-
-function capitalizar(str) {
-  if (!str) return '';
-  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-}
-
-function truncar(str, max) {
-  if (!str || str.length <= max) return str || '';
-  return str.substring(0, max - 3) + '...';
-}
-
-// ══════════════════════════════════════════════════════════════
-//  DEBOUNCE PARA BUSCAS
-// ══════════════════════════════════════════════════════════════
-function debounce(fn, delay) {
-  var timer = null;
-  return function() {
-    var args = arguments;
-    var ctx = this;
-    clearTimeout(timer);
-    timer = setTimeout(function() { fn.apply(ctx, args); }, delay);
-  };
-}
-
-// Debounce para busca no catálogo
-var filtrarCatalogoDebounced = debounce(filtrarCatalogo, 300);
-var filtrarCatalogoCustoDebounced = debounce(filtrarCatalogoCusto, 300);
-
-// ══════════════════════════════════════════════════════════════
-//  LIMPEZA DE CACHE
-// ══════════════════════════════════════════════════════════════
 function limparCacheLocal() {
-  window._precoCustoMapaCache = null;
-  window._catalogoCustoItens = null;
-  catalogo = [];
-  comandosIA = [];
-  historicoMeses = null;
-  dadosCompletos = null;
-  toast('Cache limpo');
-  if (sessao) carregarDados();
+  window._precoCustoMapaCache = null; window._catalogoCustoItens = null;
+  catalogo = []; comandosIA = []; historicoMeses = null; dadosCompletos = null;
+  toast('Cache limpo'); if (sessao) carregarDados();
 }
 
-// ══════════════════════════════════════════════════════════════
-//  DIAGNÓSTICO (para debug)
-// ══════════════════════════════════════════════════════════════
 function diagnostico() {
-  var info = {
-    versao: APP_VERSION,
-    usuario: sessao ? sessao.nome : 'N/A',
-    nivel: sessao ? sessao.nivel : 'N/A',
-    dadosCarregados: !!dadosCompletos,
-    cidades: dadosCompletos ? dadosCompletos.cidades.length : 0,
-    totalGeral: dadosCompletos ? formatCurrency(dadosCompletos.totalGeral || 0) : 'N/A',
-    catalogoItens: catalogo.length,
-    comandosIA: comandosIA.length,
-    historicoMeses: historicoMeses ? historicoMeses.length : 0,
-    online: navigator.onLine,
-    sw: 'serviceWorker' in navigator,
-    cache: {
-      precoCusto: !!window._precoCustoMapaCache,
-      catalogoCusto: !!(window._catalogoCustoItens && window._catalogoCustoItens.length)
-    }
-  };
-
+  var info = { versao: APP_VERSION, usuario: sessao ? sessao.nome : 'N/A', online: navigator.onLine, cidades: dadosCompletos ? dadosCompletos.cidades.length : 0, catalogoItens: catalogo.length, historicoMeses: historicoMeses ? historicoMeses.length : 0 };
   console.table(info);
-
-  var texto = '🔧 DIAGNÓSTICO CRV/LAS v' + APP_VERSION + '\n\n';
-  Object.keys(info).forEach(function(k) {
-    var val = info[k];
-    if (typeof val === 'object') val = JSON.stringify(val);
-    texto += k + ': ' + val + '\n';
-  });
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(texto).then(function() {
-      toast('Diagnóstico copiado');
-    });
-  }
-
+  var texto = 'DIAG v' + APP_VERSION + '\n';
+  Object.keys(info).forEach(function(k) { texto += k + ': ' + info[k] + '\n'; });
+  if (navigator.clipboard) navigator.clipboard.writeText(texto).then(function() { toast('Diagnóstico copiado'); });
   return info;
 }
 
 // ══════════════════════════════════════════════════════════════
-//  EXPOSIÇÃO GLOBAL (para chamadas do HTML onclick)
+//  EXPOSIÇÃO GLOBAL
 // ══════════════════════════════════════════════════════════════
 window.fazerLogin = fazerLogin;
 window.toggleSenha = toggleSenha;
@@ -3236,12 +2314,12 @@ window.removerSetor = removerSetor;
 window.abrirCatalogo = abrirCatalogo;
 window.fecharCatalogo = fecharCatalogo;
 window.filtrarCatalogo = filtrarCatalogo;
-window.filtrarCatalogoDebounced = filtrarCatalogoDebounced;
 window.dispararSalvar = dispararSalvar;
 window.abrirCatalogoCusto = abrirCatalogoCusto;
 window.fecharCatalogoCusto = fecharCatalogoCusto;
 window.filtrarCatalogoCusto = filtrarCatalogoCusto;
-window.filtrarCatalogoCustoDebounced = filtrarCatalogoCustoDebounced;
+window.filtrarCustoSetor = filtrarCustoSetor;
+window.sortCatalogoCusto = sortCatalogoCusto;
 window.salvarPrecoCusto = salvarPrecoCusto;
 window.abrirAssistenteIA = abrirAssistenteIA;
 window.fecharAssistenteIA = fecharAssistenteIA;
@@ -3263,20 +2341,10 @@ window.imprimirHistorico3Meses = imprimirHistorico3Meses;
 window.whatsappHistorico3Meses = whatsappHistorico3Meses;
 window.imprimirMesEspecifico = imprimirMesEspecifico;
 window.whatsappMesEspecifico = whatsappMesEspecifico;
-window.imprimirMesDetalhado = imprimirMesDetalhado;
-window.whatsappMesDetalhado = whatsappMesDetalhado;
-window.abrirPesquisaCusto = abrirPesquisaCusto;
-window.cancelarPesquisaCusto = cancelarPesquisaCusto;
-window.renderPainelPrecoCusto = renderPainelPrecoCusto;
-window.fecharPainelCusto = fecharPainelCusto;
-window.imprimirPrecoCusto = imprimirPrecoCusto;
-window.whatsappPrecoCusto = whatsappPrecoCusto;
-window.gerarComparativoVendaCusto = gerarComparativoVendaCusto;
 window.limparCacheLocal = limparCacheLocal;
 window.diagnostico = diagnostico;
-window.scrollToTop = scrollToTop;
 
 // ══════════════════════════════════════════════════════════════
-//  FIM — app.js v8.7.0 PREMIUM
+//  FIM — app.js v8.8.0 PREMIUM
 //  Grupo Carlos Vaz — CRV/LAS
 // ══════════════════════════════════════════════════════════════
