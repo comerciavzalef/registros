@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   REQUISIÇÕES DIGITAL — DESIGN SYSTEM v8.1 PREMIUM (11/05/2026)
+   REQUISIÇÕES DIGITAL — DESIGN SYSTEM v8.7 PREMIUM (02/06/2026)
    ══════════════════════════════════════════════════════════════
    Tema dark unico, paleta neutra sofisticada.
    Sem gradientes coloridos, glow neon, sombras coloridas,
@@ -410,6 +410,7 @@ textarea.login-field { resize: vertical; min-height: 80px; line-height: 1.5; }
 .menu-icon.importar { background: var(--success-soft); border: 1px solid var(--success-mid); color: var(--success); }
 .menu-icon.catalogo { background: var(--accent-soft); border: 1px solid var(--accent-mid); color: var(--accent); }
 .menu-icon.sair { background: var(--danger-soft); border: 1px solid var(--danger-mid); color: var(--danger); }
+.menu-icon.virada { background: var(--warning-soft); border: 1px solid var(--warning-mid); color: var(--warning); }
 
 .menu-text { flex: 1; min-width: 0; }
 .menu-title { font-size: .82rem; font-weight: 600; color: var(--text-primary); margin-bottom: 1px; }
@@ -1487,7 +1488,6 @@ button:focus-visible, .menu-item:focus-visible, .ia-cmd-card:focus-visible, .cid
 
 /* ══════════════════════════════════════════════════════════
    v8.6 — PREÇO DE CUSTO — Painel setor a setor
-   (adaptado ao design system dark do app)
    ══════════════════════════════════════════════════════════ */
 
 /* ── Header do painel ── */
@@ -1784,4 +1784,322 @@ button:focus-visible, .menu-item:focus-visible, .ia-cmd-card:focus-visible, .cid
   }
   .pc-resultado-nome { font-size: .78rem; }
   .pc-preco-valor { font-size: .95rem; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   v8.7 — HISTÓRICO DE MESES (Dashboard + Modal)
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Seção de Histórico no Dashboard ── */
+.hist-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.hist-header-row .section-label {
+  margin: 0;
+}
+.hist-ver-todos {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  padding: 4px 12px;
+  font-size: .62rem;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: pointer;
+  transition: all .2s ease;
+  font-family: var(--font);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.hist-ver-todos:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-mid);
+}
+.hist-ver-todos:active { transform: scale(.95); }
+
+.hist-mes-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow-sm);
+  transition: all .2s ease;
+  cursor: pointer;
+  position: relative;
+}
+.hist-mes-card::after {
+  content: '';
+  position: absolute; right: 14px; top: 50%;
+  width: 5px; height: 5px;
+  border-right: 1.5px solid var(--text-tertiary);
+  border-bottom: 1.5px solid var(--text-tertiary);
+  transform: translateY(-50%) rotate(-45deg);
+  transition: all .2s;
+}
+.hist-mes-card:hover {
+  border-color: var(--accent-mid);
+  background: var(--surface-2);
+}
+.hist-mes-card:hover::after { border-color: var(--accent); }
+.hist-mes-card:active { transform: scale(.99); }
+
+.hist-mes-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.hist-mes-nome {
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.hist-mes-total {
+  font-size: .95rem;
+  font-weight: 800;
+  color: var(--success);
+  font-variant-numeric: tabular-nums;
+  margin-right: 20px;
+}
+
+.hist-mes-cidades {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hist-cidade-chip {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  padding: 3px 10px;
+  font-size: .62rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.hist-cidade-chip .hcc-valor {
+  color: var(--accent);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Comparativo de barras (mini chart) ── */
+.hist-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 28px;
+  margin-top: 8px;
+}
+.hist-bar {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  min-height: 2px;
+  transition: height .2s var(--ease);
+}
+.hist-bar:nth-child(1) { background: var(--accent); }
+.hist-bar:nth-child(2) { background: var(--success); }
+.hist-bar:nth-child(3) { background: var(--purple); }
+.hist-bar:nth-child(4) { background: var(--warning); }
+.hist-bar:nth-child(5) { background: var(--info); }
+
+/* ── Empty state histórico ── */
+.hist-empty {
+  background: var(--surface-1);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-lg);
+  padding: 24px 16px;
+  text-align: center;
+}
+.hist-empty-text {
+  font-size: .78rem;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* ── Virada de Mês — Preview ── */
+.virada-preview {
+  background: var(--surface-1);
+  border: 1px solid var(--warning-mid);
+  border-radius: var(--r-lg);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.virada-preview-title {
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--warning);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.virada-city-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.virada-city-row:last-child { border-bottom: none; }
+.virada-city-nome {
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.virada-city-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.virada-city-itens {
+  font-size: .65rem;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+.virada-city-valor {
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--success);
+  font-variant-numeric: tabular-nums;
+}
+.virada-total-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0 0;
+  margin-top: 8px;
+  border-top: 2px solid var(--accent-mid);
+}
+.virada-total-label {
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.virada-total-valor {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--success);
+  font-variant-numeric: tabular-nums;
+}
+
+.virada-warning {
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-mid);
+  border-radius: var(--r-md);
+  padding: 10px 14px;
+  margin: 12px 0;
+  font-size: .75rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.virada-warning strong {
+  color: var(--danger);
+}
+
+/* ── Modal mês específico — header estilo ── */
+.mes-detail-header {
+  text-align: center;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.mes-detail-nome {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -.02em;
+  margin-bottom: 4px;
+}
+.mes-detail-total {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--success);
+  letter-spacing: -.03em;
+}
+.mes-detail-meta {
+  font-size: .68rem;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+/* ── Botões de ação do histórico ── */
+.hist-actions {
+  display: flex;
+  gap: 6px;
+  margin: 14px 0;
+  flex-wrap: wrap;
+}
+.hist-action-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: .75rem;
+  cursor: pointer;
+  transition: all .2s ease;
+  font-family: var(--font);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.hist-action-btn:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+  border-color: var(--border-accent);
+}
+.hist-action-btn:active { transform: scale(.97); }
+.hist-action-btn.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+.hist-action-btn.primary:hover { filter: brightness(1.08); }
+
+/* ── Seletor de mês ── */
+.hist-mes-select {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  color: var(--text-primary);
+  font-size: .85rem;
+  font-weight: 500;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6' fill='none' stroke='%236b8aad' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  transition: border-color .2s var(--ease);
+  margin-bottom: 12px;
+  font-family: var(--font);
+}
+.hist-mes-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.hist-mes-select option {
+  background: var(--surface-1);
+}
+
+@media (max-width: 480px) {
+  .hist-mes-top { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .hist-mes-total { margin-right: 20px; }
+  .hist-actions { flex-direction: column; }
+  .hist-action-btn { min-width: unset; }
 }
